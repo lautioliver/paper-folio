@@ -3,7 +3,11 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { desconectar } from "./db";
 import { crearConsulta } from "./consultas";
+import { avisarConsultaNueva } from "./email";
 import { Consulta } from "@/models/Consulta";
+
+// Ningún test llama a Resend: sin `avisar`, crearConsulta usa avisarConsultaNueva, que acá es un mock.
+vi.mock("./email", () => ({ avisarConsultaNueva: vi.fn(async () => {}) }));
 
 const SAL = "sal-de-prueba-0123456789";
 const valida = {
@@ -35,8 +39,8 @@ afterAll(async () => {
 });
 
 describe("crearConsulta", () => {
-  it("guarda una consulta válida con estado nueva, emailEnviado false y el hash de la IP", async () => {
-    const r = await crearConsulta(valida, { ip: "203.0.113.7" });
+  it("guarda una consulta válida con estado nueva, emailEnviado false si no se pudo avisar y el hash de la IP", async () => {
+    const r = await crearConsulta(valida, { ip: "203.0.113.7", avisar: async () => Promise.reject(new Error("x")) });
     expect(r.tipo).toBe("creada");
     const docs = await Consulta.find().lean();
     expect(docs).toHaveLength(1);
@@ -124,6 +128,78 @@ describe("crearConsulta", () => {
     avisar.mockClear();
     expect((await crearConsulta(valida, { ip: "10.0.0.5", avisar })).tipo).toBe("limite");
     expect(avisar).not.toHaveBeenCalled();
+  });
+
+  it("con avisar que sale bien, marca emailEnviado true", async () => {
+    const avisar = vi.fn(async () => {});
+    const r = await crearConsulta(valida, { ip: "10.1.0.1", avisar });
+    expect(r.tipo).toBe("creada");
+    expect((await Consulta.findOne().lean())?.emailEnviado).toBe(true);
+  });
+
+  it("si avisar falla, la consulta queda con emailEnviado false, devuelve creada y loguea solo el nombre del error", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const avisar = vi.fn(async () => {
+      throw Object.assign(new Error("fallo con ada@example.com y re_clave_secreta"), { name: "ErrorDeRed" });
+    });
+    try {
+      const r = await crearConsulta(valida, { ip: "10.1.0.2", avisar });
+      expect(r.tipo).toBe("creada");
+      expect(await Consulta.countDocuments()).toBe(1);
+      expect((await Consulta.findOne().lean())?.emailEnviado).toBe(false);
+      const logueado = JSON.stringify(log.mock.calls);
+      expect(logueado).toContain("ErrorDeRed");
+      expect(logueado).not.toContain("ada@example.com");
+      expect(logueado).not.toContain("re_clave_secreta");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("si el email salió pero falla marcar emailEnviado, igual devuelve creada y el log no culpa al email", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const marcar = vi.spyOn(Consulta, "findByIdAndUpdate").mockImplementationOnce((() => {
+      throw Object.assign(new Error("caída de mongo"), { name: "ErrorDeMongo" });
+    }) as never);
+    try {
+      const r = await crearConsulta(valida, { ip: "10.1.0.4", avisar: async () => {} });
+      expect(r.tipo).toBe("creada");
+      const logueado = JSON.stringify(log.mock.calls);
+      expect(logueado).toContain("ErrorDeMongo");
+      expect(logueado).not.toMatch(/no se pudo avisar/);
+    } finally {
+      marcar.mockRestore();
+      log.mockRestore();
+    }
+  });
+
+  it("si el aviso se cuelga, el timeout deja emailEnviado false y el resultado es creada", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { avisarConsultaNueva: real } = await vi.importActual<typeof import("./email")>("./email");
+    const colgado = { emails: { send: () => new Promise<never>(() => {}) } };
+    process.env.RESEND_API_KEY = "re_clave_de_prueba";
+    process.env.CONTACTO_EMAIL_DESTINO = "destino@example.com";
+    try {
+      const r = await crearConsulta(valida, {
+        ip: "10.1.0.5",
+        avisar: (c) => real(c, colgado, { timeoutMs: 20 }),
+      });
+      expect(r.tipo).toBe("creada");
+      expect((await Consulta.findOne().lean())?.emailEnviado).toBe(false);
+      expect(JSON.stringify(log.mock.calls)).toContain("EmailTimeoutError");
+    } finally {
+      delete process.env.RESEND_API_KEY;
+      delete process.env.CONTACTO_EMAIL_DESTINO;
+      log.mockRestore();
+    }
+  });
+
+  it("sin avisar, usa avisarConsultaNueva y marca emailEnviado true", async () => {
+    vi.mocked(avisarConsultaNueva).mockClear();
+    const r = await crearConsulta(valida, { ip: "10.1.0.3" });
+    expect(avisarConsultaNueva).toHaveBeenCalledTimes(1);
+    expect(avisarConsultaNueva).toHaveBeenCalledWith(r.tipo === "creada" ? r.consulta : undefined);
+    expect((await Consulta.findOne().lean())?.emailEnviado).toBe(true);
   });
 
   it("tiene el índice { ipHash: 1, creadaEn: -1 }", async () => {

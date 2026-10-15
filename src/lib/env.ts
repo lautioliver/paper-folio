@@ -16,7 +16,13 @@ const esquemaSal = z.object({
   IP_HASH_SAL: z.string({ error: "falta" }).min(16, { error: "debe tener al menos 16 caracteres" }),
 });
 
-export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal>;
+// RESEND_API_KEY y CONTACTO_EMAIL_DESTINO van aparte por lo mismo.
+const esquemaEmail = z.object({
+  RESEND_API_KEY: z.string({ error: "falta" }).trim().startsWith("re_", { error: "debe empezar con re_" }),
+  CONTACTO_EMAIL_DESTINO: z.string({ error: "falta" }).trim().pipe(z.email({ error: "debe ser un email" })),
+});
+
+export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal> & z.infer<typeof esquemaEmail>;
 
 /**
  * Valida las variables del servidor. Si algo falla, el error nombra la variable
@@ -29,6 +35,13 @@ export function leerEnv(fuente: Record<string, string | undefined> = process.env
 /** Valida solo `IP_HASH_SAL` (sal del hash de IP de las consultas) y la devuelve. Mismas reglas que `leerEnv`. */
 export function leerIpHashSal(fuente: Record<string, string | undefined> = process.env): string {
   return validar(esquemaSal, fuente).IP_HASH_SAL;
+}
+
+/** Valida solo `RESEND_API_KEY` y `CONTACTO_EMAIL_DESTINO` (el aviso por email). Mismas reglas que `leerEnv`. */
+export function leerEmailConfig(
+  fuente: Record<string, string | undefined> = process.env,
+): z.infer<typeof esquemaEmail> {
+  return validar(esquemaEmail, fuente);
 }
 
 function validar<T extends z.ZodType>(schema: T, fuente: Record<string, string | undefined>): z.infer<T> {
@@ -52,5 +65,11 @@ export const env: Env = {
   },
   get IP_HASH_SAL() {
     return leerIpHashSal();
+  },
+  get RESEND_API_KEY() {
+    return leerEmailConfig().RESEND_API_KEY;
+  },
+  get CONTACTO_EMAIL_DESTINO() {
+    return leerEmailConfig().CONTACTO_EMAIL_DESTINO;
   },
 };
