@@ -10,18 +10,22 @@ const cache: CacheMongoose = (global_.__paperfolioMongoose ??= { promesa: null }
 
 /** Conecta con Mongoose y reusa la conexión. Nunca loguea la URI. */
 export async function conectar(): Promise<typeof mongoose> {
+  // readyState 0: la conexión se cerró (disconnect() o reintentos agotados), la promesa vieja ya no sirve.
+  if (cache.promesa && mongoose.connection.readyState === 0) cache.promesa = null;
   if (!cache.promesa) {
     const { MONGODB_URI, MONGODB_DB } = leerEnv();
-    cache.promesa = mongoose
+    const promesa: Promise<typeof mongoose> = mongoose
       .connect(MONGODB_URI, {
         dbName: MONGODB_DB,
         bufferCommands: false,
         serverSelectionTimeoutMS: 5_000,
       })
       .catch((error: unknown) => {
-        cache.promesa = null; // el próximo intento reconecta en vez de repetir el fallo
+        // El próximo intento reconecta en vez de repetir el fallo (solo si el cache sigue siendo esta promesa).
+        if (cache.promesa === promesa) cache.promesa = null;
         throw error;
       });
+    cache.promesa = promesa;
   }
   return cache.promesa;
 }
