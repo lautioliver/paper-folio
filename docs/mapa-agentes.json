@@ -27,7 +27,8 @@
       "cuando": [
         "src/lib/**",
         "src/components/**",
-        "src/content/**"
+        "src/content/**",
+        "src/types/**"
       ],
       "revisar": [
         "docs/reference/modules.md"
@@ -37,7 +38,8 @@
     {
       "cuando": [
         "src/app/layout.tsx",
-        "src/styles/**"
+        "src/styles/**",
+        "src/app/forbidden.tsx"
       ],
       "revisar": [
         "docs/development/architecture.md"
@@ -118,7 +120,8 @@
         "src/app/api/auth/**",
         "src/lib/permisos.ts",
         "src/lib/acceso.ts",
-        "src/lib/usuarios.ts"
+        "src/lib/usuarios.ts",
+        "src/types/next-auth.d.ts"
       ]
     },
     {
