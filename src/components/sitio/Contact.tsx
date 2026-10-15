@@ -55,7 +55,7 @@ export function Footer() {
       </Container>
       <Container>
         <p className="mt-10 border-t border-papel/20 pt-6 text-center text-xs">
-          © {profile.asOf.slice(0, 4)} {profile.name} · Hecho en {profile.city} · Versión de prueba
+          © {profile.asOf.slice(0, 4)} {profile.name} · Hecho en {profile.city}
         </p>
       </Container>
     </footer>
