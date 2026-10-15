@@ -33,6 +33,12 @@ src/
 
 Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` y `panel/` llegan con sus features.
 
+## Autenticación y roles (#32, ADR-002)
+
+- **Auth.js v5** con Google y sesión JWT (`src/auth.ts`, rutas en `/api/auth/*`). Al ingresar se crea o actualiza el usuario en `usuarios` con su rol (`ADMIN_EMAILS` y `OPERADOR_EMAILS`).
+- **Permisos:** `requerirSesion` y `requerirRol` (`src/lib/permisos.ts`) releen el rol de la base. Sin sesión redirigen a `/ingresar`; sin permiso, `forbidden()` responde 403 (`experimental.authInterrupts` en `next.config.ts`).
+- **Todavía no hay nada protegido:** el detalle de proyectos (#34), la pantalla de ingreso (#35) y el panel (#37) lo usan.
+
 ## Landing (PoC, #18)
 
 - **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `StackBand`, `Reveal`, `HeroMotion`, `ShareButton`, `CopyProfileLink` y `ContactForm` son de cliente.

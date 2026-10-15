@@ -43,3 +43,28 @@ export async function desconectar(): Promise<void> {
   if (promesa) await promesa.catch(() => {});
   await mongoose.disconnect();
 }
+
+const indicesPorModelo = new Map<string, Promise<unknown>>();
+let escuchandoIndices = false;
+
+/**
+ * Crea los índices de un modelo una vez por proceso. Los modelos tienen `autoIndex: false` porque con
+ * `bufferCommands: false` el autoIndex corre sin conexión y falla; esto los crea después de `conectar()`.
+ * Al cerrarse la conexión se olvidan, porque la próxima base puede no tenerlos.
+ */
+export function asegurarIndicesDe(modelo: { modelName: string; createIndexes(): Promise<unknown> }): Promise<unknown> {
+  if (!escuchandoIndices) {
+    escuchandoIndices = true;
+    mongoose.connection.on("close", () => indicesPorModelo.clear());
+  }
+  let promesa = indicesPorModelo.get(modelo.modelName);
+  if (!promesa) {
+    promesa = modelo.createIndexes().catch((error: unknown) => {
+      indicesPorModelo.delete(modelo.modelName);
+      throw error;
+    });
+    indicesPorModelo.set(modelo.modelName, promesa);
+  }
+  return promesa;
+}
+

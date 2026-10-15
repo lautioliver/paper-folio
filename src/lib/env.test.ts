@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leerEmailConfig, leerEnv, leerIpHashSal } from "./env";
+import { leerEmailConfig, leerEnv, leerIpHashSal, leerAuthConfig, leerAuthRoles } from "./env";
 
 const valida = { MONGODB_URI: "mongodb://localhost:27017", MONGODB_DB: "paperfolio-dev" };
 
@@ -99,5 +99,40 @@ describe("RESEND_API_KEY y CONTACTO_EMAIL_DESTINO", () => {
 
   it("leerEnv no las exige", () => {
     expect(() => leerEnv(valida)).not.toThrow();
+  });
+});
+
+describe("leerAuthConfig", () => {
+  const completa = {
+    AUTH_SECRET: "x".repeat(32),
+    AUTH_GOOGLE_ID: "id-de-prueba.apps.googleusercontent.com",
+    AUTH_GOOGLE_SECRET: "secreto-de-prueba",
+  };
+
+  it("devuelve las tres variables válidas", () => {
+    expect(leerAuthConfig(completa)).toEqual(completa);
+  });
+
+  it("nombra la variable que falta o es corta, sin mostrar valores", () => {
+    expect(() => leerAuthConfig({ ...completa, AUTH_SECRET: "corta" })).toThrow(/AUTH_SECRET: debe tener al menos 32/);
+    expect(() => leerAuthConfig({ ...completa, AUTH_GOOGLE_ID: undefined })).toThrow(/AUTH_GOOGLE_ID: falta/);
+    let error: unknown;
+    try {
+      leerAuthConfig({ ...completa, AUTH_SECRET: "valor-secreto" });
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).not.toContain("valor-secreto");
+  });
+});
+
+describe("leerAuthRoles", () => {
+  it("devuelve las listas tal cual y vacías si no están", () => {
+    expect(leerAuthRoles({ ADMIN_EMAILS: "a@example.com", OPERADOR_EMAILS: "o@example.com" })).toEqual({
+      admin: "a@example.com",
+      operador: "o@example.com",
+    });
+    expect(leerAuthRoles({})).toEqual({ admin: "", operador: "" });
   });
 });
