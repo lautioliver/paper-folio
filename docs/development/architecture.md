@@ -33,10 +33,10 @@ Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(au
 
 ## Landing (PoC, #18)
 
-- **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `Reveal` y `ContactForm` son de cliente.
+- **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `StackBand`, `Reveal` y `ContactForm` son de cliente.
 - **Contenido** estático en `src/content/profile.ts`, con datos públicos de GitHub. Lo reemplaza el CRUD del admin (hito 5).
 - **Formulario de contacto:** valida con `parseContactRequest` (`src/lib/contact.ts`, Zod), la misma regla que va a usar el servidor, pero todavía no envía. El envío por email llega con el hito 2.
-- **Movimiento:** `Reveal` marca `data-visible` con IntersectionObserver (entrada al hacer scroll) y la banda del stack se desplaza con CSS. Con `prefers-reduced-motion` todo queda fijo.
+- **Movimiento:** `Reveal` marca `data-visible` con IntersectionObserver (entrada al hacer scroll) y la banda del stack se desplaza con CSS (se pausa con un botón o con el hover). Sin JS el contenido se ve; con `prefers-reduced-motion` todo queda fijo.
 
 ## Tokens de diseño
 
@@ -45,7 +45,7 @@ Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(au
 - **Colores** (nombres semánticos, no por tono): `primario` (amarillo), `acento` (coral), `secundario` (azul), `terciario` (índigo), `tinta` (negro), `papel` (blanco), `superficie` (gris claro). Se usan como `bg-primario`, `text-tinta`, etc.
 - **Tipografía:** Onest (`font-sans`, con `next/font/google`). Escala: `text-h1`, `text-h2`, `text-h3`, `text-cuerpo`, `text-pequeno`.
 - **Estilo neo-brutalista:** `--borde-marca` (2px, con `border-(length:--borde-marca)`), `rounded-marca` y `shadow-marca` (sombra dura de 4px en `tinta`).
-- **Utilidades de marca:** `marca` (contorno, radio y sombra dura juntos) y `apretable` (el botón se "aprieta" en hover y active), definidas con `@utility` en `globals.css`.
+- **Utilidades de marca:** `contorno` (borde y radio, para tarjetas), `marca` (contorno más la sombra dura) y `apretable` (el botón se "aprieta" en hover y active), definidas con `@utility` en `globals.css`.
 - Las pruebas que los exigen están en `src/styles/tokens.test.ts`.
 
 Ver [módulos](../reference/modules.md) y [superficies](../reference/surfaces.md).

@@ -12,4 +12,4 @@
 | `src/components/Container.tsx` | Ancho máximo y márgenes laterales de las secciones |
 | `src/lib/contact.ts` | `parseContactRequest()`: valida la consulta del formulario (nombre, email, tipo `general`/`cotizacion`/`asesoria`, mensaje de 10 a 2000 caracteres) y devuelve un error por campo |
 | `src/content/profile.ts` | Datos del PoC: perfil, stack, servicios, proyectos y trayectoria, con datos públicos de GitHub |
-| `src/components/sitio/` | Secciones de la landing (`Sections.tsx`, `Contact.tsx`), `Navbar` (menú de celular), `ContactForm`, `Reveal` (entrada con IntersectionObserver), `Highlight` (resaltado de título) e ilustraciones SVG con tokens |
+| `src/components/sitio/` | Secciones de la landing (`Sections.tsx`, `Contact.tsx`), `Navbar` (menú de celular: inerte afuera, Escape, se cierra en PC), `StackBand` (banda con pausa), `ContactForm`, `Reveal` (entrada con IntersectionObserver; sin JS se ve), `Highlight` y `SectionTitle`, `tones.ts` (clases de color por tono) e ilustraciones SVG con tokens |
