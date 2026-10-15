@@ -11,10 +11,10 @@ on:
 permissions:
   contents: read
 
-# Un push nuevo a la misma rama cancela la corrida anterior (ya obsoleta).
+# Un push nuevo a un PR cancela la corrida anterior (obsoleta). En main no se cancela nada.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   ci:
@@ -27,10 +27,13 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - name: Instalar dependencias
+        id: instalar
         run: npm ci
       - name: Lint
         run: npm run lint
       - name: Typecheck
+        if: ${{ !cancelled() && steps.instalar.outcome == 'success' }}
         run: npm run typecheck
       - name: Tests
+        if: ${{ !cancelled() && steps.instalar.outcome == 'success' }}
         run: npm test

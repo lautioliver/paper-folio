@@ -25,7 +25,7 @@ npm run dev          # http://localhost:3000
 
 ## CI
 
-`.github/workflows/ci.yml` corre en cada PR y en cada push a `main`: `npm ci`, `npm run lint`, `npm run typecheck` y `npm test`, con Node tomado de `.nvmrc`. Antes de abrir un PR, correr esos mismos comandos en local. No usa secretos.
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main`: `npm ci`, `npm run lint`, `npm run typecheck` y `npm test`, con Node tomado de `.nvmrc`. Antes de abrir un PR, correr en local lint, typecheck y tests (`npm run lint`, `npm run typecheck`, `npm test`). No usa secretos.
 
 ## Variables de entorno
 
