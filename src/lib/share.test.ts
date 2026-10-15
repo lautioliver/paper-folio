@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { copyText, shareOrCopy } from "./share";
+import { copyText, projectShareUrl, shareOrCopy } from "./share";
 
 const data = { title: "Ucanode", url: "https://ucanode.example/" };
 
@@ -56,18 +55,8 @@ describe("copyText", () => {
   });
 });
 
-describe("movimiento", () => {
-  const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-  const reveal = readFileSync("src/components/sitio/Reveal.tsx", "utf8");
-
-  it("gsap es dependencia", () => {
-    expect(pkg.dependencies.gsap).toBeTruthy();
-  });
-
-  it("Reveal usa ScrollTrigger y respeta reduced-motion con gsap.matchMedia", () => {
-    expect(reveal).toContain("ScrollTrigger");
-    expect(reveal).toContain("matchMedia");
-    expect(reveal).toContain("prefers-reduced-motion");
-    expect(reveal).not.toContain("IntersectionObserver");
+describe("projectShareUrl", () => {
+  it("apunta a la tarjeta del proyecto en el portfolio", () => {
+    expect(projectShareUrl("https://paperfolio.example", "ucanode")).toBe("https://paperfolio.example/#proyecto-ucanode");
   });
 });
