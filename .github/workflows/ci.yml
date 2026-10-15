@@ -1,6 +1,7 @@
 # .github/workflows/ci.yml — Paperfolio
 # Corre lint, typecheck y tests del proyecto Next.js en cada PR y en cada push a main.
-# Sin secretos: los tests no usan servicios externos. Node sale de .nvmrc.
+# Sin secretos. Node sale de .nvmrc. Los tests de la base usan mongodb-memory-server: la primera
+# corrida sin caché descarga el binario de mongod (~80 MB) de fastdl.mongodb.org.
 name: CI
 
 on:
@@ -26,6 +27,29 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # mongod se descarga en el postinstall de mongodb-memory-server o, si npm no lo corre
+      # (npm 11 bloquea scripts no aprobados), en el primer test. Se restaura antes de los dos.
+      # La carpeta se fija con MONGOMS_DOWNLOAD_DIR: sin eso, la librería elige entre varias
+      # (~/.cache/mongodb-binaries, node_modules/.cache…) y en Actions no era la cacheada.
+      # Clave: imagen del runner (el binario depende de la versión de Ubuntu) + versión de
+      # mongodb-memory-server-core (define qué mongod baja). Sin restore-keys: no acumula versiones.
+      # La carpeta se define una sola vez (GITHUB_ENV) y la usan npm ci, los tests y la caché.
+      # Un paso que solo arma la clave no puede frenar el CI: si falla, se sigue sin caché.
+      - name: Clave de la caché de mongod
+        id: clave-mongod
+        continue-on-error: true
+        run: |
+          echo "MONGOMS_DOWNLOAD_DIR=$RUNNER_TEMP/mongodb-binaries" >> "$GITHUB_ENV"
+          v=$(node -p "require('./package-lock.json').packages?.['node_modules/mongodb-memory-server-core']?.version ?? ''")
+          [[ "$v" =~ ^[0-9][0-9A-Za-z.+-]*$ ]] || v="lock-${{ hashFiles('package-lock.json') }}"
+          echo "clave=mongod-$ImageOS-$RUNNER_ARCH-mms$v" >> "$GITHUB_OUTPUT"
+      - name: Restaurar el binario de mongod
+        id: cache-mongod
+        if: ${{ steps.clave-mongod.outcome == 'success' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.MONGOMS_DOWNLOAD_DIR }}
+          key: ${{ steps.clave-mongod.outputs.clave }}
       - name: Instalar dependencias
         id: instalar
         run: npm ci
@@ -37,3 +61,18 @@ jobs:
       - name: Tests
         if: ${{ !cancelled() && steps.instalar.outcome == 'success' }}
         run: npm test
+      # Se guarda aunque falle lint o un test (si no, cada corrida roja vuelve a descargar), pero
+      # solo un binario completo: la librería escribe <binario>.md5 recién después de verificarlo.
+      # Sin esto, una descarga cortada quedaría en la caché y, con hit, no se repararía sola.
+      - name: Verificar el binario de mongod
+        id: binario-mongod
+        if: ${{ !cancelled() && steps.clave-mongod.outcome == 'success' && steps.cache-mongod.outputs.cache-hit != 'true' }}
+        run: |
+          cd "$MONGOMS_DOWNLOAD_DIR" 2>/dev/null && ls ./*.md5 >/dev/null 2>&1 && md5sum -c ./*.md5 \
+            && echo "ok=true" >> "$GITHUB_OUTPUT" || echo "Sin binario completo de mongod: no se guarda la caché."
+      - name: Guardar el binario de mongod
+        if: ${{ !cancelled() && steps.binario-mongod.outputs.ok == 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.MONGOMS_DOWNLOAD_DIR }}
+          key: ${{ steps.clave-mongod.outputs.clave }}
