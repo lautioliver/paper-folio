@@ -23,6 +23,8 @@ haya cambiado; si hay más de una, falla y las lista) e imprime el issue con su 
                 git -C <ruta>: si el directorio actual se reinicia entre comandos,
                 commitearías en el checkout principal.
               - Si la rama ya está en otro worktree, falla sin asignar.
+              - Si hay package-lock.json, corre npm ci en el worktree antes de asignar
+                (verificar.py lo necesita). Si falla, no asigna; reintentá igual.
               - Con el PR mergeado, borralo con: git worktree remove <ruta>
 AYUDA
   exit 0
@@ -191,6 +193,13 @@ elif [ -n "$SOLO_REMOTA" ]; then
 else
   mkdir -p "$(dirname "$WT")"; git worktree add -q --no-track -b "$RAMA" "$WT" "origin/$BASE"
   echo "Rama nueva: $RAMA (desde origin/$BASE)"
+fi
+# Dependencias de npm: verificar.py corre lint, typecheck y tests, que las necesitan. npm escribe
+# node_modules/.package-lock.json recién al terminar bien: sin él, una instalación a medias se repite.
+if [ -f "$WT/package-lock.json" ] && [ ! -f "$WT/node_modules/.package-lock.json" ]; then
+  echo "Instalando dependencias (npm ci)…"
+  (cd "$WT" && npm ci --no-audit --no-fund --loglevel=error) \
+    || error "npm ci falló en $WT. Revisá el error, y reintentá con el mismo comando: el worktree ya está creado."
 fi
 gh issue edit "$N" -R "$REPO" --add-assignee @me >/dev/null
 echo "Worktree: $WT"

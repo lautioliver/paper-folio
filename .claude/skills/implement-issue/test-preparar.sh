@@ -232,7 +232,7 @@ afirmar $? "si no puede consultar las ramas de origin, falla sin asignar ni crea
 
 # 11. Dependencias de npm en el worktree (#9): con package-lock.json, npm ci antes de asignar.
 ! [ -s "$NPM_LOG" ]; afirmar $? "sin package-lock.json no llama a npm"
-(cd "$TMP/proj" && echo '{}' >package-lock.json && git add package-lock.json && git commit -qm lock && git push -q origin main) 2>/dev/null
+(cd "$TMP/proj" && echo '{}' >package-lock.json && echo node_modules/ >.gitignore && git add package-lock.json .gitignore && git commit -qm lock && git push -q origin main) 2>/dev/null
 issue 57 "Con dependencias"
 s=$(cd "$TMP/proj" && "$PREPARAR" 57 --worktree 2>&1); c=$?
 afirmar $c "--worktree con package-lock.json termina bien"
