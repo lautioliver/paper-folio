@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { leerEnv, leerIpHashSal } from "./env";
 
-const valida = { MONGODB_URI: "mongodb://localhost:27017", MONGODB_DB: "paperfolio-dev" };
+const valida = {
+  MONGODB_URI: "mongodb://localhost:27017",
+  MONGODB_DB: "paperfolio-dev",
+};
 
 describe("leerEnv", () => {
   it("devuelve las variables tipadas cuando son válidas", () => {

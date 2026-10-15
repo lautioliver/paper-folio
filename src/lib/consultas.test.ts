@@ -49,7 +49,11 @@ describe("crearConsulta", () => {
       emailEnviado: false,
     });
     expect(docs[0].creadaEn).toBeInstanceOf(Date);
-    expect(docs[0].ipHash).toBe(createHash("sha256").update(SAL + "203.0.113.7").digest("hex"));
+    expect(docs[0].ipHash).toBe(
+      createHash("sha256")
+        .update(SAL + "203.0.113.7")
+        .digest("hex"),
+    );
   });
 
   it("no guarda la IP en claro", async () => {

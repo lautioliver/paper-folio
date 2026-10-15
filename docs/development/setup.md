@@ -35,8 +35,9 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 |---|---|
 | `MONGODB_URI` | Cadena de conexión de Atlas (`mongodb+srv://…`; también vale `mongodb://`). Obligatoria |
 | `MONGODB_DB` | Nombre de la base: `paperfolio-dev` en desarrollo, `paperfolio` en producción. Obligatoria |
+| `IP_HASH_SAL` | Sal del hash SHA-256 de la IP de las consultas de contacto (mínimo 16 caracteres; `openssl rand -hex 32`). Obligatoria para guardar consultas; `/api/salud` no la pide |
 
-`src/lib/env.ts` las valida con Zod la primera vez que se leen. Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
+`src/lib/env.ts` las valida con Zod cada vez que se leen (`IP_HASH_SAL` aparte, así la base y `/api/salud` no la exigen). Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
 
 ### Crear el cluster de Atlas
 

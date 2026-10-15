@@ -13,9 +13,7 @@ export class EnvInvalidoError extends Error {
 
 // IP_HASH_SAL va aparte: `leerEnv` (lo usan la base y /api/salud) no la exige.
 const esquemaSal = z.object({
-  IP_HASH_SAL: z
-    .string({ error: "falta" })
-    .min(16, { error: "debe tener al menos 16 caracteres" }),
+  IP_HASH_SAL: z.string({ error: "falta" }).min(16, { error: "debe tener al menos 16 caracteres" }),
 });
 
 export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal>;
@@ -30,15 +28,13 @@ export function leerEnv(fuente: Record<string, string | undefined> = process.env
 
 /** Valida solo `IP_HASH_SAL` (sal del hash de IP de las consultas) y la devuelve. Mismas reglas que `leerEnv`. */
 export function leerIpHashSal(fuente: Record<string, string | undefined> = process.env): string {
-  return "";
+  return validar(esquemaSal, fuente).IP_HASH_SAL;
 }
 
 function validar<T extends z.ZodType>(schema: T, fuente: Record<string, string | undefined>): z.infer<T> {
   const resultado = schema.safeParse(fuente);
   if (!resultado.success) {
-    const problemas = resultado.error.issues
-      .map((i) => `${i.path.join(".")}: ${i.message}`)
-      .join("; ");
+    const problemas = resultado.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
     throw new EnvInvalidoError(`Variables de entorno inválidas: ${problemas}`);
   }
   return resultado.data;
