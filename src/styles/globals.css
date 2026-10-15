@@ -1,7 +1,35 @@
 @import "tailwindcss";
 
-/* Tokens provisorios: los define el issue #7 y después el manual de marca. */
+/*
+ * Tokens de diseño PROVISORIOS (issue #7). Los valores salen de docs/diseno/portfolio-paperfolio.pdf
+ * (muestreados del render, no de la especificación) y los reemplaza el manual de marca (hito 0).
+ * Nombres semánticos: nunca por tono. Los HEX viven solo en este archivo.
+ */
+@theme {
+  --color-primario: #f3bc4c;
+  --color-acento: #ed747e;
+  --color-secundario: #477fef;
+  --color-terciario: #6466e9;
+  --color-tinta: #0b0b0b;
+  --color-papel: #ffffff;
+  --color-superficie: #ededed;
+
+  --text-h1: 3rem;
+  --text-h1--line-height: 1.1;
+  --text-h2: 2.25rem;
+  --text-h2--line-height: 1.15;
+  --text-h3: 1.5rem;
+  --text-h3--line-height: 1.2;
+  --text-cuerpo: 1rem;
+  --text-cuerpo--line-height: 1.6;
+  --text-pequeno: 0.875rem;
+  --text-pequeno--line-height: 1.5;
+
+  --borde-marca: 2px;
+  --radius-marca: 1rem;
+  --shadow-marca: 4px 4px 0 var(--color-tinta);
+}
+
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space-grotesk);
 }
