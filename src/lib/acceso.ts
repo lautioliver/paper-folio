@@ -25,9 +25,10 @@ export async function evaluarAcceso(
 }
 
 /**
- * Solo rutas internas para volver después de ingresar: empieza con una sola "/" (ni "//host" ni "/\\host",
+ * Solo rutas internas para volver después de ingresar: empieza con una sola "/", sin espacios ni caracteres de control, (ni "//host" ni "/\\host",
  * que el navegador trata como otro sitio). Cualquier otra cosa vuelve al inicio.
  */
 export function rutaInterna(ruta: string): string {
-  return /^\/(?![/\\])/.test(ruta) ? ruta : "/";
+  // Sin espacios ni caracteres de control: el navegador descarta tabs y saltos ("/\t/host" → "//host").
+  return /^\/(?![/\\])[^\s\u0000-\u001f\u007f]*$/.test(ruta) ? ruta : "/";
 }
