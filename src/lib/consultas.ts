@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import mongoose from "mongoose";
 import { Consulta } from "@/models/Consulta";
 import type { ContactField, ContactRequest } from "./contact";
 import { parseContactRequest } from "./contact";
@@ -26,9 +27,17 @@ export type OpcionesConsulta = {
 };
 
 let indices: Promise<unknown> | null = null;
+let escuchando = false;
 
 /** Crea el índice de `consultas` una vez por proceso (el modelo no lo hace solo, ver `Consulta.ts`). */
 function asegurarIndices(): Promise<unknown> {
+  // Al cerrarse la conexión (como en db.ts) el índice puede faltar en la próxima base.
+  if (!escuchando) {
+    escuchando = true;
+    mongoose.connection.on("close", () => {
+      indices = null;
+    });
+  }
   indices ??= Consulta.createIndexes().catch((error: unknown) => {
     indices = null;
     throw error;
@@ -51,6 +60,8 @@ function traeTrampa(input: unknown): boolean {
  * guardadas. Contar y guardar no son atómicos: en ráfagas concurrentes puede pasarse por poco.
  */
 export async function crearConsulta(input: unknown, opciones: OpcionesConsulta): Promise<ResultadoConsulta> {
+  // Error de programación del llamador (no leyó la IP): sin la IP, todos caerían en un mismo balde.
+  if (opciones.ip.trim() === "") throw new Error("crearConsulta: falta la IP de la consulta");
   if (traeTrampa(input)) return { tipo: "descartada" };
 
   const parsed = parseContactRequest(input);

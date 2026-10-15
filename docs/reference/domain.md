@@ -11,7 +11,7 @@ Una consulta del formulario de contacto. Modelo: `src/models/Consulta.ts`; servi
 | `nombre`, `email`, `mensaje` | string | Ya validados con `parseContactRequest` |
 | `tipo` | `general` \| `cotizacion` \| `asesoria` | |
 | `estado` | string | `nueva` por defecto. Los demás estados los define el panel del operador (hito 4) |
-| `emailEnviado` | boolean | `false` por defecto; pasa a `true` si el aviso por email salió |
+| `emailEnviado` | boolean | `false` por defecto: hoy siempre queda en `false`; pasa a `true` cuando sale el aviso por email (lo hace #24) |
 | `ipHash` | string | SHA-256 de `IP_HASH_SAL + ip`. La IP en claro no se guarda |
 | `creadaEn` | fecha | Timestamp de creación (no hay `updatedAt`) |
 
