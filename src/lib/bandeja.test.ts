@@ -105,11 +105,9 @@ describe("listarConsultas", () => {
 
   it("un filtro inválido o con operadores de Mongo se ignora, no se interpreta", async () => {
     await sembrar(3);
-    const r = await listarConsultas({
-      tipo: { $ne: "x" },
-      estado: "inventado",
-      pagina: 1,
-    });
+    const r = await listarConsultas(
+      parsearFiltros({ tipo: { $ne: "x" }, estado: "inventado", pagina: "1" }),
+    );
     expect(r.total).toBe(3);
   });
 });
@@ -123,7 +121,7 @@ describe("hallazgos de la autorevisión", () => {
 
   it("una página enorme devuelve la última, como cualquier página fuera de rango", async () => {
     await sembrar(45);
-    const r = await listarConsultas({ pagina: "99999999999" });
+    const r = await listarConsultas(parsearFiltros({ pagina: "99999999999" }));
     expect(r.pagina).toBe(3);
   });
 
@@ -133,6 +131,13 @@ describe("hallazgos de la autorevisión", () => {
     expect(r.items[0]?.extracto).not.toMatch(
       /[\ud800-\udbff](?![\udc00-\udfff])/,
     );
+  });
+});
+
+describe("parsearFiltros: ceros a la izquierda", () => {
+  it("?pagina=0000000002 es la página 2, no una página enorme", () => {
+    expect(parsearFiltros({ pagina: "0000000002" }).pagina).toBe(2);
+    expect(parsearFiltros({ pagina: "00000000000" }).pagina).toBe(1);
   });
 });
 
