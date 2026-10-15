@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leerEnv, leerIpHashSal } from "./env";
+import { leerEmailConfig, leerEnv, leerIpHashSal } from "./env";
 
 const valida = { MONGODB_URI: "mongodb://localhost:27017", MONGODB_DB: "paperfolio-dev" };
 
@@ -59,5 +59,34 @@ describe("IP_HASH_SAL", () => {
   it("leerEnv no la exige: /api/salud y la base siguen andando sin ella", () => {
     expect(() => leerEnv(valida)).not.toThrow();
     expect(leerEnv({ ...valida, IP_HASH_SAL: sal })).not.toHaveProperty("IP_HASH_SAL");
+  });
+});
+
+describe("RESEND_API_KEY y CONTACTO_EMAIL_DESTINO", () => {
+  const ok = { RESEND_API_KEY: "re_clave_de_prueba", CONTACTO_EMAIL_DESTINO: "destino@example.com" };
+
+  it("leerEmailConfig devuelve ambas si son válidas", () => {
+    expect(leerEmailConfig(ok)).toEqual(ok);
+  });
+
+  it("falla nombrando la variable si falta, la clave no empieza con re_ o el destino no es un email", () => {
+    expect(() => leerEmailConfig({ CONTACTO_EMAIL_DESTINO: ok.CONTACTO_EMAIL_DESTINO })).toThrow(/RESEND_API_KEY/);
+    expect(() => leerEmailConfig({ ...ok, RESEND_API_KEY: "sk_otra" })).toThrow(/RESEND_API_KEY/);
+    expect(() => leerEmailConfig({ RESEND_API_KEY: ok.RESEND_API_KEY })).toThrow(/CONTACTO_EMAIL_DESTINO/);
+    expect(() => leerEmailConfig({ ...ok, CONTACTO_EMAIL_DESTINO: "no-es-email" })).toThrow(/CONTACTO_EMAIL_DESTINO/);
+  });
+
+  it("no muestra el valor en el error", () => {
+    let mensaje = "";
+    try {
+      leerEmailConfig({ ...ok, RESEND_API_KEY: "clave-secreta" });
+    } catch (e) {
+      mensaje = (e as Error).message;
+    }
+    expect(mensaje).not.toContain("clave-secreta");
+  });
+
+  it("leerEnv no las exige", () => {
+    expect(() => leerEnv(valida)).not.toThrow();
   });
 });
