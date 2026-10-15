@@ -3,15 +3,15 @@
 import { useEffect, useState } from "react";
 
 /**
- * Aviso que se borra solo (3 s): así un segundo clic con el mismo resultado se vuelve a anunciar
- * en un role="status".
+ * Aviso que se borra solo (3 s). Cada llamada reinicia el plazo, aun con el mismo texto, y el aviso
+ * se borra un instante antes de repetirse para que un role="status" lo vuelva a anunciar.
  */
 export function useTransientMessage(): [string, (message: string) => void] {
-  const [message, setMessage] = useState("");
+  const [state, setState] = useState({ text: "", n: 0 });
   useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(""), 3000);
+    if (!state.text) return;
+    const timer = setTimeout(() => setState((s) => ({ ...s, text: "" })), 3000);
     return () => clearTimeout(timer);
-  }, [message]);
-  return [message, setMessage];
+  }, [state]);
+  return [state.text, (text) => setState((s) => ({ text, n: s.n + 1 }))];
 }
