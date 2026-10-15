@@ -1,9 +1,8 @@
 import { connection } from "next/server";
 import type { Session } from "next-auth";
 import { auth } from "@/auth";
-import { evaluarAcceso } from "./acceso";
 import { EnvInvalidoError } from "./env";
-import type { EstadoSesion } from "./ingreso";
+import { comprobarSesion, type EstadoSesion } from "./ingreso";
 import { buscarRol } from "./usuarios";
 
 export type SesionDeLaApp = Session | null;
@@ -43,7 +42,5 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
     console.error("sesion: no se pudo leer la sesión", error instanceof Error ? error.name : "desconocido");
     return { estado: "ninguna", configurado: true };
   }
-  const acceso = await evaluarAcceso(sesion, [], (id) => buscarRol(id));
-  if (acceso.ok) return { estado: "valida", configurado: true };
-  return { estado: acceso.motivo === "sesion-huerfana" ? "huerfana" : "ninguna", configurado: true };
+  return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
 }

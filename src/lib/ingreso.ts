@@ -22,6 +22,8 @@ export function decidirIngreso(entrada: {
 }): DecisionIngreso {
   const callbackUrl = rutaInterna(typeof entrada.callbackUrl === "string" ? entrada.callbackUrl : "/");
   const errorDeSesion = entrada.error === "sesion";
+  // Sin poder comprobar la base no se sabe si la sesión sirve: no se redirige (podría rebotar).
+  if (entrada.sesion === "error") return { accion: "mostrar", aviso: "verificacion", callbackUrl };
   if (entrada.sesion === "huerfana" || (entrada.sesion === "valida" && errorDeSesion)) {
     return { accion: "mostrar", aviso: "sesion", callbackUrl };
   }
@@ -39,11 +41,20 @@ export function puedeVerPanel(rol: Rol | null | undefined): boolean {
   return rol === "operador" || rol === "admin";
 }
 
-/** Estado de la sesión para /ingresar. Stub. */
+/**
+ * Estado de la sesión para /ingresar. Relee el rol de la base; si la base no responde devuelve "error"
+ * en vez de lanzar: /ingresar es la página para recuperarse y no puede quedar en 500.
+ */
 export async function comprobarSesion(
-  _sesion: SesionMinima,
-  _buscar: (id: string) => Promise<Rol | null>,
+  sesion: SesionMinima,
+  buscar: (id: string) => Promise<Rol | null>,
 ): Promise<EstadoSesion> {
-  void evaluarAcceso;
-  return "valida";
+  try {
+    const acceso = await evaluarAcceso(sesion, [], buscar);
+    if (acceso.ok) return "valida";
+    return acceso.motivo === "sesion-huerfana" ? "huerfana" : "ninguna";
+  } catch (error) {
+    console.error("ingreso: no se pudo comprobar la sesión", error instanceof Error ? error.name : "desconocido");
+    return "error";
+  }
 }

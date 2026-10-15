@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { profile } from "@/content/profile";
+import { alAbrirOtroMenu, avisarMenuAbierto } from "@/lib/menus";
 
 const LINKS = [
   { href: "/#inicio", label: "Inicio" },
@@ -29,8 +30,12 @@ export function Navbar({ cuenta }: { cuenta?: ReactNode }) {
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Si se abre el menú de la cuenta, este se cierra (sin mover el foco: ya está en el otro menú).
+  useEffect(() => alAbrirOtroMenu(menuId, () => setOpen(false)), [menuId]);
+
   useEffect(() => {
     if (!open) return;
+    avisarMenuAbierto(menuId);
     const outside = document.querySelectorAll<HTMLElement>("main, footer");
     const desktop = window.matchMedia(DESKTOP);
     const close = (returnFocus: boolean) => {
@@ -54,7 +59,7 @@ export function Navbar({ cuenta }: { cuenta?: ReactNode }) {
       document.removeEventListener("keydown", onKey);
       desktop.removeEventListener("change", onResize);
     };
-  }, [open]);
+  }, [open, menuId]);
 
   return (
     <header className="sticky top-4 z-40 px-4">
@@ -77,31 +82,33 @@ export function Navbar({ cuenta }: { cuenta?: ReactNode }) {
             </li>
           ))}
         </ul>
-        <Link
-          href="/#contacto"
-          className="hidden rounded-lg bg-tinta px-4 py-2 text-pequeno font-bold text-papel lg:inline-block"
-        >
-          Contactame
-        </Link>
-        {cuenta}
-        <button
-          ref={toggleRef}
-          type="button"
-          className="grid size-11 place-items-center rounded-lg bg-tinta text-papel lg:hidden"
-          aria-expanded={open}
-          aria-controls={menuId}
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
-          onClick={() => setOpen((value) => !value)}
-        >
-          <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
-            <path
-              d={open ? "M6 6 L18 18 M18 6 L6 18" : "M4 7 H20 M4 12 H20 M4 17 H20"}
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/#contacto"
+            className="hidden rounded-lg bg-tinta px-4 py-2 text-pequeno font-bold text-papel lg:inline-block"
+          >
+            Contactame
+          </Link>
+          {cuenta}
+          <button
+            ref={toggleRef}
+            type="button"
+            className="grid size-11 place-items-center rounded-lg bg-tinta text-papel lg:hidden"
+            aria-expanded={open}
+            aria-controls={menuId}
+            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
+              <path
+                d={open ? "M6 6 L18 18 M18 6 L6 18" : "M4 7 H20 M4 12 H20 M4 17 H20"}
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
       </nav>
       <div ref={menuRef} id={menuId} hidden={!open} className="fixed inset-0 bg-papel px-6 pt-28 lg:hidden">
         <ul className="flex flex-col gap-6">

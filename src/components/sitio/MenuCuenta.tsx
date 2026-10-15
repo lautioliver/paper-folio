@@ -1,17 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { puedeVerPanel } from "@/lib/ingreso";
+import { puedeVerPanel, urlDeIngreso } from "@/lib/ingreso";
+import { alAbrirOtroMenu, avisarMenuAbierto } from "@/lib/menus";
 import { salir } from "@/lib/sesion-acciones";
 import type { Rol } from "@/models/Usuario";
 
 const ITEM = "block w-full rounded-lg px-3 py-2 text-left text-pequeno font-bold hover:bg-superficie";
 
+/** Marcador del lugar de la sesión mientras carga: no muestra "Ingresar" a quien ya tiene sesión. */
+export function LugarDeCuenta() {
+  return <div aria-hidden="true" className="size-11" />;
+}
+
 export function EnlaceIngresar() {
+  // Vuelve a la página donde estaba (por `rutaInterna`, dentro de `urlDeIngreso`).
+  const ruta = usePathname();
   return (
     <Link
-      href="/ingresar"
+      href={urlDeIngreso(ruta)}
       className="marca apretable inline-flex min-h-11 items-center bg-papel px-4 text-pequeno font-bold"
     >
       Ingresar
@@ -31,8 +40,12 @@ export function MenuCuenta({ nombre, imagen, rol }: { nombre: string; imagen: st
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Si se abre el menú de celular, este se cierra (sin mover el foco).
+  useEffect(() => alAbrirOtroMenu(menuId, () => setOpen(false)), [menuId]);
+
   useEffect(() => {
     if (!open) return;
+    avisarMenuAbierto(menuId);
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setOpen(false);
@@ -48,7 +61,7 @@ export function MenuCuenta({ nombre, imagen, rol }: { nombre: string; imagen: st
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onPointer);
     };
-  }, [open]);
+  }, [open, menuId]);
 
   return (
     <div

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { sesionParaLaBarra } from "@/lib/sesion";
-import { EnlaceIngresar, MenuCuenta } from "./MenuCuenta";
+import { EnlaceIngresar, LugarDeCuenta, MenuCuenta } from "./MenuCuenta";
 
 async function Sesion() {
   const sesion = await sesionParaLaBarra();
@@ -15,7 +15,7 @@ async function Sesion() {
  */
 export function CuentaBarra() {
   return (
-    <Suspense fallback={<EnlaceIngresar />}>
+    <Suspense fallback={<LugarDeCuenta />}>
       <Sesion />
     </Suspense>
   );

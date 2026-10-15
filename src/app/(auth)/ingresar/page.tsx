@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { Container } from "@/components/Container";
 import { decidirIngreso } from "@/lib/ingreso";
 import { estadoDeSesion } from "@/lib/sesion";
-import { ingresarConGoogle, salirEIngresarDeNuevo } from "@/lib/sesion-acciones";
+import { ingresarConGoogle, salir, salirEIngresarDeNuevo } from "@/lib/sesion-acciones";
 
 export const metadata: Metadata = { title: "Ingresar", robots: { index: false } };
 
@@ -22,6 +22,21 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
       <p role="alert" className="mt-6 text-cuerpo">
         El ingreso no está disponible en este momento. Probá de nuevo más tarde.
       </p>
+    );
+  }
+
+  if (decision.aviso === "verificacion") {
+    return (
+      <>
+        <p role="alert" className="mt-6 text-cuerpo">
+          No pudimos comprobar tu sesión, probá de nuevo en un rato.
+        </p>
+        <form action={salir} className="mt-8">
+          <button type="submit" className={BOTON}>
+            Salir
+          </button>
+        </form>
+      </>
     );
   }
 
