@@ -52,6 +52,39 @@ describe("POST /api/imagenes: permisos", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
+  it("rechaza con 403 JSON un envío de otro sitio o de un subdominio (Sec-Fetch-Site), sin leer el cuerpo", async () => {
+    requerirRol.mockResolvedValue({ id: "1", rol: "admin" });
+    for (const sitio of ["cross-site", "same-site"]) {
+      const form = new FormData();
+      form.append("archivo", new Blob([PNG]), "foto.png");
+      const req = new Request("http://localhost:3480/api/imagenes", {
+        method: "POST",
+        headers: { "sec-fetch-site": sitio },
+        body: form,
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(403);
+      expect(await res.json()).toMatchObject({ error: { codigo: "ORIGEN_NO_PERMITIDO" } });
+      expect(req.bodyUsed).toBe(false);
+    }
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("acepta el envío del mismo origen (Sec-Fetch-Site: same-origin)", async () => {
+    requerirRol.mockResolvedValue({ id: "1", rol: "admin" });
+    put.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/contenido/a.png" });
+    const form = new FormData();
+    form.append("archivo", new Blob([PNG]), "foto.png");
+    const res = await POST(
+      new Request("http://localhost:3480/api/imagenes", {
+        method: "POST",
+        headers: { "sec-fetch-site": "same-origin" },
+        body: form,
+      }),
+    );
+    expect(res.status).toBe(201);
+  });
+
   it("chequea el permiso antes de leer el cuerpo", async () => {
     requerirRol.mockRejectedValue(prohibido());
     const req = pedido(new Blob([PNG]));

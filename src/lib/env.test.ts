@@ -146,6 +146,9 @@ describe("leerBlobConfig (Vercel Blob por OIDC, #47)", () => {
 
   it("falla nombrando BLOB_STORE_ID si falta o no empieza con store_, sin mostrar el valor", () => {
     expect(() => leerBlobConfig({})).toThrow(/BLOB_STORE_ID: falta/);
+    // Vacía, como queda al copiar .env.example: también es "falta", no un valor mal escrito.
+    expect(() => leerBlobConfig({ BLOB_STORE_ID: "" })).toThrow(/BLOB_STORE_ID: falta/);
+    expect(() => leerBlobConfig({ BLOB_STORE_ID: "  " })).toThrow(/BLOB_STORE_ID: falta/);
     let mensaje = "";
     try {
       leerBlobConfig({ BLOB_STORE_ID: "vercel_blob_rw_secreto" });
