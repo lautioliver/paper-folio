@@ -92,32 +92,12 @@
   animation-play-state: paused;
 }
 
-/*
- * Entrada al hacer scroll. Sin JS todo se ve: Reveal oculta (data-visible="false") solo lo que está
- * fuera de pantalla al cargar, y lo muestra con IntersectionObserver.
- */
-.revelar {
-  transition:
-    opacity 300ms ease,
-    transform 300ms ease;
-}
-.revelar[data-visible="false"] {
-  opacity: 0;
-  transform: translateY(16px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
   .banda-pista {
     animation: none;
-  }
-  .revelar,
-  .revelar[data-visible="false"] {
-    opacity: 1;
-    transform: none;
-    transition: none;
   }
   .apretable,
   .apretable:hover,
