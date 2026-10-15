@@ -156,6 +156,23 @@ describe("crearConsulta", () => {
     }
   });
 
+  it("si el email salió pero falla marcar emailEnviado, igual devuelve creada y el log no culpa al email", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const marcar = vi.spyOn(Consulta, "findByIdAndUpdate").mockImplementationOnce((() => {
+      throw Object.assign(new Error("caída de mongo"), { name: "ErrorDeMongo" });
+    }) as never);
+    try {
+      const r = await crearConsulta(valida, { ip: "10.1.0.4", avisar: async () => {} });
+      expect(r.tipo).toBe("creada");
+      const logueado = JSON.stringify(log.mock.calls);
+      expect(logueado).toContain("ErrorDeMongo");
+      expect(logueado).not.toMatch(/no se pudo avisar/);
+    } finally {
+      marcar.mockRestore();
+      log.mockRestore();
+    }
+  });
+
   it("sin avisar, usa avisarConsultaNueva y marca emailEnviado true", async () => {
     vi.mocked(avisarConsultaNueva).mockClear();
     const r = await crearConsulta(valida, { ip: "10.1.0.3" });
