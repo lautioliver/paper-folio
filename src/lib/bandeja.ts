@@ -68,7 +68,8 @@ export function parsearFiltros(input: unknown): FiltrosValidos {
     typeof crudo.pagina === "number" ||
     (typeof crudo.pagina === "string" && /^\d+$/.test(crudo.pagina))
       ? // Un número gigante cuenta como "más allá del final", no como inválido.
-        typeof crudo.pagina === "string" && crudo.pagina.length > 9
+        typeof crudo.pagina === "string" &&
+        crudo.pagina.replace(/^0+/, "").length > 9
         ? 1_000_000_000
         : crudo.pagina
       : undefined;
@@ -93,14 +94,14 @@ function extractoDe(mensaje: string): string {
 }
 
 /**
- * Lista las consultas de la más nueva a la más vieja, de a `POR_PAGINA`. Los filtros se validan acá
- * (el llamador puede pasar `searchParams` tal cual). Si la página se pasa del final, devuelve la última.
+ * Lista las consultas de la más nueva a la más vieja, de a `POR_PAGINA`. Los filtros llegan ya validados
+ * (`parsearFiltros` sobre los `searchParams`). Si la página se pasa del final, devuelve la última.
  * Proyecta campos explícitos: `ipHash` y `email` no salen de este módulo.
  */
 export async function listarConsultas(
-  filtros: FiltrosBandeja,
+  filtros: FiltrosValidos,
 ): Promise<Bandeja> {
-  const { tipo, estado, pagina: pedida } = parsearFiltros(filtros);
+  const { tipo, estado, pagina: pedida } = filtros;
   const filtro: { tipo?: ContactType; estado?: EstadoConsulta } = {};
   if (tipo) filtro.tipo = tipo;
   if (estado) filtro.estado = estado;

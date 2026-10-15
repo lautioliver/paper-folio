@@ -11,10 +11,11 @@ export const metadata: Metadata = {
 };
 
 /**
- * Guarda del panel: sin sesión redirige a `/ingresar`, sin rol de operador o admin responde 403.
- * El rol se relee de la base en cada render (ADR-002 R-3). La guarda envuelve a la página, así que
- * nada del panel se renderiza antes de pasarla. Cada página vuelve a llamar a `requerirRol`: el
- * layout no se vuelve a ejecutar en las navegaciones del cliente.
+ * Guarda del shell del panel: sin sesión redirige a `/ingresar`, sin rol de operador o admin responde 403.
+ * OJO: el layout NO protege a las páginas. Next no impide que un segmento hijo se renderice ni que
+ * aparezca en el RSC Payload aunque el layout redirija, y el layout no se vuelve a ejecutar en las
+ * navegaciones del cliente. Por eso cada página y cada acción bajo `/panel` tiene que llamar a
+ * `requerirRol("…", "operador", "admin")` (rol releído de la base, ADR-002 R-3) ANTES de leer datos.
  */
 async function Guarda({ children }: { children: React.ReactNode }) {
   // Auth.js genera valores aleatorios: se pide el request antes, así nada se intenta prerenderizar.

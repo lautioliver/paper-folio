@@ -15,7 +15,8 @@
       "cuando": [
         "src/app/api/**",
         "src/app/**/page.tsx",
-        "src/app/**/route.ts"
+        "src/app/**/route.ts",
+        "src/app/panel/**"
       ],
       "revisar": [
         "docs/development/architecture.md",
