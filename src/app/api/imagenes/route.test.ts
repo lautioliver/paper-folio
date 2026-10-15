@@ -109,7 +109,7 @@ describe("POST /api/imagenes: subida (admin)", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("responde 400 si el cuerpo no es multipart/form-data", async () => {
+  it("responde 415 si el cuerpo no es multipart/form-data, como /api/consultas", async () => {
     const res = await POST(
       new Request("http://localhost:3480/api/imagenes", {
         method: "POST",
@@ -117,7 +117,20 @@ describe("POST /api/imagenes: subida (admin)", () => {
         body: "{}",
       }),
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(415);
+    expect(await res.json()).toMatchObject({ error: { codigo: "TIPO_NO_SOPORTADO" } });
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("responde 413 sin leer el cuerpo si el Content-Length ya pasa el máximo", async () => {
+    const req = new Request("http://localhost:3480/api/imagenes", {
+      method: "POST",
+      headers: { "content-type": "multipart/form-data; boundary=x", "content-length": String(10 * 1024 * 1024) },
+      body: "--x--",
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(413);
+    expect(req.bodyUsed).toBe(false);
     expect(put).not.toHaveBeenCalled();
   });
 

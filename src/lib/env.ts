@@ -39,7 +39,7 @@ const esquemaRoles = z.object({
 // Vercel Blob (#47): se autentica por OIDC (VERCEL_OIDC_TOKEN, que inyecta Vercel) con el id del store.
 // Aparte para que `next build` y /api/salud no la exijan.
 const esquemaBlob = z.object({
-  BLOB_STORE_ID: z.string({ error: "falta" }),
+  BLOB_STORE_ID: z.string({ error: "falta" }).trim().startsWith("store_", { error: "debe empezar con store_" }),
 });
 
 export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal> & z.infer<typeof esquemaEmail>;
