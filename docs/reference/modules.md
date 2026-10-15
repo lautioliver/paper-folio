@@ -12,6 +12,7 @@
 | `src/lib/db.ts` | `conectar()`: conexión de Mongoose cacheada en `globalThis`; `desconectar()` la cierra (para tests). Nunca loguea la URI |
 | `src/models/Consulta.ts` | Modelo Mongoose de la colección `consultas` (ver [domain.md](domain.md)) |
 | `src/app/api/consultas/route.ts` | `POST /api/consultas`: lee la IP, llama a `crearConsulta` y traduce el resultado a HTTP |
+| `src/lib/api-error.ts` | `respuestaError(status, codigo, mensaje, extra?)` y `respuestaConfiguracionInvalida()`: el formato único de error de la API (`/api/salud` y `/api/consultas`) |
 | `src/lib/ip.ts` | `leerIp(headers)`: primer valor de `x-forwarded-for` o `x-real-ip`; vacío si no hay |
 | `src/lib/consultas.ts` | `crearConsulta(input, { ip, avisar? })`: valida con `parseContactRequest`, descarta si el campo trampa `sitio_web` trae algo (antes de validar), corta con `limite` al llegar a 5 consultas por hora del mismo `ipHash` y guarda. Devuelve `creada`, `invalida` (errores por campo), `limite` o `descartada`; lanza un error si la `ip` viene vacía. `avisar(consulta)` se llama tras guardar (lo conecta el email) |
 | `src/app/api/salud/route.ts` | `GET /api/salud`: health check de la base (ping) |

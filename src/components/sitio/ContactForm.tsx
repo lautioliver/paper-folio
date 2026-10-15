@@ -46,10 +46,9 @@ export function ContactForm() {
       setStatus("idle");
       const campos = body?.error?.campos;
       if (res.status === 400 && campos && Object.keys(campos).length > 0) return showErrors(formElement, campos);
+      const mensaje = body?.error?.mensaje;
       setServerError(
-        res.status === 429
-          ? "Enviaste muchas consultas seguidas. Probá de nuevo en una hora."
-          : "No pudimos enviar tu consulta. Probá de nuevo en un rato.",
+        typeof mensaje === "string" && mensaje !== "" ? mensaje : "No pudimos enviar tu consulta. Probá de nuevo en un rato.",
       );
     } catch {
       setStatus("idle");
@@ -105,7 +104,15 @@ export function ContactForm() {
           {status === "sending" ? "Enviando…" : "Enviar consulta"}
         </button>
         <p role="status" className="text-pequeno font-bold">
-          {status === "sent" ? "¡Gracias! Te respondo por email." : serverError}
+          {status === "sent" ? "¡Gracias! Te respondo por email." : ""}
+        </p>
+        <p role="alert" className="text-pequeno font-bold">
+          {serverError ? (
+            <>
+              <span aria-hidden="true" className="mr-1 inline-block size-2.5 rounded-full bg-acento" />
+              {serverError}
+            </>
+          ) : null}
         </p>
       </div>
     </form>
