@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { projects } from "@/content/profile";
-import { buscarProyecto, rutaDetalle } from "./proyectos";
+import { buscarProyecto, rutaDemo, rutaDetalle } from "./proyectos";
 
 describe("buscarProyecto", () => {
   it("encuentra cada proyecto por su slug", () => {
@@ -18,6 +18,16 @@ describe("buscarProyecto", () => {
 describe("rutaDetalle", () => {
   it("arma /proyectos/<slug>", () => {
     expect(rutaDetalle("ucanode")).toBe("/proyectos/ucanode");
+  });
+
+  it("codifica el slug para que no cambie la ruta (? # espacios)", () => {
+    expect(rutaDetalle("a?b#c d")).toBe("/proyectos/a%3Fb%23c%20d");
+  });
+});
+
+describe("rutaDemo", () => {
+  it("lleva al detalle, posicionado en la demo", () => {
+    expect(rutaDemo("ucanode")).toBe("/proyectos/ucanode#demo");
   });
 });
 

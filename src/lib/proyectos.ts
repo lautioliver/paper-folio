@@ -7,6 +7,12 @@ export function rutaDetalle(slug: string): string {
   return `${RUTA_PROYECTOS}/${slug}`;
 }
 
+/** Ruta del detalle posicionada en la demo (stub). */
+export function rutaDemo(slug: string): string {
+  void slug;
+  return "";
+}
+
 /** Busca un proyecto por slug; `undefined` si no existe. */
 export function buscarProyecto(slug: string): Project | undefined {
   return projects.find((project) => project.slug === slug);

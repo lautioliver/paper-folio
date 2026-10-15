@@ -64,11 +64,11 @@ describe("rutaInterna", () => {
 
 describe("urlDeIngreso", () => {
   it("arma /ingresar con callbackUrl codificado", () => {
-    expect(urlDeIngreso("/proyectos/ucanode")).toBe("/ingresar?callbackUrl=%2Fproyectos%2Fucanode");
+    expect(urlDeIngreso("/proyectos/ucanode", "sin-sesion")).toBe("/ingresar?callbackUrl=%2Fproyectos%2Fucanode");
   });
 
   it("una ruta externa vuelve al inicio", () => {
-    expect(urlDeIngreso("//evil.com")).toBe("/ingresar?callbackUrl=%2F");
+    expect(urlDeIngreso("//evil.com", "sin-sesion")).toBe("/ingresar?callbackUrl=%2F");
   });
 
   it("con sesión huérfana suma error=sesion", () => {

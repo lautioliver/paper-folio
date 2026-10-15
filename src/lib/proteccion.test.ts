@@ -28,10 +28,14 @@ describe("redireccionDeProxy", () => {
 });
 
 describe("matcher de proxy.ts", () => {
+  // No se puede importar `@/proxy` en Vitest: arrastra next-auth, que no resuelve `next/server`. Se lee el
+  // fuente (ruta relativa a este archivo, no al cwd) sin comentarios y se extrae el literal de `matcher`.
   it("cubre cada prefijo de PREFIJOS_PROTEGIDOS (si no, el proxy no corre y la redirección rápida se pierde)", () => {
-    const fuente = readFileSync("src/proxy.ts", "utf8");
-    for (const prefijo of PREFIJOS_PROTEGIDOS) {
-      expect(fuente, prefijo).toContain(`"${prefijo}:path+"`);
-    }
+    const fuente = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    const literal = /matcher:\s*\[([^\]]*)\]/.exec(fuente)?.[1] ?? "";
+    const matcher = [...literal.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(matcher.sort()).toEqual(PREFIJOS_PROTEGIDOS.map((prefijo) => `${prefijo}:path+`).sort());
   });
 });
