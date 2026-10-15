@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { respuestaConfiguracionInvalida, respuestaError } from "@/lib/api-error";
 import { EnvInvalidoError } from "@/lib/env";
-import { subirImagen, TAMANO_MAXIMO } from "@/lib/imagenes";
+import { MENSAJES, subirImagen, TAMANO_MAXIMO } from "@/lib/imagenes";
 import { requerirRol } from "@/lib/permisos";
 
 // Lo que agrega el multipart alrededor del archivo (boundary y cabeceras de la parte).
@@ -14,16 +14,26 @@ const esquemaArchivo = z.instanceof(File);
  * Solo `admin`. Route handler y no server action: el límite de 1 MB de las server actions no alcanza
  * para 2 MB y así no hace falta tocar `next.config.ts`.
  */
+const demasiadoGrande = () => respuestaError(413, "IMAGEN_INVALIDA", MENSAJES.tamano, { motivo: "tamano" });
+
 export async function POST(request: Request): Promise<Response> {
   // Antes de leer el cuerpo: sin sesión redirige a /ingresar y sin rol responde 403 (`forbidden()`).
   await requerirRol("/panel", "admin");
+
+  // Las server actions traen su chequeo de origen; un route handler no. Un multipart se manda desde un
+  // <form> de cualquier página: la cookie Lax ya frena otro sitio, esto frena además un subdominio
+  // (`same-site`). Sin el encabezado (curl, otro cliente) no hay cookie de un navegador ajeno que abusar.
+  const sitio = request.headers.get("sec-fetch-site");
+  if (sitio === "cross-site" || sitio === "same-site") {
+    return respuestaError(403, "ORIGEN_NO_PERMITIDO", "La subida tiene que hacerse desde el panel.");
+  }
 
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("multipart/form-data")) {
     return respuestaError(415, "TIPO_NO_SOPORTADO", "El envío tiene que ser multipart/form-data.");
   }
   // Corte barato antes de parsear: el tamaño real del archivo se vuelve a validar abajo.
   if (Number(request.headers.get("content-length") ?? 0) > TAMANO_MAXIMO + MARGEN_MULTIPART) {
-    return respuestaError(413, "IMAGEN_INVALIDA", "La imagen no puede pesar más de 2 MB.", { motivo: "tamano" });
+    return demasiadoGrande();
   }
 
   const form = await request.formData().catch(() => null);
@@ -32,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
     return respuestaError(400, "ARCHIVO_FALTANTE", "Elegí una imagen para subir.");
   }
   if (archivo.data.size > TAMANO_MAXIMO) {
-    return respuestaError(413, "IMAGEN_INVALIDA", "La imagen no puede pesar más de 2 MB.", { motivo: "tamano" });
+    return demasiadoGrande();
   }
 
   try {

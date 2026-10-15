@@ -28,7 +28,7 @@ const FORMATOS: Record<FormatoImagen, { contentType: string; extension: string }
   webp: { contentType: "image/webp", extension: "webp" },
 };
 
-const MENSAJES: Record<MotivoRechazo, string> = {
+export const MENSAJES: Record<MotivoRechazo, string> = {
   formato: "El archivo tiene que ser una imagen PNG, JPEG o WebP.",
   tamano: "La imagen no puede pesar más de 2 MB.",
   dimensiones: "La imagen no puede medir más de 2000×2000 px.",

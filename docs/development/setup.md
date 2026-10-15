@@ -58,7 +58,7 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 
 1. En Vercel, en el proyecto: **Storage → Create → Blob**, y conectarlo al proyecto. Vercel carga `BLOB_STORE_ID` en sus variables (si el store se conectó con otro prefijo, aparecen otras como `BLOB_STORE_ID_STORE_ID`, que el código no usa).
 2. La autenticación es por **OIDC**: en Vercel, `VERCEL_OIDC_TOKEN` lo inyecta la plataforma; no hace falta `BLOB_READ_WRITE_TOKEN`.
-3. En local hacen falta `BLOB_STORE_ID` y `VERCEL_OIDC_TOKEN` en `.env.local`. El token vence a las ~12 h: para renovarlo, **no** corras `vercel env pull` sobre `.env.local` (lo pisa entero); bajalo a un archivo aparte (`vercel env pull .env.oidc`) y copiá solo esa variable.
+3. En local hacen falta `BLOB_STORE_ID` y `VERCEL_OIDC_TOKEN` en `.env.local`. El token vence a las ~12 h: para renovarlo, **no** corras `vercel env pull` sobre `.env.local` (lo pisa entero); bajalo a un archivo aparte (`vercel env pull .env.oidc`) y copiá solo esa variable. Si la subida responde `503 SUBIDA_FALLIDA` en local, lo primero es renovarlo.
 4. Los tests no las necesitan: el cliente de Blob se inyecta y `vitest.config.ts` las vacía.
 
 ### Crear el cluster de Atlas
