@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { CONTACT_TYPES, CONTACT_TYPE_LABELS, parseContactRequest, type ContactField } from "@/lib/contact";
 import { cn } from "@/lib/cn";
 
@@ -16,9 +16,12 @@ export function ContactForm() {
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [serverError, setServerError] = useState("");
+  // El estado se actualiza al renderizar: una ref frena un doble envío (doble clic o Enter repetido).
+  const sending = useRef(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending.current) return;
     const formElement = event.currentTarget;
     const values = Object.fromEntries(new FormData(formElement));
     const result = parseContactRequest(values);
@@ -27,6 +30,7 @@ export function ContactForm() {
     if (!result.ok) return showErrors(formElement, result.errors);
     setErrors({});
     setStatus("sending");
+    sending.current = true;
     try {
       const res = await fetch("/api/consultas", {
         method: "POST",
@@ -40,7 +44,8 @@ export function ContactForm() {
       }
       const body = await res.json().catch(() => null);
       setStatus("idle");
-      if (res.status === 400 && body?.error?.campos) return showErrors(formElement, body.error.campos);
+      const campos = body?.error?.campos;
+      if (res.status === 400 && campos && Object.keys(campos).length > 0) return showErrors(formElement, campos);
       setServerError(
         res.status === 429
           ? "Enviaste muchas consultas seguidas. Probá de nuevo en una hora."
@@ -49,6 +54,8 @@ export function ContactForm() {
     } catch {
       setStatus("idle");
       setServerError("No pudimos conectar con el servidor. Revisá tu conexión y probá de nuevo.");
+    } finally {
+      sending.current = false;
     }
   }
 
