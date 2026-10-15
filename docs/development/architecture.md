@@ -10,7 +10,7 @@ Stack: [ADR-001](../decisions/ADR-001-stack.md). Hoy existe el scaffold: un proy
 - **Tailwind 4**, procesado por `@tailwindcss/turbopack` (configurado en `next.config.ts`; no hay `postcss.config`). Los estilos globales están en `src/styles/globals.css` y los importa `src/app/layout.tsx`.
 - **Fuentes:** Geist y Geist Mono con `next/font`. Son provisorias: las reemplazan los tokens del #7.
 - **ESLint 9** con `eslint-config-next` (core-web-vitals + TypeScript), en `eslint.config.mjs`.
-- **Vitest 5** en entorno `node`. Toma los tests `src/**/*.test.ts(x)` y resuelve el alias `@/` → `src/` (`vitest.config.ts`).
+- **Vitest 5** en entorno `node`. Toma solo los tests `src/**/*.test.ts`: los de componentes (`.tsx`) esperan a que haya jsdom. Resuelve el alias `@/` → `src/` (`vitest.config.ts`).
 
 ## Estructura
 

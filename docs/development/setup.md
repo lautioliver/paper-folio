@@ -4,7 +4,7 @@
 
 ## Requisitos
 
-- **Node 24** (`.nvmrc`; `engines` pide `>=24`). Con nvm: `nvm use`.
+- **Node 24** (`.nvmrc`; `engines` fija `24.x`, así Vercel no salta solo a otra versión mayor). Con nvm: `nvm use`.
 - npm (viene con Node).
 
 ## Levantar

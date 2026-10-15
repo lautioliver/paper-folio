@@ -17,7 +17,7 @@ El portfolio de un desarrollador fullstack, hecho como Trabajo Práctico Integra
 
 ## Qué hay
 
-El diseño de la landing pública ([portfolio-paperfolio.pdf](../diseno/portfolio-paperfolio.pdf)), en estilo neo-brutalista. Todavía no hay código.
+El diseño de la landing pública ([portfolio-paperfolio.pdf](../diseno/portfolio-paperfolio.pdf)), en estilo neo-brutalista, y el scaffold del proyecto (Next.js, Tailwind y Vitest, ver [arquitectura](architecture.md)). Todavía no hay features.
 
 ## Qué viene
 

@@ -232,6 +232,16 @@
       "nombre": "tests",
       "siempre": true,
       "correr": "npx vitest related {archivos} --run --passWithNoTests"
+    },
+    {
+      "nombre": "tests-completos",
+      "cuando": [
+        "package.json",
+        "package-lock.json",
+        "vitest.config.ts",
+        "tsconfig.json"
+      ],
+      "correr": "npm test"
     }
   ],
   "obligatorios": [
