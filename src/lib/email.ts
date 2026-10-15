@@ -21,11 +21,6 @@ export type ClienteEmail = {
 // Remitente de pruebas de Resend: no hace falta verificar un dominio propio.
 const REMITENTE = "onboarding@resend.dev";
 
-/**
- * Avisa por email a `CONTACTO_EMAIL_DESTINO` de una consulta nueva (texto plano, con el email del
- * visitante como `replyTo`). Falla si falta la configuración o si Resend responde con error; el
- * mensaje del error nombra el tipo de error de Resend, nunca la clave ni datos del visitante.
- */
 /** Resend respondió con un error. El mensaje lleva solo su `name`, nunca datos del visitante. */
 export class EmailRechazadoError extends Error {
   name = "EmailRechazadoError";
@@ -41,6 +36,11 @@ const TIMEOUT_MS = 8000;
 // Caracteres de control y separadores de línea/párrafo: el nombre es texto libre del visitante.
 const CONTROL = /[\p{Cc}\p{Zl}\p{Zp}]+/gu;
 
+/**
+ * Avisa por email a `CONTACTO_EMAIL_DESTINO` de una consulta nueva (texto plano, con el email del
+ * visitante como `replyTo`). Falla si falta la configuración o si Resend responde con error; el
+ * mensaje del error nombra el tipo de error de Resend, nunca la clave ni datos del visitante.
+ */
 export async function avisarConsultaNueva(
   consulta: ConsultaCreada,
   cliente?: ClienteEmail,

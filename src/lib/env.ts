@@ -18,7 +18,7 @@ const esquemaSal = z.object({
 
 // RESEND_API_KEY y CONTACTO_EMAIL_DESTINO van aparte por lo mismo.
 const esquemaEmail = z.object({
-  RESEND_API_KEY: z.string({ error: "falta" }).startsWith("re_", { error: "debe empezar con re_" }),
+  RESEND_API_KEY: z.string({ error: "falta" }).trim().startsWith("re_", { error: "debe empezar con re_" }),
   CONTACTO_EMAIL_DESTINO: z.string({ error: "falta" }).trim().pipe(z.email({ error: "debe ser un email" })),
 });
 

@@ -83,6 +83,10 @@ describe("RESEND_API_KEY y CONTACTO_EMAIL_DESTINO", () => {
     );
   });
 
+  it("recorta los espacios de la clave", () => {
+    expect(leerEmailConfig({ ...ok, RESEND_API_KEY: " re_clave_de_prueba\n" }).RESEND_API_KEY).toBe("re_clave_de_prueba");
+  });
+
   it("no muestra el valor en el error", () => {
     let mensaje = "";
     try {
