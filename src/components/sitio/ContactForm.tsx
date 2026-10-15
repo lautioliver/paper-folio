@@ -68,7 +68,7 @@ export function ContactForm() {
 
   return (
     <form noValidate onSubmit={onSubmit} className="relative grid gap-5">
-      <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+      <div aria-hidden="true" inert className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
         <label htmlFor="sitio_web">No completes este campo</label>
         <input id="sitio_web" name="sitio_web" type="text" tabIndex={-1} autoComplete="off" />
       </div>
