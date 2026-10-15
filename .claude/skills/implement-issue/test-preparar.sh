@@ -39,6 +39,9 @@ export NPM_LOG="$TMP/npm.log"
 cat >"$TMP/bin/npm" <<'SH'
 #!/usr/bin/env bash
 echo "$(pwd -P)|$*" >>"$NPM_LOG"
+echo "npm falso: salida"
+# Con NPM_ASIGNA=<json del issue>, otra persona toma el issue mientras corre npm ci.
+[ -n "${NPM_ASIGNA:-}" ] && perl -pi -e 's/"assignees":\[\]/"assignees":[{"login":"otro"}]/' "$NPM_ASIGNA"
 mkdir -p node_modules
 [ -n "${NPM_FALLA:-}" ] && { echo "npm falso: falla" >&2; exit 1; }
 echo '{}' >node_modules/.package-lock.json
@@ -241,6 +244,20 @@ asignado 57 && es -f "$WT/57/node_modules/.package-lock.json"; afirmar $? "asign
 antes=$(wc -l <"$NPM_LOG")
 (cd "$TMP/proj" && "$PREPARAR" 57 --worktree >/dev/null 2>&1); c=$?
 es "$c" -eq 0 && es "$(wc -l <"$NPM_LOG")" -eq "$antes"; afirmar $? "al retomar con las dependencias instaladas no reinstala"
+grep -q "|ci .*--ignore-scripts" "$NPM_LOG"; afirmar $? "npm ci no corre los scripts de instalación de la rama"
+touch -t 203001010000 "$WT/57/package-lock.json"
+(cd "$TMP/proj" && "$PREPARAR" 57 --worktree >/dev/null 2>&1); c=$?
+es "$c" -eq 0 && es "$(wc -l <"$NPM_LOG")" -gt "$antes"; afirmar $? "si package-lock.json es más nuevo que lo instalado, reinstala"
+
+issue 60 "Salida limpia"
+s=$(cd "$TMP/proj" && "$PREPARAR" 60 --worktree 2>/dev/null); c=$?
+es "$c" -eq 0 && ! grep -q "npm falso: salida" <<<"$s" && grep -qx "Worktree: $WT/60" <<<"$s"
+afirmar $? "la salida de npm va a stderr: stdout queda para las líneas que leen los agentes"
+
+issue 59 "Lo toma otro"
+s=$(cd "$TMP/proj" && NPM_ASIGNA="$TMP/issues/59.json" "$PREPARAR" 59 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "otro" <<<"$s" && ! asignado 59
+afirmar $? "si otra persona toma el issue mientras corre npm ci, no lo asigna"
 
 issue 58 "Npm falla"
 s=$(cd "$TMP/proj" && NPM_FALLA=1 "$PREPARAR" 58 --worktree 2>&1); c=$?
