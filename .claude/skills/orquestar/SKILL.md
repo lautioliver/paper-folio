@@ -35,7 +35,7 @@ git -C <raíz> fetch -q origin        # una sola vez, antes de lanzar: fetch en 
 .claude/skills/implement-issue/preparar.sh <n> --worktree   # uno por issue, de a uno
 ```
 
-`preparar.sh` valida, asigna, crea el worktree en `../<repo>-wt/<n>` e imprime `Worktree: <ruta>`. Si falla para un issue, no lo lances y anotalo para el mensaje final.
+`preparar.sh` valida, crea el worktree en `../<repo>-wt/<n>`, instala las dependencias si hay `package-lock.json` (`npm ci --ignore-scripts`: cada issue suma una instalación), asigna e imprime `Worktree: <ruta>`. Si falla para un issue, no lo lances y anotalo para el mensaje final.
 
 Lanzá los subagentes en paralelo, en un solo mensaje, con la herramienta Agent: `subagent_type` `implementador-liviano` (Haiku) o `implementador` (Sonnet). Sin `isolation`: el worktree ya existe. En el prompt: número de issue, ruta del worktree, rama base (`BASE=<base>`), `agente_sha` (`git log -1 --format=%H -- .claude/agents/<rol>.md` en tu checkout: es la versión que corre, aunque el worktree tenga otra), `skill_sha` (lo mismo con `.claude/skills/implement-issue/SKILL.md`) y que siga su definición. Al revisor: número de PR, la ruta del checkout del orquestador, `agente_sha` de `revisor.md` y `skill_sha` (`git log -1 --format=%H -- .claude/skills/review-pr/SKILL.md`). **Nunca más de 3 implementando a la vez**, contando los relanzados.
 

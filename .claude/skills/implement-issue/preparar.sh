@@ -23,6 +23,9 @@ haya cambiado; si hay más de una, falla y las lista) e imprime el issue con su 
                 git -C <ruta>: si el directorio actual se reinicia entre comandos,
                 commitearías en el checkout principal.
               - Si la rama ya está en otro worktree, falla sin asignar.
+              - Si hay package-lock.json, corre npm ci --ignore-scripts en el worktree
+                antes de asignar (verificar.py lo necesita), y de nuevo si el lock es
+                más nuevo que lo instalado. Si falla, no asigna; reintentá igual.
               - Con el PR mergeado, borralo con: git worktree remove <ruta>
 AYUDA
   exit 0
@@ -51,6 +54,15 @@ YO=$(gh api user -q .login)
 
 issue=$(gh api "repos/$REPO/issues/$N")
 error() { echo "NO SE PUEDE TOMAR #$N: $*" >&2; exit 1; }
+# Justo antes de asignar se vuelve a leer el issue: entre la primera lectura y la asignación
+# pasan el fetch, el worktree y npm ci, y en ese rato otra persona lo puede haber tomado.
+releer_asignados() {
+  local otros
+  otros=$(gh api "repos/$REPO/issues/$N" | jq -r --arg yo "$YO" '[.assignees[].login | select(. != $yo)] | join(", ")') \
+    || error "no pude volver a leer el issue antes de asignarlo (¿red o rate limit?).${WT:+ El worktree $WT queda creado;} reintentá con el mismo comando."
+  [ -z "$otros" ] || error "mientras lo preparaba lo tomó $otros.${WT:+ El worktree $WT queda creado; si no lo vas a usar: git worktree remove $WT}"
+}
+NPM="${NPM:-npm}"
 
 [ "$(jq -r '.pull_request // empty' <<<"$issue")" ] && error "es un PR, no un issue."
 [ "$(jq -r .state <<<"$issue")" = "open" ] || error "está cerrado."
@@ -167,6 +179,7 @@ if [ -z "$WORKTREE" ]; then
   else
     git switch -q -c "$RAMA" "origin/$BASE"; echo "Rama nueva: $RAMA (desde origin/$BASE)"
   fi
+  releer_asignados
   gh issue edit "$N" -R "$REPO" --add-assignee @me >/dev/null
   echo "Asignado a @$YO."
   exit 0
@@ -180,6 +193,14 @@ elif [ -e "$WT" ]; then
   error "$WT ya existe y no es el worktree de $RAMA."
 fi
 traer
+# Sin npm y con package-lock.json en lo que se va a sacar, se frena antes de crear el worktree.
+if ! command -v "$NPM" >/dev/null; then
+  if git show-ref -q --verify "refs/heads/$RAMA"; then ref="$RAMA"
+  elif [ -n "$SOLO_REMOTA" ]; then ref="origin/$RAMA"
+  else ref="origin/$BASE"; fi
+  git cat-file -e "$ref:package-lock.json" 2>/dev/null \
+    && error "el repo usa npm (package-lock.json) y npm no está instalado. Instalá Node (ver docs/development/setup.md) y reintentá."
+fi
 if [ -n "$en_uso" ]; then
   echo "Rama existente: $RAMA (retomando)"; atrasada
 elif git show-ref -q --verify "refs/heads/$RAMA"; then
@@ -192,6 +213,17 @@ else
   mkdir -p "$(dirname "$WT")"; git worktree add -q --no-track -b "$RAMA" "$WT" "origin/$BASE"
   echo "Rama nueva: $RAMA (desde origin/$BASE)"
 fi
+# Dependencias de npm: verificar.py corre lint, typecheck y tests, que las necesitan. npm escribe
+# node_modules/.package-lock.json recién al terminar bien: sin él (instalación a medias) o si
+# package-lock.json es más nuevo (cambiaron las dependencias), se instala. Todo a stderr: stdout
+# es de las líneas que leen los agentes. --ignore-scripts: la rama puede venir de origin sin revisar.
+lock="$WT/package-lock.json"; instalado="$WT/node_modules/.package-lock.json"
+if [ -f "$lock" ] && { [ ! -f "$instalado" ] || [ "$lock" -nt "$instalado" ]; }; then
+  echo "Instalando dependencias (npm ci)…" >&2
+  (cd "$WT" && "$NPM" ci --ignore-scripts --no-audit --no-fund --loglevel=error) >&2 \
+    || error "npm ci falló en $WT. Revisá el error, y reintentá con el mismo comando: el worktree ya está creado."
+fi
+releer_asignados
 gh issue edit "$N" -R "$REPO" --add-assignee @me >/dev/null
 echo "Worktree: $WT"
 echo "Asignado a @$YO."

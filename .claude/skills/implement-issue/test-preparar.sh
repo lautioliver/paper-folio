@@ -25,13 +25,35 @@ case "$*" in
   api\ repos/o/r/issues/*/dependencies/*) echo '[]' ;;
   api\ repos/o/r/issues/*/parent*) exit 1 ;;
   api\ repos/o/r/issues/*/comments*) ;;
-  api\ repos/o/r/issues/*) cat "$GH_ISSUES/${2##*/}.json" ;;
+  api\ repos/o/r/issues/*)
+    # Con GH_ASIGNA_AL_RELEER=<json>, la segunda lectura de ese issue ya lo tiene asignado a otro.
+    if [ "${GH_ASIGNA_AL_RELEER:-}" = "$GH_ISSUES/${2##*/}.json" ]; then
+      if [ -f "$GH_ISSUES/releido" ]; then perl -pi -e 's/"assignees":\[\]/"assignees":[{"login":"otro"}]/' "$GH_ASIGNA_AL_RELEER"; else : >"$GH_ISSUES/releido"; fi
+    fi
+    cat "$GH_ISSUES/${2##*/}.json" ;;
   "issue edit"*) ;;
   "pr list"*) r=$(sed -E 's/.*--head ([^ ]+).*/\1/' <<<"$*"); [ -f "$GH_ISSUES/pr-${r//\//_}" ] && cat "$GH_ISSUES/pr-${r//\//_}" ;;
   *) echo "gh falso: $*" >&2; exit 1 ;;
 esac
 SH
 chmod +x "$TMP/bin/gh"
+# npm falso: registra "<dir>|<args>". Con NPM_FALLA deja node_modules a medias (sin el
+# .package-lock.json que npm escribe al terminar) y falla.
+export NPM_LOG="$TMP/npm.log"
+: >"$NPM_LOG"
+cat >"$TMP/bin/npm" <<'SH'
+#!/usr/bin/env bash
+echo "$(pwd -P)|$*" >>"$NPM_LOG"
+echo "npm falso: salida"
+# Con NPM_ASIGNA=<json del issue>, otra persona toma el issue mientras corre npm ci.
+# Con NPM_BORRA=<json del issue>, el issue deja de poder leerse (gh falla al releerlo).
+[ -n "${NPM_BORRA:-}" ] && rm -f "$NPM_BORRA"
+[ -n "${NPM_ASIGNA:-}" ] && perl -pi -e 's/"assignees":\[\]/"assignees":[{"login":"otro"}]/' "$NPM_ASIGNA"
+mkdir -p node_modules
+[ -n "${NPM_FALLA:-}" ] && { echo "npm falso: falla" >&2; exit 1; }
+echo '{}' >node_modules/.package-lock.json
+SH
+chmod +x "$TMP/bin/npm"
 # Aislado de la config de git de quien corre los tests (firma de commits, hooks globales…).
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export PATH="$TMP/bin:$PATH" BASE=main GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=t@t
@@ -217,6 +239,60 @@ s=$(cd "$TMP/proj" && "$PREPARAR" 56 2>&1); c=$?
 git -C "$TMP/proj" remote set-url origin "$TMP/remoto.git"
 es "$c" -ne 0 && ! asignado 56 && ! git -C "$TMP/proj" show-ref -q --verify refs/heads/claude/56-sin-remoto
 afirmar $? "si no puede consultar las ramas de origin, falla sin asignar ni crear una rama nueva"
+
+# 11. Dependencias de npm en el worktree (#9): con package-lock.json, npm ci antes de asignar.
+! [ -s "$NPM_LOG" ]; afirmar $? "sin package-lock.json no llama a npm"
+(cd "$TMP/proj" && echo '{}' >package-lock.json && echo node_modules/ >.gitignore && git add package-lock.json .gitignore && git commit -qm lock && git push -q origin main) 2>/dev/null
+issue 57 "Con dependencias"
+s=$(cd "$TMP/proj" && "$PREPARAR" 57 --worktree 2>&1); c=$?
+afirmar $c "--worktree con package-lock.json termina bien"
+grep -qx "$WT/57|ci.*" "$NPM_LOG"; afirmar $? "corre npm ci adentro del worktree"
+asignado 57 && es -f "$WT/57/node_modules/.package-lock.json"; afirmar $? "asigna con las dependencias instaladas"
+antes=$(wc -l <"$NPM_LOG")
+(cd "$TMP/proj" && "$PREPARAR" 57 --worktree >/dev/null 2>&1); c=$?
+es "$c" -eq 0 && es "$(wc -l <"$NPM_LOG")" -eq "$antes"; afirmar $? "al retomar con las dependencias instaladas no reinstala"
+grep -q "|ci .*--ignore-scripts" "$NPM_LOG"; afirmar $? "npm ci no corre los scripts de instalación de la rama"
+touch -t 203001010000 "$WT/57/package-lock.json"
+(cd "$TMP/proj" && "$PREPARAR" 57 --worktree >/dev/null 2>&1); c=$?
+es "$c" -eq 0 && es "$(wc -l <"$NPM_LOG")" -gt "$antes"; afirmar $? "si package-lock.json es más nuevo que lo instalado, reinstala"
+
+issue 60 "Salida limpia"
+s=$(cd "$TMP/proj" && "$PREPARAR" 60 --worktree 2>/dev/null); c=$?
+es "$c" -eq 0 && ! grep -q "npm falso: salida" <<<"$s" && grep -qx "Worktree: $WT/60" <<<"$s"
+afirmar $? "la salida de npm va a stderr: stdout queda para las líneas que leen los agentes"
+
+issue 59 "Lo toma otro"
+s=$(cd "$TMP/proj" && NPM_ASIGNA="$TMP/issues/59.json" "$PREPARAR" 59 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "otro" <<<"$s" && ! asignado 59
+afirmar $? "si otra persona toma el issue mientras corre npm ci, no lo asigna"
+
+issue 61 "Gh falla al releer"
+s=$(cd "$TMP/proj" && NPM_BORRA="$TMP/issues/61.json" "$PREPARAR" 61 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "NO SE PUEDE TOMAR #61" <<<"$s" && grep -q "reintentá" <<<"$s" && ! asignado 61
+afirmar $? "si no puede volver a leer el issue antes de asignar, falla con el mensaje de reintento y sin asignar"
+
+issue 62 "Sin npm"
+s=$(cd "$TMP/proj" && NPM=npm-que-no-existe "$PREPARAR" 62 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "npm no está instalado" <<<"$s" && ! [ -e "$WT/62" ] && ! asignado 62
+afirmar $? "sin npm y con package-lock.json, falla antes de crear el worktree"
+
+issue 63 "Ya instalado y lo toma otro"
+(cd "$TMP/proj" && "$PREPARAR" 63 --worktree >/dev/null 2>&1)
+: >"$GH_LOG"
+# Retoma con las dependencias al día (no instala) y otra persona se asigna entre la primera
+# lectura del issue y la segunda: el releer tiene que estar antes de asignar, instale o no.
+s=$(cd "$TMP/proj" && GH_ASIGNA_AL_RELEER="$TMP/issues/63.json" "$PREPARAR" 63 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "otro" <<<"$s" && ! grep -q "^issue edit 63 .*--add-assignee" "$GH_LOG"
+afirmar $? "vuelve a mirar los asignados antes de asignar aunque no haya instalado nada"
+
+issue 58 "Npm falla"
+s=$(cd "$TMP/proj" && NPM_FALLA=1 "$PREPARAR" 58 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "npm ci" <<<"$s"; afirmar $? "si npm ci falla, sale con error y lo dice"
+! asignado 58; afirmar $? "si npm ci falla, no asigna"
+antes=$(wc -l <"$NPM_LOG")
+s=$(cd "$TMP/proj" && "$PREPARAR" 58 --worktree 2>&1); c=$?
+es "$c" -eq 0 && es "$(wc -l <"$NPM_LOG")" -gt "$antes" && asignado 58
+afirmar $? "después de una instalación a medias, reintenta npm ci y asigna"
 
 # Plantilla sin inicializar (BASE=main) y sin BASE: usa la rama por defecto del remoto y avisa.
 # Después del init la base ya está configurada (puede ser develop, que este remoto no tiene) y estos
