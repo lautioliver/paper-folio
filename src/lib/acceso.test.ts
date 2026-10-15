@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso } from "./acceso";
+import { evaluarAcceso, rutaInterna } from "./acceso";
 
 const base: Record<string, Rol> = { u1: "usuario", o1: "operador", a1: "admin" };
 const buscarRol = async (id: string) => base[id] ?? null;
@@ -27,11 +27,34 @@ describe("evaluarAcceso", () => {
     expect(await evaluarAcceso(sesion("u1", "admin"), PANEL, buscarRol)).toEqual({ ok: false, motivo: "sin-permiso" });
   });
 
-  it("si el usuario ya no existe en la base → sin-sesion", async () => {
-    expect(await evaluarAcceso(sesion("borrado", "admin"), PANEL, buscarRol)).toEqual({ ok: false, motivo: "sin-sesion" });
+  it("si el usuario ya no existe en la base → sesion-huerfana", async () => {
+    expect(await evaluarAcceso(sesion("borrado", "admin"), PANEL, buscarRol)).toEqual({ ok: false, motivo: "sesion-huerfana" });
   });
 
   it("sin roles pedidos alcanza con tener sesión de un usuario existente", async () => {
     expect(await evaluarAcceso(sesion("u1", "usuario"), [], buscarRol)).toEqual({ ok: true, id: "u1", rol: "usuario" });
+  });
+});
+
+describe("evaluarAcceso con usuario borrado", () => {
+  it("sesión válida pero el usuario ya no existe → sesion-huerfana (no sin-sesion, para no rebotar con /ingresar)", async () => {
+    expect(await evaluarAcceso({ user: { id: "borrado", rol: "admin" } }, ["admin"], async () => null)).toEqual({
+      ok: false,
+      motivo: "sesion-huerfana",
+    });
+  });
+});
+
+describe("rutaInterna", () => {
+  it.each([
+    ["/proyectos/ucanode", "/proyectos/ucanode"],
+    ["/panel?x=1", "/panel?x=1"],
+    ["//evil.com", "/"],
+    ["/\\evil.com", "/"],
+    ["https://evil.com", "/"],
+    ["javascript:alert(1)", "/"],
+    ["", "/"],
+  ])("%s → %s", (entrada, salida) => {
+    expect(rutaInterna(entrada)).toBe(salida);
   });
 });

@@ -94,7 +94,14 @@ describe("registrarIngreso", () => {
 describe("buscarRol", () => {
   it("devuelve el rol guardado en la base", async () => {
     const r = await registrarIngreso({ email: "ope@example.com" }, listas);
-    expect(await buscarRol(r.id)).toBe("operador");
+    expect(await buscarRol(r.id, listas)).toBe("operador");
+  });
+
+  it("recalcula el rol con las listas vigentes: si lo sacan de ADMIN_EMAILS deja de ser admin sin volver a ingresar", async () => {
+    const r = await registrarIngreso({ email: "admin@example.com" }, listas);
+    expect(await buscarRol(r.id, listas)).toBe("admin");
+    expect(await buscarRol(r.id, { admin: "", operador: "" })).toBe("usuario");
+    expect(await buscarRol(r.id, { admin: "", operador: "admin@example.com" })).toBe("operador");
   });
 
   it("devuelve null si el usuario no existe o el id no es válido", async () => {

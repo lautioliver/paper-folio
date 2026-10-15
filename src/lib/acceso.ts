@@ -21,3 +21,8 @@ export async function evaluarAcceso(
   if (roles.length > 0 && !roles.includes(rol)) return { ok: false, motivo: "sin-permiso" };
   return { ok: true, id, rol };
 }
+
+// Stub: el test se escribe antes que la lógica.
+export function rutaInterna(ruta: string): string {
+  return ruta;
+}

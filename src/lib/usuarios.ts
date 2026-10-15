@@ -70,7 +70,7 @@ export async function registrarIngreso(
 }
 
 /** Rol guardado en la base (la fuente de verdad para el panel). `null` si no existe. */
-export async function buscarRol(id: string): Promise<Rol | null> {
+export async function buscarRol(id: string, _listas: ListasDeRoles = leerAuthRoles()): Promise<Rol | null> {
   if (!mongoose.isValidObjectId(id)) return null;
   await conectar();
   const doc = await Usuario.findById(id, { rol: 1 }).lean();
