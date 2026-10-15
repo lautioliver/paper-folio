@@ -8,7 +8,7 @@ Stack: [ADR-001](../decisions/ADR-001-stack.md). Hoy existe el scaffold: un proy
 
 - **Next.js 16.4** con React 19 y TypeScript estricto. `next.config.ts` deja activos `cacheComponents` y `partialPrefetching`, que vienen por defecto en `create-next-app`.
 - **Tailwind 4**, procesado por `@tailwindcss/turbopack` (configurado en `next.config.ts`; no hay `postcss.config`). Los estilos globales están en `src/styles/globals.css` y los importa `src/app/layout.tsx`.
-- **Fuentes:** Space Grotesk con `next/font/google`. Es provisoria: la define el manual de marca.
+- **Fuente:** Onest con `next/font/google`, la del diseño (identificada en el manual de marca, #18).
 - **MongoDB con Mongoose 9.** `src/lib/db.ts` exporta `conectar()`, que abre la conexión una vez y la reusa (se cachea en `globalThis`, para serverless y para las recargas de `next dev`). Las variables las valida con Zod `src/lib/env.ts`. Todavía no hay modelos: cada feature crea los suyos en `src/models/`.
 - **`GET /api/salud`:** `200 { ok: true }` si la base responde a un ping; si no, `503` con `{ error: { codigo, mensaje } }`, sin el detalle del fallo.
 - **ESLint 9** con `eslint-config-next` (core-web-vitals + TypeScript), en `eslint.config.mjs`.
@@ -20,23 +20,32 @@ Stack: [ADR-001](../decisions/ADR-001-stack.md). Hoy existe el scaffold: un proy
 src/
   app/
     layout.tsx        # html lang="es-AR", fuentes, metadata desde siteConfig
-    (sitio)/page.tsx  # portada (sitio público)
+    (sitio)/page.tsx  # landing: arma las secciones de components/sitio
     api/salud/route.ts # health check de la base
   components/         # componentes de UI compartidos
+    sitio/            # secciones de la landing, formulario de contacto, ilustraciones
+  content/profile.ts  # datos del PoC (#18): perfil y repos públicos de GitHub
   lib/                # utilidades y servicios
   styles/globals.css  # Tailwind y tokens
 ```
 
 Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` y `panel/` llegan con sus features.
 
+## Landing (PoC, #18)
+
+- **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `StackBand`, `Reveal` y `ContactForm` son de cliente.
+- **Contenido** estático en `src/content/profile.ts`, con datos públicos de GitHub. Lo reemplaza el CRUD del admin (hito 5).
+- **Formulario de contacto:** valida con `parseContactRequest` (`src/lib/contact.ts`, Zod), la misma regla que va a usar el servidor, pero todavía no envía. El envío por email llega con el hito 2.
+- **Movimiento:** `Reveal` marca `data-visible` con IntersectionObserver (entrada al hacer scroll) y la banda del stack se desplaza con CSS (se pausa con un botón o con el hover). Sin JS el contenido se ve; con `prefers-reduced-motion` todo queda fijo.
+
 ## Tokens de diseño
 
 **Provisorios.** Los valores salen de `docs/diseno/portfolio-paperfolio.pdf`, muestreados del render, y los reemplaza el manual de marca (hito 0). Viven en `src/styles/globals.css` (`@theme`), y son el único lugar con HEX: en `src/**/*.tsx` no hay colores sueltos.
 
 - **Colores** (nombres semánticos, no por tono): `primario` (amarillo), `acento` (coral), `secundario` (azul), `terciario` (índigo), `tinta` (negro), `papel` (blanco), `superficie` (gris claro). Se usan como `bg-primario`, `text-tinta`, etc.
-- **Tipografía:** Space Grotesk (`font-sans`, con `next/font/google`). Escala: `text-h1`, `text-h2`, `text-h3`, `text-cuerpo`, `text-pequeno`.
+- **Tipografía:** Onest (`font-sans`, con `next/font/google`). Escala: `text-h1`, `text-h2`, `text-h3`, `text-cuerpo`, `text-pequeno`.
 - **Estilo neo-brutalista:** `--borde-marca` (2px, con `border-(length:--borde-marca)`), `rounded-marca` y `shadow-marca` (sombra dura de 4px en `tinta`).
-- **Uso de referencia:** la portada aplica los tokens en el título y en un botón.
+- **Utilidades de marca:** `contorno` (borde y radio, para tarjetas), `marca` (contorno más la sombra dura) y `apretable` (el botón se "aprieta" en hover y active), definidas con `@utility` en `globals.css`.
 - Las pruebas que los exigen están en `src/styles/tokens.test.ts`.
 
 Ver [módulos](../reference/modules.md) y [superficies](../reference/surfaces.md).
