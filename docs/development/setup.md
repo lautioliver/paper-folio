@@ -37,7 +37,10 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 | `MONGODB_DB` | Nombre de la base: `paperfolio-dev` en desarrollo, `paperfolio` en producción. Obligatoria |
 | `IP_HASH_SAL` | Sal del hash SHA-256 de la IP de las consultas de contacto (mínimo 16 caracteres; `openssl rand -hex 32`). Obligatoria para guardar consultas; `/api/salud` no la pide |
 
-`src/lib/env.ts` las valida con Zod cada vez que se leen (`IP_HASH_SAL` aparte, así la base y `/api/salud` no la exigen). Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
+| `RESEND_API_KEY` | Clave de la API de Resend (empieza con `re_`). Se saca en [resend.com/api-keys](https://resend.com/api-keys) (Create API Key, permiso de envío). Obligatoria para mandar el aviso de cada consulta; sin ella la consulta se guarda igual con `emailEnviado: false` |
+| `CONTACTO_EMAIL_DESTINO` | Email que recibe el aviso de cada consulta nueva. Con el remitente de pruebas `onboarding@resend.dev`, Resend solo entrega al email con el que se creó la cuenta. Va solo en `.env.local` y en las variables de Vercel, nunca en el repo |
+
+`src/lib/env.ts` las valida con Zod cada vez que se leen (`IP_HASH_SAL`, `RESEND_API_KEY` y `CONTACTO_EMAIL_DESTINO` aparte, así la base y `/api/salud` no las exigen). Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
 
 ### Crear el cluster de Atlas
 

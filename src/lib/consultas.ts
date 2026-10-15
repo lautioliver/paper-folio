@@ -4,6 +4,7 @@ import { Consulta } from "@/models/Consulta";
 import type { ContactField, ContactRequest } from "./contact";
 import { parseContactRequest } from "./contact";
 import { conectar } from "./db";
+import { avisarConsultaNueva } from "./email";
 import { leerIpHashSal } from "./env";
 
 export const LIMITE_POR_HORA = 5;
@@ -20,7 +21,11 @@ export type ResultadoConsulta =
 export type OpcionesConsulta = {
   /** IP del visitante. Solo se guarda su hash SHA-256 con `IP_HASH_SAL`. */
   ip: string;
-  /** Se llama con la consulta ya guardada (el email, issue B). Por ahora no hace nada. */
+  /**
+   * Se llama con la consulta ya guardada; por defecto manda el email (`avisarConsultaNueva`).
+   * Si sale bien, la consulta queda con `emailEnviado: true`; si falla, queda en `false` y igual
+   * se devuelve `creada`.
+   */
   avisar?: (consulta: ConsultaCreada) => Promise<void> | void;
   /** Reloj inyectable para los tests. */
   ahora?: () => Date;
@@ -92,6 +97,15 @@ export async function crearConsulta(input: unknown, opciones: OpcionesConsulta):
     creadaEn: ahora,
   });
   const consulta: ConsultaCreada = { id: String(doc._id), ...parsed.data };
-  await opciones.avisar?.(consulta);
+  try {
+    await (opciones.avisar ?? avisarConsultaNueva)(consulta);
+    await Consulta.findByIdAndUpdate(doc._id, { emailEnviado: true });
+  } catch (error) {
+    // Solo el nombre del error: el mensaje puede traer la clave o datos del visitante.
+    console.error(
+      "crearConsulta: no se pudo avisar la consulta nueva por email:",
+      error instanceof Error ? error.name : "error",
+    );
+  }
   return { tipo: "creada", consulta };
 }
