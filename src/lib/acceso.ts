@@ -32,3 +32,10 @@ export function rutaInterna(ruta: string): string {
   // Sin espacios ni caracteres de control: el navegador descarta tabs y saltos ("/\t/host" → "//host").
   return /^\/(?![/\\])[^\s\u0000-\u001f\u007f]*$/.test(ruta) ? ruta : "/";
 }
+
+/** URL de `/ingresar` para volver a `volverA` después de ingresar (stub). */
+export function urlDeIngreso(volverA: string, motivo?: "sin-sesion" | "sin-permiso" | "sesion-huerfana"): string {
+  void volverA;
+  void motivo;
+  return "";
+}

@@ -67,6 +67,13 @@ export const services: Service[] = [
   },
 ];
 
+export type CasoDeEstudio = {
+  problema: string;
+  solucion: string;
+  funcionalidades: string[];
+  stack: string[];
+};
+
 export type Project = {
   slug: string;
   initial: string;
@@ -77,6 +84,7 @@ export type Project = {
   demoUrl: string;
   repoUrl: string;
   accent: Tone;
+  caso: CasoDeEstudio;
 };
 
 export const projects: Project[] = [
@@ -91,6 +99,7 @@ export const projects: Project[] = [
     demoUrl: "https://ucanode.app",
     repoUrl: "https://github.com/lautioliver/UcaNode",
     accent: "terciario",
+    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
   },
   {
     slug: "numerika-ai",
@@ -103,6 +112,7 @@ export const projects: Project[] = [
     demoUrl: "https://numerika-ai.vercel.app",
     repoUrl: "https://github.com/lautioliver/numerika-ai",
     accent: "secundario",
+    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
   },
   {
     slug: "campustatus",
@@ -115,6 +125,7 @@ export const projects: Project[] = [
     demoUrl: "https://campu-status.vercel.app",
     repoUrl: "https://github.com/lautioliver/CampuStatus",
     accent: "acento",
+    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
   },
   {
     slug: "barrilete-kit",
@@ -127,6 +138,7 @@ export const projects: Project[] = [
     demoUrl: "https://barrilete-kit-lp-5n68.vercel.app",
     repoUrl: "https://github.com/lautioliver/barrilete-kit",
     accent: "primario",
+    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
   },
 ];
 
