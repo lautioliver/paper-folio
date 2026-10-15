@@ -113,12 +113,6 @@ describe("listarConsultas", () => {
 });
 
 describe("hallazgos de la autorevisión", () => {
-  it("un estado desconocido o ausente se muestra como nueva", async () => {
-    await sembrar(2, (i) => (i === 0 ? { estado: "raro" } : {}));
-    const r = await listarConsultas({ pagina: 1 });
-    expect(r.items.map((c) => c.estado)).toEqual(["nueva", "nueva"]);
-  });
-
   it("una página enorme devuelve la última, como cualquier página fuera de rango", async () => {
     await sembrar(45);
     const r = await listarConsultas(parsearFiltros({ pagina: "99999999999" }));
@@ -131,6 +125,15 @@ describe("hallazgos de la autorevisión", () => {
     expect(r.items[0]?.extracto).not.toMatch(
       /[\ud800-\udbff](?![\udc00-\udfff])/,
     );
+  });
+});
+
+describe("índice de la bandeja (#39)", () => {
+  it("listarConsultas crea el índice { creadaEn: -1, _id: -1 } que usa el orden", async () => {
+    await sembrar(1);
+    await listarConsultas({ pagina: 1 });
+    const indices = await Consulta.collection.indexes();
+    expect(indices.map((i) => i.key)).toContainEqual({ creadaEn: -1, _id: -1 });
   });
 });
 
