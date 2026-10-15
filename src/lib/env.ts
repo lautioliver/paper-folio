@@ -34,7 +34,9 @@ export function leerIpHashSal(fuente: Record<string, string | undefined> = proce
 function validar<T extends z.ZodType>(schema: T, fuente: Record<string, string | undefined>): z.infer<T> {
   const resultado = schema.safeParse(fuente);
   if (!resultado.success) {
-    const problemas = resultado.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    const problemas = resultado.error.issues
+      .map((i) => `${i.path.join(".")}: ${i.message}`)
+      .join("; ");
     throw new EnvInvalidoError(`Variables de entorno inválidas: ${problemas}`);
   }
   return resultado.data;

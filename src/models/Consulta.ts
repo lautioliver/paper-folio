@@ -1,4 +1,4 @@
-import mongoose, { Schema, type InferSchemaType } from "mongoose";
+import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
 import { CONTACT_TYPES } from "@/lib/contact";
 
 const consultaSchema = new Schema(
@@ -25,4 +25,6 @@ consultaSchema.index({ ipHash: 1, creadaEn: -1 });
 
 export type ConsultaDoc = InferSchemaType<typeof consultaSchema>;
 
-export const Consulta = mongoose.models.Consulta ?? mongoose.model<ConsultaDoc>("Consulta", consultaSchema);
+export const Consulta: Model<ConsultaDoc> =
+  (mongoose.models.Consulta as Model<ConsultaDoc> | undefined) ??
+  mongoose.model<ConsultaDoc>("Consulta", consultaSchema);
