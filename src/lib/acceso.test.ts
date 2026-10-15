@@ -54,7 +54,10 @@ describe("rutaInterna", () => {
     ["https://evil.com", "/"],
     ["javascript:alert(1)", "/"],
     ["", "/"],
-  ])("%s → %s", (entrada, salida) => {
+    ["/\t/evil.com", "/"],
+    ["/\n/evil.com", "/"],
+    ["/ok con espacio", "/"],
+  ])("%j → %s", (entrada, salida) => {
     expect(rutaInterna(entrada)).toBe(salida);
   });
 });
