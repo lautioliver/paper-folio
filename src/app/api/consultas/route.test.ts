@@ -93,10 +93,32 @@ describe("POST /api/consultas", () => {
   });
 
   it("cuenta por el primer valor de x-forwarded-for y usa x-real-ip si falta", async () => {
-    for (let i = 0; i < 5; i++) await pedir(valida, `203.0.113.7, 10.0.0.${i}`);
+    for (let i = 0; i < 5; i++) expect((await pedir(valida, `203.0.113.7, 10.0.0.${i}`)).status).toBe(201);
     expect((await pedir(valida, "203.0.113.7, 10.9.9.9")).status).toBe(429);
-    for (let i = 0; i < 5; i++) await pedir(valida, null, { "x-real-ip": "198.51.100.4" });
+    for (let i = 0; i < 5; i++) {
+      expect((await pedir(valida, null, { "x-real-ip": "198.51.100.4" })).status).toBe(201);
+    }
     expect((await pedir(valida, null, { "x-real-ip": "198.51.100.4" })).status).toBe(429);
+  });
+
+  it("415 TIPO_NO_SOPORTADO si el Content-Type no es application/json, sin guardar", async () => {
+    for (const tipo of ["text/plain", "application/x-www-form-urlencoded", ""]) {
+      const res = await POST(
+        new Request("http://localhost/api/consultas", {
+          method: "POST",
+          headers: { "content-type": tipo, "x-forwarded-for": "203.0.113.7" },
+          body: JSON.stringify(valida),
+        }),
+      );
+      expect(res.status).toBe(415);
+      expect((await res.json()).error.codigo).toBe("TIPO_NO_SOPORTADO");
+    }
+    expect(await Consulta.countDocuments()).toBe(0);
+  });
+
+  it("acepta application/json con charset", async () => {
+    const res = await pedir(valida, "203.0.113.7", { "content-type": "application/json; charset=utf-8" });
+    expect(res.status).toBe(201);
   });
 
   it("400 IP_NO_DETECTADA sin IP, sin guardar y sin caer en un balde compartido", async () => {
@@ -121,7 +143,9 @@ describe("POST /api/consultas", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await pedir(valida);
     expect(res.status).toBe(503);
-    const texto = JSON.stringify(await res.json()) + JSON.stringify(log.mock.calls);
+    const cuerpo = await res.json();
+    expect(cuerpo.error.codigo).toBe("CONFIGURACION_INVALIDA");
+    const texto = JSON.stringify(cuerpo) + JSON.stringify(log.mock.calls);
     expect(texto).not.toContain("clave-secreta");
   });
 
