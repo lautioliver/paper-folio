@@ -1,5 +1,5 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { desconectar } from "@/lib/db";
 import { GET } from "./route";
 
@@ -34,4 +34,22 @@ describe("GET /api/salud", () => {
     expect(cuerpo.error.mensaje).toEqual(expect.any(String));
     expect(JSON.stringify(cuerpo)).not.toContain("127.0.0.1");
   }, 15_000); // conectar() espera hasta 5 s a que el servidor responda
+
+  it("distingue una configuración inválida del corte de la base y no filtra valores", async () => {
+    await desconectar();
+    const uri = process.env.MONGODB_URI;
+    process.env.MONGODB_URI = "postgres://usuario:clave-secreta@host/db";
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(503);
+      expect((await res.json()).error.codigo).toBe("CONFIGURACION_INVALIDA");
+      const logueado = JSON.stringify(log.mock.calls);
+      expect(logueado).toContain("MONGODB_URI");
+      expect(logueado).not.toContain("clave-secreta");
+    } finally {
+      log.mockRestore();
+      process.env.MONGODB_URI = uri;
+    }
+  });
 });

@@ -48,6 +48,28 @@ describe("conectar", () => {
     expect(m.connection.readyState).toBe(1);
   });
 
+  it("no abre otro cliente durante un corte: el driver reintenta solo", async () => {
+    const propio = await MongoMemoryServer.create();
+    process.env.MONGODB_URI = propio.getUri();
+    try {
+      const m = await conectar();
+      const cliente = m.connection.getClient();
+      const spy = vi.spyOn(mongoose, "connect");
+      await propio.stop({ doCleanup: false });
+      for (let i = 0; i < 100 && m.connection.readyState !== 0; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      expect(m.connection.readyState).toBe(0);
+      await conectar().catch(() => {});
+      expect(spy).not.toHaveBeenCalled();
+      expect(m.connection.getClient()).toBe(cliente);
+    } finally {
+      process.env.MONGODB_URI = servidor.getUri();
+      await desconectar();
+      await propio.stop();
+    }
+  }, 30_000);
+
   it("no loguea la URI", async () => {
     const espias = (["log", "info", "warn", "error", "debug"] as const).map((n) =>
       vi.spyOn(console, n).mockImplementation(() => {}),
