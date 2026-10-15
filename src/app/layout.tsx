@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Onest } from "next/font/google";
 import { siteConfig } from "@/lib/site";
 import "@/styles/globals.css";
 
-// Fuente provisoria (issue #7): la define el manual de marca.
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+// Onest: la fuente del diseño, identificada en el manual de marca (#18).
+const onest = Onest({
+  variable: "--font-onest",
   subsets: ["latin"],
 });
 
@@ -18,7 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es-AR"
-      className={`${spaceGrotesk.variable} h-full antialiased`}
+      className={`${onest.variable} h-full scroll-pt-24 antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>

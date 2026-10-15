@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Tokens de diseño PROVISORIOS (issue #7). Los valores salen de docs/diseno/portfolio-paperfolio.pdf
+ * Tokens de diseño PROVISORIOS (issue #7; fuente Onest desde #18). Los valores salen de docs/diseno/portfolio-paperfolio.pdf
  * (muestreados del render, no de la especificación) y los reemplaza el manual de marca (hito 0).
  * Nombres semánticos: nunca por tono. Los HEX viven solo en este archivo.
  */
@@ -31,5 +31,84 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-space-grotesk);
+  --font-sans: var(--font-onest);
+}
+
+/* Pieza de marca: contorno, radio y sombra dura. */
+@utility marca {
+  border: var(--borde-marca) solid var(--color-tinta);
+  border-radius: var(--radius-marca);
+  box-shadow: var(--shadow-marca);
+}
+
+/* Botón que se "aprieta": la sombra baja y la pieza se corre. */
+@utility apretable {
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+  &:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--color-tinta);
+  }
+  &:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0 0 0 var(--color-tinta);
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--color-papel);
+    color: var(--color-tinta);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-secundario);
+    outline-offset: 2px;
+  }
+}
+
+/* Banda del stack: dos copias seguidas que se desplazan media pista. */
+@keyframes desplazar {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.banda-pista {
+  animation: desplazar 30s linear infinite;
+}
+
+/* Entrada al hacer scroll (Reveal agrega data-visible con IntersectionObserver). */
+.revelar {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease;
+}
+.revelar[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .banda-pista {
+    animation: none;
+  }
+  .revelar {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .apretable,
+  .apretable:hover,
+  .apretable:active {
+    transition: none;
+    transform: none;
+  }
 }
