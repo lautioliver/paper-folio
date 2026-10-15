@@ -23,6 +23,10 @@ npm run dev          # http://localhost:3000
 | `npm test` | Vitest, una pasada |
 | `npm run build` | Build de producción |
 
+## CI
+
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main`: `npm ci`, `npm run lint`, `npm run typecheck` y `npm test`, con Node tomado de `.nvmrc`. Antes de abrir un PR, correr en local lint, typecheck y tests (`npm run lint`, `npm run typecheck`, `npm test`). No usa secretos.
+
 ## Variables de entorno
 
 Van en `.env.local`, que no se commitea. Todavía no se usan: las agrega el #6 (MongoDB).
