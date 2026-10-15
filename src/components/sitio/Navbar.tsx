@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { profile } from "@/content/profile";
 
 const LINKS = [
-  { href: "#inicio", label: "Inicio" },
-  { href: "#sobre-mi", label: "Sobre mí" },
-  { href: "#proyectos", label: "Proyectos" },
-  { href: "#stack", label: "Stack" },
-  { href: "#contacto", label: "Contacto" },
+  { href: "/#inicio", label: "Inicio" },
+  { href: "/#sobre-mi", label: "Sobre mí" },
+  { href: "/#proyectos", label: "Proyectos" },
+  { href: "/#stack", label: "Stack" },
+  { href: "/#contacto", label: "Contacto" },
 ];
 
 // Mismo corte que lg de Tailwind: desde ahí la barra muestra los enlaces y el menú no existe.
@@ -18,8 +19,11 @@ const DESKTOP = "(min-width: 1024px)";
  * Barra flotante del manual: enlaces en PC; en celular, menú a pantalla completa.
  * Con el menú abierto, el resto de la página queda inerte (el foco no sale del menú), Escape lo cierra
  * y el foco vuelve al botón. Al pasar a PC se cierra solo, para no dejar la página sin scroll.
+ * `cuenta` es la sesión (Ingresar o el menú del avatar): llega de afuera para que la lectura de la sesión
+ * quede en el servidor, en un Suspense, y no vuelva dinámica toda la página.
+ * Los enlaces llevan "/#…" para que sirvan también desde otras páginas (como /cuenta).
  */
-export function Navbar() {
+export function Navbar({ cuenta }: { cuenta?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -58,12 +62,12 @@ export function Navbar() {
         aria-label="Principal"
         className="marca relative z-10 mx-auto flex max-w-3xl items-center justify-between gap-4 bg-papel py-2 pr-2 pl-3"
       >
-        <a href="#inicio" className="flex items-center gap-2 font-bold">
+        <Link href="/#inicio" className="flex items-center gap-2 font-bold">
           <span aria-hidden="true" className="grid size-9 place-items-center rounded-full bg-tinta text-pequeno text-papel">
             {profile.firstName[0]}
           </span>
           <span>{profile.knownAs}.dev</span>
-        </a>
+        </Link>
         <ul className="hidden items-center gap-6 text-pequeno font-bold lg:flex">
           {LINKS.map((link) => (
             <li key={link.href}>
@@ -73,12 +77,13 @@ export function Navbar() {
             </li>
           ))}
         </ul>
-        <a
-          href="#contacto"
+        <Link
+          href="/#contacto"
           className="hidden rounded-lg bg-tinta px-4 py-2 text-pequeno font-bold text-papel lg:inline-block"
         >
           Contactame
-        </a>
+        </Link>
+        {cuenta}
         <button
           ref={toggleRef}
           type="button"
