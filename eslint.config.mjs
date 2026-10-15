@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Reportes generados por vitest --coverage.
     "coverage/**",
+    // Worktrees de los subagentes: ESLint (flat config) no lee .gitignore.
+    ".claude/**",
   ]),
 ]);
 
