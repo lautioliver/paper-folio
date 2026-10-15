@@ -11,14 +11,28 @@ export class EnvInvalidoError extends Error {
   name = "EnvInvalidoError";
 }
 
-export type Env = z.infer<typeof esquema>;
+// IP_HASH_SAL va aparte: `leerEnv` (lo usan la base y /api/salud) no la exige.
+const esquemaSal = z.object({
+  IP_HASH_SAL: z.string({ error: "falta" }).min(16, { error: "debe tener al menos 16 caracteres" }),
+});
+
+export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal>;
 
 /**
  * Valida las variables del servidor. Si algo falla, el error nombra la variable
  * y el motivo, nunca el valor (puede traer credenciales).
  */
-export function leerEnv(fuente: Record<string, string | undefined> = process.env): Env {
-  const resultado = esquema.safeParse(fuente);
+export function leerEnv(fuente: Record<string, string | undefined> = process.env): z.infer<typeof esquema> {
+  return validar(esquema, fuente);
+}
+
+/** Valida solo `IP_HASH_SAL` (sal del hash de IP de las consultas) y la devuelve. Mismas reglas que `leerEnv`. */
+export function leerIpHashSal(fuente: Record<string, string | undefined> = process.env): string {
+  return validar(esquemaSal, fuente).IP_HASH_SAL;
+}
+
+function validar<T extends z.ZodType>(schema: T, fuente: Record<string, string | undefined>): z.infer<T> {
+  const resultado = schema.safeParse(fuente);
   if (!resultado.success) {
     const problemas = resultado.error.issues
       .map((i) => `${i.path.join(".")}: ${i.message}`)
@@ -35,5 +49,8 @@ export const env: Env = {
   },
   get MONGODB_DB() {
     return leerEnv().MONGODB_DB;
+  },
+  get IP_HASH_SAL() {
+    return leerIpHashSal();
   },
 };
