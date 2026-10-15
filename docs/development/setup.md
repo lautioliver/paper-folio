@@ -25,7 +25,7 @@ npm run dev          # http://localhost:3000
 
 ## CI
 
-`.github/workflows/ci.yml` corre en cada PR y en cada push a `main`: `npm ci`, `npm run lint`, `npm run typecheck` y `npm test`, con Node tomado de `.nvmrc`. Fija la carpeta del binario de `mongod` con `MONGOMS_DOWNLOAD_DIR` (en `runner.temp`) y la cachea entre corridas (`actions/cache`, clave por imagen del runner y versión de `mongodb-memory-server-core`; se guarda aunque el job falle), así los tests no vuelven a descargar `mongod`. Antes de abrir un PR, correr en local lint, typecheck y tests (`npm run lint`, `npm run typecheck`, `npm test`). No usa secretos.
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main`: `npm ci`, `npm run lint`, `npm run typecheck` y `npm test`, con Node tomado de `.nvmrc`. Fija la carpeta del binario de `mongod` con `MONGOMS_DOWNLOAD_DIR` (en `runner.temp`) y la cachea entre corridas (`actions/cache`, clave por imagen del runner y versión de `mongodb-memory-server-core`; se guarda aunque el job falle, pero solo si el binario pasa su `.md5`), así los tests no vuelven a descargar `mongod`. Antes de abrir un PR, correr en local lint, typecheck y tests (`npm run lint`, `npm run typecheck`, `npm test`). No usa secretos.
 
 ## Variables de entorno
 

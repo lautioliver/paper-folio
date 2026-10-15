@@ -33,22 +33,26 @@ jobs:
       # (~/.cache/mongodb-binaries, node_modules/.cache…) y en Actions no era la cacheada.
       # Clave: imagen del runner (el binario depende de la versión de Ubuntu) + versión de
       # mongodb-memory-server-core (define qué mongod baja). Sin restore-keys: no acumula versiones.
+      # La carpeta se define una sola vez (GITHUB_ENV) y la usan npm ci, los tests y la caché.
+      # Un paso que solo arma la clave no puede frenar el CI: si falla, se sigue sin caché.
       - name: Clave de la caché de mongod
         id: clave-mongod
+        continue-on-error: true
         run: |
-          v=$(node -p "require('./package-lock.json').packages['node_modules/mongodb-memory-server-core'].version")
+          echo "MONGOMS_DOWNLOAD_DIR=$RUNNER_TEMP/mongodb-binaries" >> "$GITHUB_ENV"
+          v=$(node -p "require('./package-lock.json').packages?.['node_modules/mongodb-memory-server-core']?.version ?? ''")
+          [[ "$v" =~ ^[0-9][0-9A-Za-z.+-]*$ ]] || v="lock-${{ hashFiles('package-lock.json') }}"
           echo "clave=mongod-$ImageOS-$RUNNER_ARCH-mms$v" >> "$GITHUB_OUTPUT"
       - name: Restaurar el binario de mongod
         id: cache-mongod
+        if: ${{ steps.clave-mongod.outcome == 'success' }}
         uses: actions/cache/restore@v4
         with:
-          path: ${{ runner.temp }}/mongodb-binaries
+          path: ${{ env.MONGOMS_DOWNLOAD_DIR }}
           key: ${{ steps.clave-mongod.outputs.clave }}
       - name: Instalar dependencias
         id: instalar
         run: npm ci
-        env:
-          MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/mongodb-binaries
       - name: Lint
         run: npm run lint
       - name: Typecheck
@@ -57,12 +61,18 @@ jobs:
       - name: Tests
         if: ${{ !cancelled() && steps.instalar.outcome == 'success' }}
         run: npm test
-        env:
-          MONGOMS_DOWNLOAD_DIR: ${{ runner.temp }}/mongodb-binaries
-      # Se guarda aunque falle lint o un test: si no, cada corrida roja vuelve a descargar mongod.
+      # Se guarda aunque falle lint o un test (si no, cada corrida roja vuelve a descargar), pero
+      # solo un binario completo: la librería escribe <binario>.md5 recién después de verificarlo.
+      # Sin esto, una descarga cortada quedaría en la caché y, con hit, no se repararía sola.
+      - name: Verificar el binario de mongod
+        id: binario-mongod
+        if: ${{ !cancelled() && steps.clave-mongod.outcome == 'success' && steps.cache-mongod.outputs.cache-hit != 'true' }}
+        run: |
+          cd "$MONGOMS_DOWNLOAD_DIR" 2>/dev/null && ls ./*.md5 >/dev/null 2>&1 && md5sum -c ./*.md5 \
+            && echo "ok=true" >> "$GITHUB_OUTPUT" || echo "Sin binario completo de mongod: no se guarda la caché."
       - name: Guardar el binario de mongod
-        if: ${{ !cancelled() && steps.cache-mongod.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && steps.binario-mongod.outputs.ok == 'true' }}
         uses: actions/cache/save@v4
         with:
-          path: ${{ runner.temp }}/mongodb-binaries
+          path: ${{ env.MONGOMS_DOWNLOAD_DIR }}
           key: ${{ steps.clave-mongod.outputs.clave }}
