@@ -1,6 +1,6 @@
 # Documentación de Paperfolio
 
-TODO: qué es Paperfolio en una frase, con link al ADR que lo define.
+Paperfolio es el portfolio de un desarrollador fullstack, con paneles de operador y de admin, hecho en Next.js + MongoDB ([ADR-001](decisions/ADR-001-stack.md)). La consigna está en [`consigna/`](consigna/instrucciones-tpi-2026.pdf) y el diseño en [`diseno/`](diseno/portfolio-paperfolio.pdf).
 
 Esta carpeta es el mapa. El código es la verdad de lo que corre; acá se dice **dónde leer** y **qué no mezclar**.
 
@@ -60,11 +60,11 @@ Regla: si un documento de producto y el código no coinciden, **gana** [architec
 ### Decisiones
 
 - [Cómo se escribe un ADR](decisions/README.md)
-- TODO: `- [ADR-001](decisions/ADR-001-....md) — resumen en una línea`
+- [ADR-001](decisions/ADR-001-stack.md) — Next.js fullstack, MongoDB con Mongoose, Auth.js con Google, Tailwind y Vercel
 
 ### Guías
 
-- TODO: una guía por integración.
+- Todavía no hay. Va una por integración (Atlas, Google OAuth, Resend) a medida que se configuren.
 
 ### Agentes
 

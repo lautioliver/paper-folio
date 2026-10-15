@@ -18,12 +18,46 @@
   - head-branch: ['^docs/']
 
 # ── area: según los archivos que toca el PR ──────────────────────────────
-# TODO: una entrada por cada area: de labels.yml, con las rutas de tu repo.
+# Una entrada por cada area: de labels.yml, con las rutas del repo.
+
+"area:web":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/app/(sitio)/**'
+          - 'src/components/**'
+
+"area:auth":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/auth.ts'
+          - 'src/auth.config.ts'
+          - 'src/proxy.ts'
+          - 'src/app/(auth)/**'
+          - 'src/app/api/auth/**'
+          - 'src/lib/permisos.ts'
+
+"area:panel":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/app/panel/**'
 
 "area:api":
   - changed-files:
       - any-glob-to-any-file:
-          - 'src/**'           # TODO: ajustar
+          - 'src/app/api/**'
+          - 'src/lib/**'
+
+"area:db":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/models/**'
+
+"area:diseno":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/diseno/**'
+          - 'src/styles/**'
+          - 'tailwind.config.*'
 
 "area:infra":
   - changed-files:

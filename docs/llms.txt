@@ -1,8 +1,8 @@
 # Paperfolio
 
-> TODO: una línea con qué es el producto, la decisión que lo define y cómo está armado el repo.
+> Portfolio de un desarrollador fullstack (TPI de Lenguajes 4) con sitio público, contenido solo para registrados y paneles de operador y admin. Es un solo proyecto Next.js + MongoDB/Mongoose (ADR-001); los modelos van en src/models y los servicios en src/lib.
 
-Instrucciones para modelos: leer este archivo y AGENTS.md. Spec aspiracional = /README.md. Narrativa = docs/development/vision.md. Código que corre = docs/development/architecture.md. Orden = docs/development/roadmap.md. Largo plazo (no implementar) = docs/development/horizon.md. Por qué = docs/decisions/. TODO: reglas de una línea que un modelo no debe romper.
+Instrucciones para modelos: leer este archivo y AGENTS.md. Spec aspiracional = /README.md. Narrativa = docs/development/vision.md. Código que corre = docs/development/architecture.md. Orden = docs/development/roadmap.md. Largo plazo (no implementar) = docs/development/horizon.md. Por qué = docs/decisions/. Reglas: toda entrada se valida con Zod en el servidor; los permisos se chequean en el servidor; los contadores usan $inc atómico; no hay colores fuera de los tokens de Tailwind.
 
 ## Documentación
 
@@ -11,6 +11,10 @@ Instrucciones para modelos: leer este archivo y AGENTS.md. Spec aspiracional = /
 - [Hub](README.md)
 - [Convención de nombres en GitHub](convencion-nombres-github.md) — labels en ../.github/labels.yml
 - [Decisiones (ADRs)](decisions/README.md)
+- [ADR-001: stack](decisions/ADR-001-stack.md)
+- [Visión](development/vision.md)
+- [Roadmap](development/roadmap.md)
+- [Arquitectura implementada](development/architecture.md)
 - [Mapa para agentes: docs según cambios, rutas sensibles](mapa-agentes.json)
 - [Contrato de los subagentes: reglas y salida común](agentes/contrato-subagentes.md)
 - [Lecciones de las retros de agentes (revisadas en PR; leer antes de implementar)](agentes/lecciones.md)
@@ -19,4 +23,4 @@ Instrucciones para modelos: leer este archivo y AGENTS.md. Spec aspiracional = /
 
 ## Código ancla
 
-- TODO: los 4 o 5 archivos por donde se entiende el sistema (montaje de rutas, schema, estados).
+- Todavía no hay código. Cuando exista: src/models/, src/lib/permisos.ts, src/auth.ts y src/app/api/.
