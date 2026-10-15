@@ -12,6 +12,7 @@ Instrucciones para modelos: leer este archivo y AGENTS.md. Spec aspiracional = /
 - [Convención de nombres en GitHub](convencion-nombres-github.md) — labels en ../.github/labels.yml
 - [Decisiones (ADRs)](decisions/README.md)
 - [ADR-001: stack](decisions/ADR-001-stack.md)
+- [ADR-002: auth y roles](decisions/ADR-002-auth.md)
 - [Visión](development/vision.md)
 - [Roadmap](development/roadmap.md)
 - [Arquitectura implementada](development/architecture.md)

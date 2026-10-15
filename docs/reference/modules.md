@@ -21,3 +21,9 @@
 | `src/lib/contact.ts` | `parseContactRequest()`: valida la consulta del formulario (nombre, email, tipo `general`/`cotizacion`/`asesoria`, mensaje de 10 a 2000 caracteres) y devuelve un error por campo |
 | `src/content/profile.ts` | Datos del PoC: perfil, stack, servicios, proyectos y trayectoria, con datos públicos de GitHub |
 | `src/components/sitio/` | Secciones de la landing (`Sections.tsx`, `Contact.tsx`), `Navbar` (menú de celular: inerte afuera, Escape, se cierra en PC), `StackBand` (banda con pausa), `ContactForm`, `Reveal` (entrada con GSAP ScrollTrigger; sin JS o con reduced-motion se ve fijo), `HeroMotion`, `ShareButton` y `CopyProfileLink`, `Highlight` y `SectionTitle`, `tones.ts` (clases de color por tono) e ilustraciones SVG con tokens |
+| `src/auth.ts` | Auth.js v5 con Google y sesión JWT (`handlers`, `auth`, `signIn`, `signOut`). Registra al usuario al ingresar. Ver ADR-002 |
+| `src/models/Usuario.ts` | Modelo de `usuarios` y la lista de roles (`ROLES`) |
+| `src/lib/usuarios.ts` | `rolParaEmail()`, `registrarIngreso()` (upsert por email con el rol según `ADMIN_EMAILS` y `OPERADOR_EMAILS`) y `buscarRol()` |
+| `src/lib/acceso.ts` | `evaluarAcceso()`: decide si una sesión alcanza para unos roles, releyendo el rol de la base. Lógica pura, sin Next |
+| `src/lib/permisos.ts` | `requerirSesion(volverA)` y `requerirRol(volverA, ...roles)` para páginas y server actions: redirigen a `/ingresar` o responden 403 (`forbidden()`) |
+
