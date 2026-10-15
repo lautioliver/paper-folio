@@ -131,4 +131,25 @@ describe("crearConsulta", () => {
     const indices = await Consulta.collection.indexes();
     expect(indices.some((i) => JSON.stringify(i.key) === JSON.stringify({ ipHash: 1, creadaEn: -1 }))).toBe(true);
   });
+
+  it("falla con un error claro si la IP viene vacía o en blanco, sin guardar", async () => {
+    for (const ip of ["", "   "]) {
+      await expect(crearConsulta(valida, { ip })).rejects.toThrow(/IP/);
+    }
+    expect(await Consulta.countDocuments()).toBe(0);
+  });
+
+  it("recrea el índice si la conexión se cerró y se reconectó a otra base", async () => {
+    await crearConsulta(valida, { ip: "10.0.0.7" });
+    await desconectar();
+    process.env.MONGODB_DB = "paperfolio-test-2";
+    try {
+      await crearConsulta(valida, { ip: "10.0.0.7" });
+      const indices = await Consulta.collection.indexes();
+      expect(indices.some((i) => JSON.stringify(i.key) === JSON.stringify({ ipHash: 1, creadaEn: -1 }))).toBe(true);
+    } finally {
+      await desconectar();
+      process.env.MONGODB_DB = "paperfolio-test";
+    }
+  });
 });
