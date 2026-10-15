@@ -34,4 +34,5 @@
 | `src/proxy.ts` | Proxy de Next 16: redirige a `/ingresar?callbackUrl=…` si no hay sesión en las rutas protegidas (hoy `/proyectos/:path+`). Solo adelanta la redirección; el control real es `requerirSesion` en cada página |
 | `src/lib/proteccion.ts` | `redireccionDeProxy(pathname, haySesion)` y `PREFIJOS_PROTEGIDOS`: la decisión del proxy, pura y testeable |
 | `src/lib/proyectos.ts` | `buscarProyecto(slug)`, `rutaDetalle(slug)` y `RUTA_PROYECTOS` |
+| `src/lib/imagenes.ts` | `validarImagen(bytes)`: detecta PNG, JPEG o WebP por la firma y lee el ancho y el alto de la cabecera (IHDR, SOFn, VP8X/VP8L/VP8), sin decodificar ni dependencias extra; rechaza con `motivo` `formato` (incluido SVG), `tamano` (más de 2 MB) o `dimensiones` (más de 2000 px). `subirImagen(bytes, { subir?, generarId? })`: valida, nombra `contenido/<uuid>.<ext>` y sube con acceso público. El cliente de Blob se inyecta en los tests; el real usa `BLOB_STORE_ID` (`leerBlobConfig()` de `env.ts`) |
 

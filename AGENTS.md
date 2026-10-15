@@ -16,6 +16,7 @@ Portfolio de un desarrollador fullstack (TPI de Lenguajes 4, 2026, apuntando a p
 - Zod para validar toda entrada en el servidor.
 - Tailwind CSS (es el framework CSS que exige la consigna) con los tokens del manual de marca.
 - Resend para los emails, Recharts para los gráficos y GSAP para las animaciones.
+- Vercel Blob (`@vercel/blob`) para las imágenes del contenido.
 - Vitest para los tests.
 - Deploy en Vercel.
 
