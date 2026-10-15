@@ -23,7 +23,8 @@ export async function proxy(request: NextRequest) {
 }
 
 // Next exige el matcher como literal. Mantenelo igual que `PREFIJOS_PROTEGIDOS` (src/lib/proteccion.ts).
-// Para sumar una ruta protegida (por ejemplo `/panel`), agregala a los dos.
+// Para sumar una ruta protegida, agregala a los dos. `/panel` solo (sin subruta) no pasa por acá: la página
+// redirige a `/panel/consultas`, que sí.
 export const config = {
-  matcher: ["/proyectos/:path+"],
+  matcher: ["/proyectos/:path+", "/panel/:path+"],
 };
