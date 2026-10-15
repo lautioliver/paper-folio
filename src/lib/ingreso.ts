@@ -1,13 +1,14 @@
 import type { Rol } from "@/models/Usuario";
-import { rutaInterna } from "./acceso";
+import { evaluarAcceso, rutaInterna, type SesionMinima } from "./acceso";
 
 /** Estado de la sesión visto desde /ingresar: sin token, token con usuario en la base, o token huérfano. */
-export type EstadoSesion = "ninguna" | "valida" | "huerfana";
+// "error": hay token pero no se pudo comprobar contra la base (no responde).
+export type EstadoSesion = "ninguna" | "valida" | "huerfana" | "error";
 
 export type DecisionIngreso =
   | { accion: "redirigir"; destino: string }
   // aviso "sesion": el token existe pero el usuario no está en la base; se ofrece salir e ingresar de nuevo.
-  | { accion: "mostrar"; aviso: "sesion" | null; callbackUrl: string };
+  | { accion: "mostrar"; aviso: "sesion" | "verificacion" | null; callbackUrl: string };
 
 /**
  * A dónde lleva /ingresar según la sesión, `error` y `callbackUrl` (ADR-002 R-5). El `callbackUrl` pasa
@@ -36,4 +37,13 @@ export function urlDeIngreso(callbackUrl: string): string {
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */
 export function puedeVerPanel(rol: Rol | null | undefined): boolean {
   return rol === "operador" || rol === "admin";
+}
+
+/** Estado de la sesión para /ingresar. Stub. */
+export async function comprobarSesion(
+  _sesion: SesionMinima,
+  _buscar: (id: string) => Promise<Rol | null>,
+): Promise<EstadoSesion> {
+  void evaluarAcceso;
+  return "valida";
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decidirIngreso, puedeVerPanel, urlDeIngreso } from "./ingreso";
+import { comprobarSesion, decidirIngreso, puedeVerPanel, urlDeIngreso } from "./ingreso";
 
 describe("decidirIngreso", () => {
   it("sin sesión muestra la pantalla con el callbackUrl interno", () => {
@@ -54,5 +54,34 @@ describe("puedeVerPanel", () => {
     expect(puedeVerPanel("admin")).toBe(true);
     expect(puedeVerPanel(null)).toBe(false);
     expect(puedeVerPanel(undefined)).toBe(false);
+  });
+});
+
+describe("decidirIngreso con la base caída", () => {
+  it("con sesión sin verificar no redirige ni da error: avisa", () => {
+    expect(decidirIngreso({ sesion: "error", callbackUrl: "/cuenta" })).toEqual({
+      accion: "mostrar",
+      aviso: "verificacion",
+      callbackUrl: "/cuenta",
+    });
+  });
+});
+
+describe("comprobarSesion", () => {
+  const sesion = { user: { id: "u1", rol: "usuario" as const } };
+  it("sin sesión → ninguna", async () => {
+    expect(await comprobarSesion(null, async () => "usuario")).toBe("ninguna");
+  });
+  it("usuario en la base → valida", async () => {
+    expect(await comprobarSesion(sesion, async () => "usuario")).toBe("valida");
+  });
+  it("usuario que ya no está → huerfana", async () => {
+    expect(await comprobarSesion(sesion, async () => null)).toBe("huerfana");
+  });
+  it("si la base falla → error, sin lanzar", async () => {
+    const caida = async () => {
+      throw new Error("MongoServerSelectionError");
+    };
+    expect(await comprobarSesion(sesion, caida)).toBe("error");
   });
 });
