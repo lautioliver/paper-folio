@@ -1,6 +1,8 @@
 // Los menús de la barra (el de celular y el de la cuenta) no pueden estar abiertos a la vez: el que se abre
 // avisa por acá y el otro se cierra. Un EventTarget propio, sin tocar `window`, para poder probarlo.
-const canal = new EventTarget();
+// En `globalThis` por si el empaquetador carga el módulo dos veces (cada menú en su propio chunk).
+const global = globalThis as typeof globalThis & { __canalMenusBarra?: EventTarget };
+const canal = (global.__canalMenusBarra ??= new EventTarget());
 
 /** Avisa que el menú `id` se abrió: los demás se cierran. */
 export function avisarMenuAbierto(id: string): void {
