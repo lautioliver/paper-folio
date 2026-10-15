@@ -21,17 +21,24 @@ export const ETIQUETAS_ESTADO: Record<EstadoConsulta, string> = {
  * `archivada` se vuelve a `en_curso`. A `nueva` no se vuelve nunca. Responder por email (#40) es otro camino.
  */
 export const TRANSICIONES: Record<EstadoConsulta, readonly EstadoConsulta[]> = {
-  nueva: [],
-  en_curso: [],
-  respondida: [],
-  archivada: [],
+  nueva: ["en_curso"],
+  en_curso: ["respondida"],
+  respondida: ["archivada"],
+  archivada: ["en_curso"],
 };
+
+export function esEstadoConsulta(valor: unknown): valor is EstadoConsulta {
+  return (ESTADOS_CONSULTA as readonly unknown[]).includes(valor);
+}
 
 /** Si se puede pasar de `desde` a `hacia` con un cambio de estado manual. */
 export function esTransicionValida(desde: string, hacia: string): boolean {
-  void desde;
-  void hacia;
-  return true;
+  // `esEstadoConsulta` antes de indexar: "constructor" o "__proto__" no son claves propias de TRANSICIONES.
+  return (
+    esEstadoConsulta(desde) &&
+    esEstadoConsulta(hacia) &&
+    TRANSICIONES[desde].includes(hacia)
+  );
 }
 
 /** Estados desde los que se puede llegar a `hacia` (para el filtro atómico del update). */

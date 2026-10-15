@@ -1,23 +1,16 @@
 import { z } from "zod";
 import { Consulta } from "@/models/Consulta";
 import { CONTACT_TYPES, type ContactType } from "./contact";
-import { conectar } from "./db";
+import { asegurarIndicesDe, conectar } from "./db";
+import { ESTADOS_CONSULTA, type EstadoConsulta } from "./estados-consulta";
 
 export const POR_PAGINA = 20;
-export const ESTADOS_CONSULTA = [
-  "nueva",
-  "en_curso",
-  "respondida",
-  "archivada",
-] as const;
-export type EstadoConsulta = (typeof ESTADOS_CONSULTA)[number];
-
-export const ETIQUETAS_ESTADO: Record<EstadoConsulta, string> = {
-  nueva: "Nueva",
-  en_curso: "En curso",
-  respondida: "Respondida",
-  archivada: "Archivada",
-};
+// Los estados viven en un módulo puro (los usa también el modelo); se reexportan por compatibilidad.
+export {
+  ESTADOS_CONSULTA,
+  ETIQUETAS_ESTADO,
+  type EstadoConsulta,
+} from "./estados-consulta";
 
 const LARGO_EXTRACTO = 140;
 
@@ -107,6 +100,7 @@ export async function listarConsultas(
   if (estado) filtro.estado = estado;
 
   await conectar();
+  await asegurarIndicesDe(Consulta);
   const total = await Consulta.countDocuments(filtro);
   const paginas = Math.ceil(total / POR_PAGINA);
   const pagina = Math.min(pedida, Math.max(paginas, 1));
@@ -126,10 +120,7 @@ export async function listarConsultas(
     id: String(d._id),
     nombre: d.nombre,
     tipo: d.tipo,
-    // `estado` no tiene enum en el schema: uno desconocido (dato viejo o editado a mano) se ve como nueva.
-    estado: (ESTADOS_CONSULTA as readonly string[]).includes(d.estado)
-      ? (d.estado as EstadoConsulta)
-      : "nueva",
+    estado: d.estado,
     extracto: extractoDe(d.mensaje),
     creadaEn: d.creadaEn,
   }));

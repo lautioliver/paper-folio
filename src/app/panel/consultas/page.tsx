@@ -105,7 +105,12 @@ export default async function ConsultasPage({
           {items.map((c) => (
             <li key={c.id} className="contorno bg-papel p-4">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-bold">{c.nombre}</span>
+                <Link
+                  href={`${RUTA}/${c.id}`}
+                  className="font-bold underline decoration-2 underline-offset-4"
+                >
+                  {c.nombre}
+                </Link>
                 <ChipEstado estado={c.estado} />
                 <span className="text-pequeno">
                   {CONTACT_TYPE_LABELS[c.tipo]}
