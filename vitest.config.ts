@@ -7,6 +7,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Ningún test puede mandar un email real, aunque la clave esté exportada en el shell.
+    env: { RESEND_API_KEY: "", CONTACTO_EMAIL_DESTINO: "" },
     // Solo .ts: los tests de componentes (.tsx) necesitan un DOM (jsdom), que todavía no está instalado.
     include: ["src/**/*.test.ts"],
   },

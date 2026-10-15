@@ -34,6 +34,7 @@ describe("avisarConsultaNueva", () => {
         to: "destino@example.com",
         subject: "Nueva consulta (cotizacion) de Ada Lovelace",
       }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
   });
 
