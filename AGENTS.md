@@ -4,30 +4,48 @@ Contexto rápido para agentes y devs que tocan este repo. Es la fuente de las re
 
 ## Qué es
 
-TODO: una o dos frases. Qué hace el producto y la decisión más importante que lo define (con link a su ADR).
+Portfolio de un desarrollador fullstack (TPI de Lenguajes 4, 2026, apuntando a promoción). Tiene un sitio público, el detalle de proyectos y demos solo para usuarios registrados, un panel de operador para responder consultas por email y un panel de admin con CRUD, usuarios y métricas. Es un solo proyecto Next.js con MongoDB ([ADR-001](docs/decisions/ADR-001-stack.md)). La consigna está en `docs/consigna/` y el diseño en `docs/diseno/`.
 
 Índice de docs (humanos + LLMs): `docs/README.md`. Spec: `README.md`. Narrativa: `docs/development/vision.md`. Qué corre hoy: `docs/development/architecture.md`. Orden de trabajo: `docs/development/roadmap.md`. Largo plazo (no construir): `docs/development/horizon.md`.
 
 ## Stack
 
-TODO: lenguaje, framework, base de datos, monorepo, tests. Una línea por pieza.
+- TypeScript + Next.js (App Router): frontend y API (route handlers y server actions) en el mismo proyecto.
+- MongoDB Atlas con Mongoose. Los modelos van en `src/models/`.
+- Auth.js con Google. Los roles son `usuario`, `operador` y `admin`.
+- Zod para validar toda entrada en el servidor.
+- Tailwind CSS (es el framework CSS que exige la consigna) con los tokens del manual de marca.
+- Resend para los emails, Recharts para los gráficos y GSAP para las animaciones.
+- Vitest para los tests.
+- Deploy en Vercel.
+
+Todavía no hay código: el scaffold es un issue aparte.
 
 ## Comandos
 
 ```bash
-# TODO: instalar, typecheck, lint, test, dev
+npm install
+npm run dev          # http://localhost:3000
+npm run lint
+npx tsc --noEmit
+npx vitest run       # o: npx vitest related <archivos> --run
 ```
 
-TODO: comandos que NO se corren (por ejemplo builds de producción) y por qué.
+No se corren:
+- Scripts de seed o de borrado contra la base de Atlas compartida. Solo contra una base local o propia.
+- `vercel --prod`: el deploy lo hace una persona.
 
 ## Convenciones que importan
 
-TODO: las reglas de código que un agente rompería si no las lee. Ejemplos:
-- Errores de API con un formato único.
-- IDs públicos con prefijo, nunca secuenciales.
-- Dinero en enteros (centavos).
-- Lógica de negocio en servicios, rutas finas.
-- Operaciones concurrentes atómicas en la base, nunca read-modify-write.
+- **Toda entrada se valida con Zod en el servidor**: formularios, query params y archivos (tipo MIME real y tamaño máximo). La validación del cliente no alcanza (ADR-001 R-6).
+- **Los permisos se chequean en el servidor** en cada route handler y server action, con el rol de la sesión. Ocultar un botón no protege nada.
+- Los componentes no consultan Mongo directo: van por `src/lib/` (servicios). Las rutas y las acciones son finas.
+- Los contadores (visitas, accesos) se actualizan con `$inc` atómico, nunca leyendo y escribiendo.
+- Las URLs públicas usan slug. Los `_id` de Mongo no se muestran en la UI pública.
+- Errores de API con un formato único: `{ error: { codigo, mensaje } }`.
+- Colores y tipografías solo desde los tokens de Tailwind del manual de marca. Nada de hex sueltos.
+- Las animaciones respetan `prefers-reduced-motion`.
+- La UI va en español rioplatense. Los identificadores del código van en inglés.
 
 Siempre:
 - Nunca secretos en logs, código o repo. `.env*` están ignorados.

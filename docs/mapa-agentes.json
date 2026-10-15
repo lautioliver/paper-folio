@@ -1,20 +1,21 @@
 {
-  "_ayuda": "Mapa para agentes y CI. 'docs': qué documento revisar cuando cambian ciertos archivos (lo usan update-docs, implement-issue y review-pr). 'sensibles': rutas que exigen consultar antes de cambiarlas y correr /security-review (ver AGENTS.md, Autonomía). 'verificar': qué correr antes del PR según lo que cambió (scripts/agentes/verificar.py). 'obligatorios': documentos que tienen que existir (lo valida scripts/agentes/check-docs.py). 'ignorar_check': rutas que check-docs.py no valida, como bitácoras históricas que citan archivos que ya no existen. Globs estilo git: ** cualquier profundidad, * un nivel. Una ruta que empieza con ? es opcional: check-docs no falla si no coincide con ningún archivo (sirve para alternativas de stack, como package.json o *.lock). Las rutas propias del proyecto van sin ?: si dejan de existir, el check falla. TODO: completar con las rutas del proyecto.",
+  "_ayuda": "Mapa para agentes y CI. 'docs': qué documento revisar cuando cambian ciertos archivos (lo usan update-docs, implement-issue y review-pr). 'sensibles': rutas que exigen consultar antes de cambiarlas y correr /security-review (ver AGENTS.md, Autonomía). 'verificar': qué correr antes del PR según lo que cambió (scripts/agentes/verificar.py). 'obligatorios': documentos que tienen que existir (lo valida scripts/agentes/check-docs.py). 'ignorar_check': rutas que check-docs.py no valida, como bitácoras históricas que citan archivos que ya no existen. Globs estilo git: ** cualquier profundidad, * un nivel. Una ruta que empieza con ? es opcional: check-docs no falla si no coincide con ningún archivo (sirve para alternativas de stack, como package.json o *.lock). Las rutas propias del proyecto van sin ?: si dejan de existir, el check falla. Paperfolio: las rutas de src/ llevan ? hasta que exista el scaffold; el issue del scaffold se las saca.",
   "docs": [
     {
       "cuando": [
-        "TODO/schema/**",
-        "?**/migrations/**"
+        "?src/models/**"
       ],
       "revisar": [
         "docs/reference/domain.md",
         "docs/development/architecture.md"
       ],
-      "motivo": "cambió el modelo de datos"
+      "motivo": "cambió el modelo de datos (Mongoose)"
     },
     {
       "cuando": [
-        "TODO/api/routes/**"
+        "?src/app/api/**",
+        "?src/app/**/page.tsx",
+        "?src/app/**/route.ts"
       ],
       "revisar": [
         "docs/development/architecture.md",
@@ -24,7 +25,7 @@
     },
     {
       "cuando": [
-        "TODO/modules/**"
+        "?src/lib/**"
       ],
       "revisar": [
         "docs/reference/modules.md"
@@ -85,22 +86,20 @@
     {
       "tipo": "schema",
       "rutas": [
-        "TODO/schema/**",
-        "?**/migrations/**"
+        "?src/models/**"
       ],
       "skill": "db-migration"
     },
     {
       "tipo": "auth",
       "rutas": [
-        "TODO/auth/**",
-        "?**/middleware/**"
-      ]
-    },
-    {
-      "tipo": "dinero",
-      "rutas": [
-        "TODO/payments/**"
+        "?src/auth.ts",
+        "?src/auth.config.ts",
+        "?src/proxy.ts",
+        "?src/middleware.ts",
+        "?src/app/(auth)/**",
+        "?src/app/api/auth/**",
+        "?src/lib/permisos.ts"
       ]
     },
     {
@@ -123,12 +122,6 @@
         ".codex/hooks.json",
         ".github/hooks/**",
         ".cursor/hooks.json"
-      ]
-    },
-    {
-      "tipo": "api-publica",
-      "rutas": [
-        "TODO/public-api/**"
       ]
     }
   ],
@@ -207,36 +200,6 @@
         ".cursor/hooks.json"
       ],
       "correr": "python3 -m unittest scripts/agentes/test_barandas.py"
-    },
-    {
-      "nombre": "lint",
-      "siempre": true,
-      "correr": "TODO: comando de lint (por ejemplo: npm run lint)"
-    },
-    {
-      "nombre": "typecheck",
-      "siempre": true,
-      "correr": "TODO: comando de typecheck (por ejemplo: npx tsc --noEmit)"
-    },
-    {
-      "nombre": "tests",
-      "siempre": true,
-      "correr": "TODO: tests, idealmente solo los afectados (por ejemplo: npx vitest related {archivos} --run)"
-    },
-    {
-      "nombre": "migraciones",
-      "cuando": [
-        "TODO/schema/**",
-        "?**/migrations/**"
-      ],
-      "correr": "TODO: verificar que el schema y las migraciones coinciden (generar y comprobar que no queda nada sin commitear)"
-    },
-    {
-      "nombre": "contrato-api",
-      "cuando": [
-        "TODO/public-api/**"
-      ],
-      "correr": "TODO: comparar el contrato público contra la base (por ejemplo: un diff de OpenAPI)"
     }
   ],
   "obligatorios": [

@@ -20,8 +20,22 @@
   description: "Documentación"
 
 # ── area: ────────────────────────────────────────────
-# TODO: una por área del producto; mismos nombres que los scopes de commit (§2).
-# Las tres de abajo existen siempre: labeler.yml las usa.
+# Una por área del producto; mismos nombres que los scopes de commit (§2).
+- name: "area:web"
+  color: "1D76DB"
+  description: "Sitio público: secciones, componentes y animaciones"
+- name: "area:auth"
+  color: "1D76DB"
+  description: "Registro, login, sesiones y roles"
+- name: "area:panel"
+  color: "1D76DB"
+  description: "Paneles de operador y admin: consultas, CRUD, usuarios, métricas"
+- name: "area:db"
+  color: "1D76DB"
+  description: "Modelos de Mongoose y datos"
+- name: "area:diseno"
+  color: "1D76DB"
+  description: "Manual de marca, tokens de Tailwind y prototipos"
 - name: "area:api"
   color: "1D76DB"
   description: "API y lógica de negocio"

@@ -120,7 +120,7 @@ La spec solo obliga `feat` y `fix`; `fix` equivale a un PATCH en SemVer, `feat` 
 ### Scopes del proyecto
 Los scopes deberían ser pocos y estables, y coincidir con los labels `area:`. Siempre existen `db`, `api` y `docs`.
 
-TODO: `<scope-1>`, `<scope-2>`, `db`, `api`, `docs`
+`web`, `auth`, `panel`, `api`, `db`, `diseno`, `infra`, `docs`
 
 > Regla: si un cambio toca varios scopes, se omite el scope o se divide en varios commits.
 
@@ -220,7 +220,7 @@ Propuesta popularizada como "Sane GitHub Labels": agrupar por prefijo y usar un 
 | Grupo | Valores | Color sugerido |
 |---|---|---|
 | `tipo:` | `feature`, `bug`, `task`, `audit`, `docs` (solo si no hay Issue Types) | Violeta |
-| `area:` | Las áreas del producto (TODO: ver `.github/labels.yml`) | Azul |
+| `area:` | Las áreas del producto: `web`, `auth`, `panel`, `api`, `db`, `diseno`, `infra`, `docs` | Azul |
 | `prioridad:` | `critica`, `alta`, `media`, `baja` | Rojo → gris |
 | `estado:` | `bloqueado`, `necesita-info`, `a-triar` | Amarillo |
 | especiales | `breaking-change`, `logica-negocio` | Negro |
@@ -320,7 +320,7 @@ Marcar la opción elegida por el equipo y fecha:
 | # | Tema | Opción elegida | Fecha | Notas |
 |---|---|---|---|---|
 | 1 | Ramas | ✅ Conventional Branch 1.1 | 2026-10-15 | Única rama permanente `main`: los PRs de trabajo van directo a `main`. Excepción: `agentes/retros`, rama de datos de las retros (§1). |
-| 2 | Commits | | | ¿scopes confirmados? |
+| 2 | Commits | ✅ Conventional Commits 1.0 | 2026-10-15 | Scopes: `web`, `auth`, `panel`, `api`, `db`, `diseno`, `infra`, `docs` |
 | 3 | PRs | | | ¿squash merge? |
 | 4 | Títulos de issues | | | |
 | 4.2 | Tipo de issue | | | ¿repo en organización? |
@@ -328,7 +328,7 @@ Marcar la opción elegida por el equipo y fecha:
 | 6 | Campos del Project | | | ¿prioridad en campo o label? |
 | 7 | Milestones | | | |
 | 8 | Versionado | | | |
-| 9 | Idioma | | | |
+| 9 | Idioma | ✅ Español rioplatense | 2026-10-15 | Docs, issues, PRs y UI en español; tipos de commit e identificadores del código en inglés |
 
 ---
 
