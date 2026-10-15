@@ -1,3 +1,4 @@
+import { CuentaBarra } from "@/components/sitio/CuentaBarra";
 import { Contact, Footer } from "@/components/sitio/Contact";
 import { Navbar } from "@/components/sitio/Navbar";
 import { About, Hero, Projects, Services, Timeline } from "@/components/sitio/Sections";
@@ -7,7 +8,7 @@ import { StackBand } from "@/components/sitio/StackBand";
 export default function HomePage() {
   return (
     <>
-      <Navbar />
+      <Navbar cuenta={<CuentaBarra />} />
       <main className="flex-1">
         <Hero />
         <StackBand />

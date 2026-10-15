@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/Container";
 import { Footer } from "@/components/sitio/Contact";
+import { CuentaBarra } from "@/components/sitio/CuentaBarra";
 import { Highlight } from "@/components/sitio/Highlight";
+import { Navbar } from "@/components/sitio/Navbar";
 import { ProjectCard } from "@/components/sitio/Sections";
 import { projects } from "@/content/profile";
 
@@ -15,14 +17,15 @@ export const metadata: Metadata = {
 export default function ProyectosPage() {
   return (
     <>
-      <header className="py-6">
-        <Container>
-          <Link href="/" className="text-pequeno font-bold underline decoration-2 underline-offset-4">
-            ← Volver al inicio
-          </Link>
-        </Container>
-      </header>
+      <Navbar cuenta={<CuentaBarra />} />
       <main className="flex-1 pb-16">
+        <div className="py-6">
+          <Container>
+            <Link href="/" className="text-pequeno font-bold underline decoration-2 underline-offset-4">
+              ← Volver al inicio
+            </Link>
+          </Container>
+        </div>
         <Container>
           <h1 className="text-center text-[1.75rem] leading-[1.15] font-bold sm:text-h2">
             Todos mis <Highlight tone="primario">proyectos</Highlight>
