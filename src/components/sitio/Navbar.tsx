@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { profile } from "@/content/profile";
 
 const LINKS = [
@@ -11,21 +11,44 @@ const LINKS = [
   { href: "#contacto", label: "Contacto" },
 ];
 
-/** Barra flotante del manual: enlaces en PC; en celular, menú a pantalla completa (Escape lo cierra). */
+// Mismo corte que lg de Tailwind: desde ahí la barra muestra los enlaces y el menú no existe.
+const DESKTOP = "(min-width: 1024px)";
+
+/**
+ * Barra flotante del manual: enlaces en PC; en celular, menú a pantalla completa.
+ * Con el menú abierto, el resto de la página queda inerte (el foco no sale del menú), Escape lo cierra
+ * y el foco vuelve al botón. Al pasar a PC se cierra solo, para no dejar la página sin scroll.
+ */
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const menuId = useId();
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+    const outside = document.querySelectorAll<HTMLElement>("main, footer");
+    const desktop = window.matchMedia(DESKTOP);
+    const close = (returnFocus: boolean) => {
+      setOpen(false);
+      if (returnFocus) toggleRef.current?.focus();
     };
-    document.addEventListener("keydown", onKey);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close(true);
+    };
+    const onResize = () => {
+      if (desktop.matches) close(false);
+    };
+    outside.forEach((element) => (element.inert = true));
     document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    desktop.addEventListener("change", onResize);
+    menuRef.current?.querySelector("a")?.focus();
     return () => {
-      document.removeEventListener("keydown", onKey);
+      outside.forEach((element) => (element.inert = false));
       document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKey);
+      desktop.removeEventListener("change", onResize);
     };
   }, [open]);
 
@@ -33,10 +56,10 @@ export function Navbar() {
     <header className="sticky top-4 z-40 px-4">
       <nav
         aria-label="Principal"
-        className="marca mx-auto flex max-w-3xl items-center justify-between gap-4 bg-papel py-2 pr-2 pl-3"
+        className="marca relative z-10 mx-auto flex max-w-3xl items-center justify-between gap-4 bg-papel py-2 pr-2 pl-3"
       >
-        <a href="#inicio" className="flex items-center gap-2 font-bold" aria-label={`${profile.name}, inicio`}>
-          <span className="grid size-9 place-items-center rounded-full bg-tinta text-pequeno text-papel">
+        <a href="#inicio" className="flex items-center gap-2 font-bold">
+          <span aria-hidden="true" className="grid size-9 place-items-center rounded-full bg-tinta text-pequeno text-papel">
             {profile.firstName[0]}
           </span>
           <span>{profile.knownAs}.dev</span>
@@ -57,6 +80,7 @@ export function Navbar() {
           Contactame
         </a>
         <button
+          ref={toggleRef}
           type="button"
           className="grid size-11 place-items-center rounded-lg bg-tinta text-papel lg:hidden"
           aria-expanded={open}
@@ -74,11 +98,7 @@ export function Navbar() {
           </svg>
         </button>
       </nav>
-      <div
-        id={menuId}
-        hidden={!open}
-        className="fixed inset-x-0 top-24 bottom-0 z-30 bg-papel px-6 pt-8 lg:hidden"
-      >
+      <div ref={menuRef} id={menuId} hidden={!open} className="fixed inset-0 bg-papel px-6 pt-28 lg:hidden">
         <ul className="flex flex-col gap-6">
           {LINKS.map((link) => (
             <li key={link.href}>

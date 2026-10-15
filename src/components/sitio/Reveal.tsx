@@ -9,27 +9,22 @@ type RevealProps = {
 };
 
 /**
- * Entrada al hacer scroll con IntersectionObserver: sube 16 px y aparece (clase .revelar).
- * Marca el elemento con data-visible, sin estado de React (no re-renderiza).
- * Con prefers-reduced-motion el CSS lo muestra fijo; sin IntersectionObserver se muestra directo.
+ * Entrada al hacer scroll: sube 16 px y aparece. Sin JS (o antes de hidratar) el contenido se ve:
+ * solo lo que está debajo de la pantalla al cargar se oculta (data-visible="false") y se muestra
+ * con IntersectionObserver. Marca el elemento por dataset, sin estado de React.
  */
 export function Reveal({ children, className }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const element = ref.current;
-    if (!element) return;
-    const show = () => {
-      element.dataset.visible = "true";
-    };
-    if (!("IntersectionObserver" in window)) {
-      show();
-      return;
-    }
+    if (!element || !("IntersectionObserver" in window)) return;
+    if (element.getBoundingClientRect().top < window.innerHeight) return;
+    element.dataset.visible = "false";
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          show();
+          element.dataset.visible = "true";
           observer.disconnect();
         }
       },
@@ -40,7 +35,7 @@ export function Reveal({ children, className }: RevealProps) {
   }, []);
 
   return (
-    <div ref={ref} data-visible="false" className={cn("revelar", className)}>
+    <div ref={ref} className={cn("revelar", className)}>
       {children}
     </div>
   );

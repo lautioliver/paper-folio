@@ -34,7 +34,13 @@
   --font-sans: var(--font-onest);
 }
 
-/* Pieza de marca: contorno, radio y sombra dura. */
+/* Contorno de marca: borde de 2 px en tinta y radio de marca (tarjetas sin sombra). */
+@utility contorno {
+  border: var(--borde-marca) solid var(--color-tinta);
+  border-radius: var(--radius-marca);
+}
+
+/* Pieza de marca: contorno más la sombra dura. */
 @utility marca {
   border: var(--borde-marca) solid var(--color-tinta);
   border-radius: var(--radius-marca);
@@ -80,17 +86,24 @@
   animation: desplazar 30s linear infinite;
 }
 
-/* Entrada al hacer scroll (Reveal agrega data-visible con IntersectionObserver). */
+/* Pausa de la banda: el botón de StackBand o el hover sobre la banda. */
+.banda:hover .banda-pista,
+.banda[data-pausada="true"] .banda-pista {
+  animation-play-state: paused;
+}
+
+/*
+ * Entrada al hacer scroll. Sin JS todo se ve: Reveal oculta (data-visible="false") solo lo que está
+ * fuera de pantalla al cargar, y lo muestra con IntersectionObserver.
+ */
 .revelar {
-  opacity: 0;
-  transform: translateY(16px);
   transition:
     opacity 300ms ease,
     transform 300ms ease;
 }
-.revelar[data-visible="true"] {
-  opacity: 1;
-  transform: none;
+.revelar[data-visible="false"] {
+  opacity: 0;
+  transform: translateY(16px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -100,7 +113,8 @@
   .banda-pista {
     animation: none;
   }
-  .revelar {
+  .revelar,
+  .revelar[data-visible="false"] {
     opacity: 1;
     transform: none;
     transition: none;

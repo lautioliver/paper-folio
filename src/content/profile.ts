@@ -1,3 +1,5 @@
+import type { Tone } from "@/components/sitio/tones";
+
 // Datos del PoC (#18): perfil, README y repos PÚBLICOS de github.com/lautioliver (2026-10-15).
 // Los repos privados no se muestran. Se reemplaza por contenido administrable con el CRUD del hito 5.
 
@@ -11,9 +13,13 @@ export const profile = {
     "Construyo aplicaciones web de punta a punta: interfaces en Next.js y React, APIs en TypeScript y bases de datos en PostgreSQL. Muchas nacen de un problema real de la facu.",
   about:
     "Empecé armando scripts para automatizar mi cursada en la UCASAL y terminé construyendo plataformas que usan otros estudiantes. Me gusta entender el problema completo, del botón a la base de datos. Fuera del código: ajedrez y Fórmula 1.",
+  githubHandle: "lautioliver",
   githubUrl: "https://github.com/lautioliver",
+  xHandle: "ltarooZ",
   xUrl: "https://x.com/ltarooZ",
   githubSince: 2024,
+  // Fecha de los datos: de acá sale el año del pie (new Date() no se puede prerenderizar).
+  asOf: "2026-10-15",
 } as const;
 
 export const stack = [
@@ -70,7 +76,7 @@ export type Project = {
   stack: string[];
   demoUrl: string;
   repoUrl: string;
-  accent: "secundario" | "terciario" | "primario" | "acento";
+  accent: Tone;
 };
 
 export const projects: Project[] = [

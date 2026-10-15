@@ -1,11 +1,13 @@
 import { Container } from "@/components/Container";
-import { milestones, profile, projects, services, stack } from "@/content/profile";
+import { milestones, profile, projects, services } from "@/content/profile";
 import { cn } from "@/lib/cn";
-import { Highlight } from "./Highlight";
+import { Highlight, SectionTitle } from "./Highlight";
 import { BrowserMock, HeroCharacter, Portrait, ServiceIcon } from "./Illustrations";
 import { Reveal } from "./Reveal";
+import { PANEL_BG, TONE_BG } from "./tones";
 
-const BUTTON = "apretable inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-cuerpo font-bold";
+// Botón de marca: contorno, radio y sombra (marca) más el "apretar" (apretable).
+const BUTTON = "marca apretable inline-flex items-center justify-center gap-2 px-5 py-3 text-cuerpo font-bold";
 
 export function Hero() {
   return (
@@ -18,10 +20,10 @@ export function Hero() {
           </h1>
           <p className="mt-6 max-w-xl text-cuerpo">{profile.intro}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a href="#contacto" className={cn(BUTTON, "marca bg-tinta text-papel")}>
+            <a href="#contacto" className={cn(BUTTON, "bg-tinta text-papel")}>
               Contactame
             </a>
-            <a href="#proyectos" className={cn(BUTTON, "marca bg-papel")}>
+            <a href="#proyectos" className={cn(BUTTON, "bg-papel")}>
               Ver proyectos
             </a>
           </div>
@@ -34,41 +36,18 @@ export function Hero() {
   );
 }
 
-export function StackBand() {
-  const dots = ["bg-primario", "bg-acento", "bg-secundario", "bg-terciario"];
-  const items = [...stack, ...stack];
-  return (
-    <section id="stack" aria-label="Stack" className="overflow-hidden py-10">
-      <div className="-mx-8 -rotate-3 bg-tinta py-4">
-        <ul className="banda-pista flex w-max gap-12 pl-12">
-          {items.map((tech, i) => (
-            <li
-              key={`${tech}-${i}`}
-              aria-hidden={i >= stack.length}
-              className="flex items-center gap-3 text-h3 font-bold whitespace-nowrap text-papel"
-            >
-              <span className={cn("size-3 rounded-full", dots.at(i % dots.length))} />
-              {tech}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
 export function Services() {
   return (
     <section id="servicios" className="py-16">
       <Container>
-        <h2 className="text-center text-[1.75rem] leading-[1.15] font-bold sm:text-h2">
+        <SectionTitle className="text-center">
           Mi amplio <Highlight tone="acento">set de habilidades</Highlight>
-        </h2>
+        </SectionTitle>
         <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service) => (
             <li key={service.title}>
               <Reveal className="h-full">
-                <article className="h-full overflow-hidden rounded-[var(--radius-marca)] border-(length:--borde-marca) border-tinta bg-papel">
+                <article className="contorno h-full overflow-hidden bg-papel">
                   <div className="grid place-items-center border-b-(length:--borde-marca) border-tinta bg-superficie py-6">
                     <ServiceIcon icon={service.icon} />
                   </div>
@@ -100,7 +79,6 @@ export function Services() {
 }
 
 export function About() {
-  const publicDemos = projects.length;
   return (
     <section id="sobre-mi" className="py-16">
       <Container className="grid items-center gap-12 lg:grid-cols-[1fr_1.2fr]">
@@ -108,9 +86,9 @@ export function About() {
           <Portrait />
         </Reveal>
         <div>
-          <h2 className="text-[1.75rem] leading-[1.15] font-bold sm:text-h2">
+          <SectionTitle>
             ¿Quién está detrás de <Highlight tone="secundario">todo esto?</Highlight>
-          </h2>
+          </SectionTitle>
           <p className="mt-6 text-cuerpo">{profile.about}</p>
           <p className="mt-2 text-pequeno">{profile.role}.</p>
           <ul className="mt-6 flex flex-wrap gap-6 text-pequeno font-bold">
@@ -120,10 +98,10 @@ export function About() {
             </li>
             <li className="flex items-center gap-2">
               <span className="size-4 rounded-sm border-2 border-tinta bg-secundario" />
-              {publicDemos} proyectos públicos en producción
+              {projects.length} proyectos públicos en producción
             </li>
           </ul>
-          <a href={profile.githubUrl} target="_blank" rel="noreferrer" className={cn(BUTTON, "marca mt-8 bg-tinta text-papel")}>
+          <a href={profile.githubUrl} target="_blank" rel="noreferrer" className={cn(BUTTON, "mt-8 bg-tinta text-papel")}>
             Ver mi GitHub
           </a>
         </div>
@@ -132,30 +110,23 @@ export function About() {
   );
 }
 
-const PROJECT_BG = {
-  primario: "bg-primario",
-  acento: "bg-acento",
-  secundario: "bg-secundario",
-  terciario: "bg-terciario",
-} as const;
-
 export function Projects() {
   return (
     <section id="proyectos" className="py-16">
       <Container>
-        <h2 className="text-center text-[1.75rem] leading-[1.15] font-bold sm:text-h2">
+        <SectionTitle className="text-center">
           Mirá mis <Highlight tone="primario">proyectos destacados</Highlight>
-        </h2>
+        </SectionTitle>
         <ul className="mt-12 grid gap-8">
           {projects.map((project) => (
             <li key={project.slug}>
               <Reveal>
-                <article className="grid overflow-hidden rounded-[var(--radius-marca)] border-(length:--borde-marca) border-tinta bg-papel lg:grid-cols-2">
+                <article className="contorno grid overflow-hidden bg-papel lg:grid-cols-2">
                   <div className="order-2 p-6 sm:p-8 lg:order-1">
                     <span
                       className={cn(
                         "grid size-11 place-items-center rounded-lg border-2 border-tinta text-h3 font-bold",
-                        PROJECT_BG[project.accent],
+                        TONE_BG[project.accent],
                       )}
                       aria-hidden="true"
                     >
@@ -179,7 +150,7 @@ export function Projects() {
                   <div
                     className={cn(
                       "order-1 grid place-items-center border-b-(length:--borde-marca) border-tinta p-8 lg:order-2 lg:border-b-0 lg:border-l-(length:--borde-marca)",
-                      PROJECT_BG[project.accent === "primario" ? "secundario" : project.accent === "acento" ? "terciario" : project.accent],
+                      PANEL_BG[project.accent],
                     )}
                   >
                     <BrowserMock tone={project.accent} />
@@ -199,9 +170,9 @@ export function Timeline() {
     <section id="trayectoria" className="bg-tinta py-20 text-papel">
       <Container className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
         <div>
-          <h2 className="text-[1.75rem] leading-[1.15] font-bold sm:text-h2">
+          <SectionTitle>
             Mirá mi <Highlight tone="terciario">trayectoria</Highlight>
-          </h2>
+          </SectionTitle>
           <p className="mt-6 max-w-sm text-cuerpo">
             Cada proyecto empezó como un problema real: de la facu, del campus o de cómo trabajo con agentes.
           </p>
@@ -210,7 +181,7 @@ export function Timeline() {
           {milestones.map((milestone) => (
             <li key={milestone.title}>
               <Reveal>
-                <article className="rounded-[var(--radius-marca)] border-(length:--borde-marca) border-papel bg-papel p-6 text-tinta">
+                <article className="rounded-marca bg-papel p-6 text-tinta">
                   <p className="text-pequeno font-bold">{milestone.date}</p>
                   <hr className="my-3 border-t-2 border-tinta" />
                   <h3 className="text-cuerpo font-bold">{milestone.title}</h3>
