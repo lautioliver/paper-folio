@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { forbidden, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import type { Rol } from "@/models/Usuario";
@@ -11,6 +12,9 @@ export { evaluarAcceso, rutaInterna, RUTA_INGRESO, type Acceso, type SesionMinim
  * volviendo después a `volverA` (una ruta interna).
  */
 export async function requerirSesion(volverA: string): Promise<{ id: string; rol: Rol }> {
+  // Con `cacheComponents`, Auth.js genera un token CSRF (`crypto.getRandomValues`) en cada `auth()`: Next lo
+  // toma por un valor inestable de prerender y lo loguea como error. `connection()` marca la ruta como dinámica.
+  await connection();
   const acceso = await evaluarAcceso(await auth(), [], (id) => buscarRol(id));
   if (!acceso.ok) redirect(urlDeIngreso(volverA, acceso.motivo));
   return { id: acceso.id, rol: acceso.rol };
@@ -25,6 +29,7 @@ export async function requerirRol(
   rol: Rol,
   ...otros: Rol[]
 ): Promise<{ id: string; rol: Rol }> {
+  await connection(); // ver `requerirSesion`
   const acceso = await evaluarAcceso(await auth(), [rol, ...otros], (id) => buscarRol(id));
   if (!acceso.ok && acceso.motivo !== "sin-permiso") redirect(urlDeIngreso(volverA, acceso.motivo));
   if (!acceso.ok) forbidden();

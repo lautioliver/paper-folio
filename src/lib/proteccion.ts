@@ -20,5 +20,5 @@ function estaProtegida(pathname: string): boolean {
  */
 export function redireccionDeProxy(pathname: string, haySesion: boolean): string | null {
   if (haySesion || !estaProtegida(pathname)) return null;
-  return urlDeIngreso(pathname);
+  return urlDeIngreso(pathname, "sin-sesion");
 }

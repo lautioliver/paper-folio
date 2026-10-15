@@ -31,4 +31,5 @@ La consigna pide registro obligatorio para ver el detalle de proyectos y demos (
 
 - Depende de una beta: se fija la versión exacta y se actualiza solo con un PR que lo diga.
 - Cambiar el rol de alguien hoy es editar `ADMIN_EMAILS` u `OPERADOR_EMAILS` en Vercel y que esa persona vuelva a ingresar. El panel del admin del hito 5 lo reemplaza, y ahí habrá que enmendar R-4.
+- Con `cacheComponents`, la guarda (`requerirSesion` / `requerirRol`) corre dentro de `Suspense`: la redirección de la página y el 403 de `forbidden()` viajan en el stream con HTTP 200. El contenido protegido nunca se envía; el 307 real sin sesión lo da `proxy.ts`. Por eso las guardas llaman a `connection()` antes de leer la sesión (Auth.js usa `crypto.getRandomValues` en cada `auth()` y Next lo loguea como error si la ruta parece prerenderizable).
 - `authInterrupts` es experimental en Next 16. Si cambia, se reemplaza `forbidden()` por una respuesta 403 propia.

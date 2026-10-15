@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { milestones, profile, projects, services, type Project } from "@/content/profile";
 import { cn } from "@/lib/cn";
-import { RUTA_PROYECTOS, rutaDetalle } from "@/lib/proyectos";
+import { RUTA_PROYECTOS, rutaDemo, rutaDetalle } from "@/lib/proyectos";
 import { Highlight, SectionTitle } from "./Highlight";
 import { BrowserMock, HeroCharacter, Portrait, ServiceIcon } from "./Illustrations";
 import { HeroMotion } from "./HeroMotion";
@@ -138,7 +138,7 @@ export function ProjectCard({ project }: { project: Project }) {
           <p className="mt-2 text-pequeno">{project.description}</p>
           <p className="mt-3 text-xs font-bold">{project.stack.join(" · ")}</p>
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-pequeno font-bold">
-            {/* Detalle solo para registrados: sin prefetch, así no se pide la ruta protegida antes de un clic. */}
+            {/* Detalle y demo solo para registrados: sin prefetch, así no se pide la ruta protegida antes de un clic. */}
             <Link
               href={rutaDetalle(project.slug)}
               prefetch={false}
@@ -146,9 +146,10 @@ export function ProjectCard({ project }: { project: Project }) {
             >
               Ver caso de estudio
             </Link>
-            <a href={project.demoUrl} target="_blank" rel="noreferrer" className="underline decoration-2 underline-offset-4">
+            {/* La demo también es solo para registrados: pasa por el ingreso y vuelve al detalle. */}
+            <Link href={rutaDemo(project.slug)} prefetch={false} className="underline decoration-2 underline-offset-4">
               Ver demo →
-            </a>
+            </Link>
             <a href={project.repoUrl} target="_blank" rel="noreferrer" className="underline decoration-2 underline-offset-4">
               Ver en GitHub →
             </a>

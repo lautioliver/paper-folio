@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/Container";
 import { Footer } from "@/components/sitio/Contact";
-import { Highlight, SectionTitle } from "@/components/sitio/Highlight";
+import { Highlight } from "@/components/sitio/Highlight";
 import { ProjectCard } from "@/components/sitio/Sections";
 import { projects } from "@/content/profile";
 
@@ -24,9 +24,9 @@ export default function ProyectosPage() {
       </header>
       <main className="flex-1 pb-16">
         <Container>
-          <SectionTitle className="text-center">
+          <h1 className="text-center text-[1.75rem] leading-[1.15] font-bold sm:text-h2">
             Todos mis <Highlight tone="primario">proyectos</Highlight>
-          </SectionTitle>
+          </h1>
           <p className="mx-auto mt-4 max-w-xl text-center text-cuerpo">
             El caso de estudio y la demo de cada uno son para usuarios registrados: ingresás con Google, en un clic.
           </p>
