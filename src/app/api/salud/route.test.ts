@@ -26,12 +26,12 @@ describe("GET /api/salud", () => {
 
   it("responde 503 con el formato de error si la base no responde", async () => {
     await desconectar();
-    process.env.MONGODB_URI = "mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=500";
+    process.env.MONGODB_URI = "mongodb://127.0.0.1:1";
     const res = await GET();
     expect(res.status).toBe(503);
     const cuerpo = await res.json();
     expect(cuerpo.error.codigo).toEqual(expect.any(String));
     expect(cuerpo.error.mensaje).toEqual(expect.any(String));
     expect(JSON.stringify(cuerpo)).not.toContain("127.0.0.1");
-  });
+  }, 15_000); // conectar() espera hasta 5 s a que el servidor responda
 });

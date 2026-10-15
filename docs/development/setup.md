@@ -25,7 +25,28 @@ npm run dev          # http://localhost:3000
 
 ## Variables de entorno
 
-Van en `.env.local`, que no se commitea. Todavía no se usan: las agrega el #6 (MongoDB).
+Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.example .env.local`.
+
+| Variable | Qué es |
+|---|---|
+| `MONGODB_URI` | Cadena de conexión de Atlas (`mongodb+srv://…`; también vale `mongodb://`). Obligatoria |
+| `MONGODB_DB` | Nombre de la base: `paperfolio-dev` en desarrollo, `paperfolio` en producción. Obligatoria |
+
+`src/lib/env.ts` las valida con Zod la primera vez que se leen. Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
+
+### Crear el cluster de Atlas
+
+1. En [MongoDB Atlas](https://cloud.mongodb.com), crear un proyecto y un cluster gratuito (M0).
+2. En **Database Access**, crear un usuario con contraseña y permisos de lectura y escritura.
+3. En **Network Access**, permitir tu IP. Para Vercel, que no tiene IP fija, hace falta `0.0.0.0/0`.
+4. En **Connect > Drivers**, copiar la cadena de conexión, reemplazar `<password>` y pegarla en `MONGODB_URI` de `.env.local`.
+5. Con `npm run dev`, `curl localhost:3000/api/salud` tiene que responder `200 {"ok":true}`. Si responde `503`, la URI o el acceso de red están mal.
+
+No corras scripts de seed ni de borrado contra la base compartida: usá `paperfolio-dev` o una base propia.
+
+## Tests con MongoDB
+
+Los tests de la base usan `mongodb-memory-server`: levantan un `mongod` efímero en memoria, así que no necesitan Atlas ni `.env.local`. El binario de MongoDB se descarga **la primera vez que corre un test** y queda en `~/.cache/mongodb-binaries` (la descarga automática del `postinstall` no corre en los worktrees, que instalan con `--ignore-scripts`). Esa primera corrida necesita red y tarda; las siguientes son offline. Para usar un `mongod` ya instalado, `MONGOMS_SYSTEM_BINARY=/ruta/a/mongod npm test`.
 
 ## Problemas conocidos
 

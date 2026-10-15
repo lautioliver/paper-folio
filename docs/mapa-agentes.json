@@ -13,9 +13,9 @@
     },
     {
       "cuando": [
-        "?src/app/api/**",
+        "src/app/api/**",
         "src/app/**/page.tsx",
-        "?src/app/**/route.ts"
+        "src/app/**/route.ts"
       ],
       "revisar": [
         "docs/development/architecture.md",
