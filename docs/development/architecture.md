@@ -32,13 +32,13 @@ src/
   styles/globals.css  # Tailwind y tokens
 ```
 
-Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` y `panel/` llegan con sus features.
+Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público y `panel/` el panel del operador. `(auth)` llega con su feature.
 
 ## Autenticación y roles (#32, ADR-002)
 
 - **Auth.js v5** con Google y sesión JWT (`src/auth.ts`, rutas en `/api/auth/*`). Al ingresar se crea o actualiza el usuario en `usuarios` con su rol (`ADMIN_EMAILS` y `OPERADOR_EMAILS`).
 - **Permisos:** `requerirSesion` y `requerirRol` (`src/lib/permisos.ts`) releen el rol de la base. Sin sesión redirigen a `/ingresar`; sin permiso, `forbidden()` responde 403 (`experimental.authInterrupts` en `next.config.ts`).
-- **Panel (#37):** `/panel/**` exige `operador` o `admin`. El control real es `requerirRol` en el layout y en cada página, en el servidor; `src/proxy.ts` (#34) sumará `/panel` después. Como `auth()` lee cookies, con `cacheComponents` la guarda va dentro de `Suspense` y detrás de `connection()`: la respuesta empieza a enviarse antes de resolver el permiso, así que el 403 y la redirección llegan en el stream (HTTP 200), no como estado HTTP. Todavía no están protegidos el detalle de proyectos (#34) ni la pantalla de ingreso (#35).
+- **Panel (#37):** `/panel/**` exige `operador` o `admin`. El control real es `requerirRol` en el layout y en cada página, en el servidor; el proxy (#34) sumará `/panel` después. Como `auth()` lee cookies, con `cacheComponents` la guarda va dentro de `Suspense` y detrás de `connection()`: la respuesta empieza a enviarse antes de resolver el permiso, así que el 403 y la redirección llegan en el stream (HTTP 200), no como estado HTTP. Todavía no están protegidos el detalle de proyectos (#34) ni la pantalla de ingreso (#35).
 
 ## Landing (PoC, #18)
 
