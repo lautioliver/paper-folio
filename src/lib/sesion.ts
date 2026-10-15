@@ -39,7 +39,9 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
     sesion = (await auth()) as SesionDeLaApp;
   } catch (error) {
     if (error instanceof EnvInvalidoError) return { estado: "ninguna", configurado: false };
-    throw error;
+    // Una cookie corrupta no puede dejar /ingresar en 500: es la página para recuperarse.
+    console.error("sesion: no se pudo leer la sesión", error instanceof Error ? error.name : "desconocido");
+    return { estado: "ninguna", configurado: true };
   }
   const acceso = await evaluarAcceso(sesion, [], (id) => buscarRol(id));
   if (acceso.ok) return { estado: "valida", configurado: true };

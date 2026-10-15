@@ -55,8 +55,10 @@ export function MenuCuenta({ nombre, imagen, rol }: { nombre: string; imagen: st
       ref={raizRef}
       className="relative"
       onBlur={(event) => {
-        // El foco salió del avatar y del menú (Tab): se cierra, sin robar el foco a donde fue.
-        if (open && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+        // El foco salió del avatar y del menú (Tab): se cierra, sin robar el foco a donde fue. Con
+        // `relatedTarget` null (Safari no enfoca los botones al hacer clic) no se cierra: el clic afuera
+        // ya lo cierra el listener de pointerdown, y cerrar acá se comería el clic en "Salir".
+        if (open && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
     >
       <button

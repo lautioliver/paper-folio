@@ -6,7 +6,7 @@ async function Sesion() {
   const sesion = await sesionParaLaBarra();
   if (!sesion?.user?.id) return <EnlaceIngresar />;
   const { name, email, image, rol } = sesion.user;
-  return <MenuCuenta nombre={name ?? email ?? "Mi cuenta"} imagen={image ?? null} rol={rol} />;
+  return <MenuCuenta nombre={name || email || "Mi cuenta"} imagen={image ?? null} rol={rol} />;
 }
 
 /**
