@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso } from "./permisos";
+import { evaluarAcceso } from "./acceso";
 
 const base: Record<string, Rol> = { u1: "usuario", o1: "operador", a1: "admin" };
 const buscarRol = async (id: string) => base[id] ?? null;

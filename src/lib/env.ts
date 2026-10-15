@@ -22,6 +22,20 @@ const esquemaEmail = z.object({
   CONTACTO_EMAIL_DESTINO: z.string({ error: "falta" }).trim().pipe(z.email({ error: "debe ser un email" })),
 });
 
+// Auth.js (#32): las credenciales de Google y la clave de las sesiones, aparte para que `next build` y
+// /api/salud no las exijan. Auth.js las lee solo de process.env; acá se validan con mensajes claros.
+const esquemaAuth = z.object({
+  AUTH_SECRET: z.string({ error: "falta" }).min(32, { error: "debe tener al menos 32 caracteres" }),
+  AUTH_GOOGLE_ID: z.string({ error: "falta" }).trim().min(1, { error: "no puede estar vacía" }),
+  AUTH_GOOGLE_SECRET: z.string({ error: "falta" }).trim().min(1, { error: "no puede estar vacía" }),
+});
+
+// Listas de emails separados por comas. Opcionales: vacías, nadie es admin ni operador.
+const esquemaRoles = z.object({
+  ADMIN_EMAILS: z.string().default(""),
+  OPERADOR_EMAILS: z.string().default(""),
+});
+
 export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal> & z.infer<typeof esquemaEmail>;
 
 /**
@@ -42,6 +56,20 @@ export function leerEmailConfig(
   fuente: Record<string, string | undefined> = process.env,
 ): z.infer<typeof esquemaEmail> {
   return validar(esquemaEmail, fuente);
+}
+
+/** Valida `AUTH_SECRET`, `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET`. Mismas reglas que `leerEnv`. */
+export function leerAuthConfig(fuente: Record<string, string | undefined> = process.env): z.infer<typeof esquemaAuth> {
+  return validar(esquemaAuth, fuente);
+}
+
+/** Lee `ADMIN_EMAILS` y `OPERADOR_EMAILS` (vacías si no están) como listas de roles. */
+export function leerAuthRoles(fuente: Record<string, string | undefined> = process.env): {
+  admin: string;
+  operador: string;
+} {
+  const { ADMIN_EMAILS, OPERADOR_EMAILS } = validar(esquemaRoles, fuente);
+  return { admin: ADMIN_EMAILS, operador: OPERADOR_EMAILS };
 }
 
 function validar<T extends z.ZodType>(schema: T, fuente: Record<string, string | undefined>): z.infer<T> {
