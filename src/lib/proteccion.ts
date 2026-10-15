@@ -5,7 +5,7 @@ import { urlDeIngreso } from "./acceso";
  * mismos (Next lo exige como literal, así que no se puede importar). Para sumar una ruta protegida, agregala acá
  * y en el `matcher`. El control real sigue estando en cada página (`requerirSesion` / `requerirRol`).
  */
-export const PREFIJOS_PROTEGIDOS = ["/proyectos/"] as const;
+export const PREFIJOS_PROTEGIDOS = ["/proyectos/", "/panel/"] as const;
 
 function estaProtegida(pathname: string): boolean {
   // "/proyectos/" solo (el listado con barra final) es público: tiene que haber algo después del prefijo.

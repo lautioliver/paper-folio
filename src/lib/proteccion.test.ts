@@ -39,3 +39,13 @@ describe("matcher de proxy.ts", () => {
     expect(matcher.sort()).toEqual(PREFIJOS_PROTEGIDOS.map((prefijo) => `${prefijo}:path+`).sort());
   });
 });
+
+describe("proxy en el panel", () => {
+  it("sin sesión, /panel/consultas redirige a /ingresar con callbackUrl", () => {
+    expect(redireccionDeProxy("/panel/consultas", false)).toBe("/ingresar?callbackUrl=%2Fpanel%2Fconsultas");
+  });
+
+  it("con sesión deja pasar (el rol lo controla la página con requerirRol)", () => {
+    expect(redireccionDeProxy("/panel/consultas", true)).toBeNull();
+  });
+});

@@ -22,6 +22,7 @@ src/
   app/
     layout.tsx        # html lang="es-AR", fuentes, metadata desde siteConfig
     (sitio)/page.tsx  # landing: arma las secciones de components/sitio
+    panel/            # bandeja del operador (#37): layout con la guarda de rol y consultas/page.tsx
     api/salud/route.ts # health check de la base
     api/consultas/route.ts # POST: guarda una consulta de contacto
   components/         # componentes de UI compartidos
@@ -31,7 +32,7 @@ src/
   styles/globals.css  # Tailwind y tokens
 ```
 
-Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` tiene `/ingresar` (#35); `panel/` llega con su feature.
+Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público, `(auth)` tiene `/ingresar` (#35) y `panel/` es el panel del operador (#37).
 
 ## Autenticación y roles (#32, ADR-002)
 
@@ -39,7 +40,7 @@ Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(au
 - **Permisos:** `requerirSesion` y `requerirRol` (`src/lib/permisos.ts`) releen el rol de la base. Sin sesión redirigen a `/ingresar`; sin permiso, `forbidden()` responde 403 (`experimental.authInterrupts` en `next.config.ts`).
 - **Ingreso y sesión en la barra (#35):** `/ingresar` (`src/app/(auth)/ingresar/page.tsx`) muestra "Continuar con Google" y decide qué hacer con `decidirIngreso` (`src/lib/ingreso.ts`): con sesión válida redirige al `callbackUrl` (siempre por `rutaInterna`; uno externo vuelve a `/`); con `error=sesion` o con sesión huérfana no redirige y ofrece salir e ingresar de nuevo. Sin variables `AUTH_*` muestra que el ingreso no está disponible. La barra recibe la sesión como slot (`CuentaBarra`, de servidor, dentro de `Suspense`): "Ingresar" sin sesión, o el avatar con el menú (`MenuCuenta`: "Mi cuenta", "Panel" solo para `operador` y `admin`, "Salir"; Escape cierra y devuelve el foco). El menú usa el rol del token, solo para la UI; `/cuenta` (`requerirSesion`) muestra los datos con el rol de la base. Las rutas que leen la sesión van en `Suspense` y llaman antes a `connection()` (Auth.js genera valores al azar y el prerender los toma por una lectura estática).
 - **Detalle de proyectos (#34):** `/proyectos/[slug]` llama a `requerirSesion` en el servidor; ese es el control real. `src/proxy.ts` solo adelanta la redirección a `/ingresar?callbackUrl=…` antes de renderizar: usa `auth` de Auth.js como wrapper (valida la firma del JWT; como la configuración es perezosa, `auth(callback)` devuelve una promesa y se espera) y decide con `redireccionDeProxy` (`src/lib/proteccion.ts`). El `matcher` es un literal (Next lo exige): para proteger otra ruta (por ejemplo `/panel`), sumala a `PREFIJOS_PROTEGIDOS` y al `matcher`. Como la página usa la sesión, se renderiza dentro de `Suspense` (`cacheComponents`): el 404 de un slug inexistente y las redirecciones de la página salen con HTTP 200 y `noindex`, porque el estado ya se envió con la cabecera.
-- **El panel (#37) todavía no está:** va a usar `requerirRol` en cada página.
+- **Panel (#37):** `/panel/**` exige `operador` o `admin`. El control real es `requerirRol`, en el servidor, **en cada página y acción bajo `/panel`, antes de leer datos**: el layout también lo llama, pero solo protege el shell (Next no impide que un segmento hijo se renderice ni que aparezca en el RSC Payload aunque el layout redirija, y el layout no se re-ejecuta al navegar); el proxy (#34) sumará `/panel` después. Como `auth()` lee cookies, con `cacheComponents` la guarda va dentro de `Suspense` y detrás de `connection()`: la respuesta empieza a enviarse antes de resolver el permiso, así que el 403 y la redirección llegan en el stream (HTTP 200), no como estado HTTP. Todavía no están protegidos el detalle de proyectos (#34) ni la pantalla de ingreso (#35).
 
 ## Landing (PoC, #18)
 
