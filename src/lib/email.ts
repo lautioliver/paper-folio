@@ -23,7 +23,15 @@ const REMITENTE = "onboarding@resend.dev";
  * visitante como `replyTo`). Falla si falta la configuración o si Resend responde con error; el
  * mensaje del error nombra el tipo de error de Resend, nunca la clave ni datos del visitante.
  */
-export async function avisarConsultaNueva(consulta: ConsultaCreada, cliente?: ClienteEmail): Promise<void> {
+export class EmailRechazadoError extends Error {
+  name = "EmailRechazadoError";
+}
+
+export async function avisarConsultaNueva(
+  consulta: ConsultaCreada,
+  cliente?: ClienteEmail,
+  _opciones?: { timeoutMs?: number },
+): Promise<void> {
   const config = leerEmailConfig();
   const resend = cliente ?? new Resend(config.RESEND_API_KEY);
   // Sin saltos de línea: el nombre es texto libre del visitante y va en el asunto.

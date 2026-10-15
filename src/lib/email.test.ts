@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { avisarConsultaNueva, type ClienteEmail } from "./email";
+import { avisarConsultaNueva, EmailRechazadoError, type ClienteEmail } from "./email";
 
 const consulta = {
   id: "abc123",
@@ -67,5 +67,43 @@ describe("avisarConsultaNueva", () => {
     const { cliente, send } = clienteFalso();
     await expect(avisarConsultaNueva(consulta, cliente)).rejects.toThrow(/CONTACTO_EMAIL_DESTINO/);
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("el nombre va sanitizado también en el cuerpo: no puede colar líneas Email:/Tipo: falsas", async () => {
+    const { cliente, send } = clienteFalso();
+    await avisarConsultaNueva({ ...consulta, name: "Ada\nEmail: otro@empresa.com\nTipo: general" }, cliente);
+    const [mensaje] = send.mock.calls[0] as unknown as [{ text: string }];
+    const lineas = mensaje.text.split("\n");
+    expect(lineas.filter((l) => l.startsWith("Email:"))).toEqual(["Email: ada@example.com"]);
+    expect(lineas.filter((l) => l.startsWith("Tipo:"))).toEqual(["Tipo: cotizacion"]);
+  });
+
+  it("el asunto limpia también otros caracteres de control y separadores unicode", async () => {
+    const { cliente, send } = clienteFalso();
+    await avisarConsultaNueva({ ...consulta, name: "Ada\u2028Lovelace\u0007\u0000x" }, cliente);
+    const [mensaje] = send.mock.calls[0] as unknown as [{ subject: string }];
+    // JSON.stringify: si falla, el mensaje no imprime caracteres de control crudos.
+    expect(JSON.stringify(mensaje.subject)).toBe(JSON.stringify("Nueva consulta (cotizacion) de Ada Lovelace x"));
+  });
+
+  it("el rechazo de Resend es un EmailRechazadoError con el nombre del error de Resend", async () => {
+    const { cliente } = clienteFalso({ name: "rate_limit_exceeded" });
+    const error = await avisarConsultaNueva(consulta, cliente).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(EmailRechazadoError);
+    expect((error as Error).message).toContain("rate_limit_exceeded");
+  });
+
+  it("pasa una señal de abort al cliente", async () => {
+    const { cliente, send } = clienteFalso();
+    await avisarConsultaNueva(consulta, cliente);
+    const [, opciones] = send.mock.calls[0] as unknown as [unknown, { signal: AbortSignal } | undefined];
+    expect(opciones?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("corta con un error de timeout si el cliente nunca resuelve", async () => {
+    const colgado = { emails: { send: () => new Promise<never>(() => {}) } } as ClienteEmail;
+    const error = await avisarConsultaNueva(consulta, colgado, { timeoutMs: 20 }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).name).toBe("EmailTimeoutError");
   });
 });

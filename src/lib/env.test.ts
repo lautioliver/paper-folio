@@ -76,6 +76,13 @@ describe("RESEND_API_KEY y CONTACTO_EMAIL_DESTINO", () => {
     expect(() => leerEmailConfig({ ...ok, CONTACTO_EMAIL_DESTINO: "no-es-email" })).toThrow(/CONTACTO_EMAIL_DESTINO/);
   });
 
+  it("dice falta si no está y recorta los espacios del borde", () => {
+    expect(() => leerEmailConfig({ RESEND_API_KEY: ok.RESEND_API_KEY })).toThrow(/CONTACTO_EMAIL_DESTINO: falta/);
+    expect(leerEmailConfig({ ...ok, CONTACTO_EMAIL_DESTINO: " destino@example.com\n" }).CONTACTO_EMAIL_DESTINO).toBe(
+      "destino@example.com",
+    );
+  });
+
   it("no muestra el valor en el error", () => {
     let mensaje = "";
     try {

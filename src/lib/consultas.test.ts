@@ -173,6 +173,27 @@ describe("crearConsulta", () => {
     }
   });
 
+  it("si el aviso se cuelga, el timeout deja emailEnviado false y el resultado es creada", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { avisarConsultaNueva: real } = await vi.importActual<typeof import("./email")>("./email");
+    const colgado = { emails: { send: () => new Promise<never>(() => {}) } };
+    process.env.RESEND_API_KEY = "re_clave_de_prueba";
+    process.env.CONTACTO_EMAIL_DESTINO = "destino@example.com";
+    try {
+      const r = await crearConsulta(valida, {
+        ip: "10.1.0.5",
+        avisar: (c) => real(c, colgado, { timeoutMs: 20 }),
+      });
+      expect(r.tipo).toBe("creada");
+      expect((await Consulta.findOne().lean())?.emailEnviado).toBe(false);
+      expect(JSON.stringify(log.mock.calls)).toContain("EmailTimeoutError");
+    } finally {
+      delete process.env.RESEND_API_KEY;
+      delete process.env.CONTACTO_EMAIL_DESTINO;
+      log.mockRestore();
+    }
+  });
+
   it("sin avisar, usa avisarConsultaNueva y marca emailEnviado true", async () => {
     vi.mocked(avisarConsultaNueva).mockClear();
     const r = await crearConsulta(valida, { ip: "10.1.0.3" });
