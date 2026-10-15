@@ -99,7 +99,21 @@ export const projects: Project[] = [
     demoUrl: "https://ucanode.app",
     repoUrl: "https://github.com/lautioliver/UcaNode",
     accent: "terciario",
-    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
+    caso: {
+      problema:
+        "Organizar en un solo lugar las materias, entregas, horarios y links útiles de la cursada en la UCASAL. La referencia era un dashboard personal de Notion.",
+      solucion:
+        "Una aplicación web independiente, con PostgreSQL, que junta todo eso y suma una comunidad estudiantil.",
+      funcionalidades: [
+        "Registro y login con verificación de email (Resend) y onboarding con selección de carrera y plan de estudios.",
+        "Dashboard con próximas entregas, clases del día, materias en curso y links favoritos.",
+        "Materias con año, semestre, estados y correlatividades; entregas por materia, tipo, fecha, prioridad y estado.",
+        "Apuntes enriquecidos con autosave y exportación a PDF (beta), y grilla semanal de horarios.",
+        "Comunidad con publicaciones, votos y comentarios anidados, y hubs públicos por universidad.",
+        "Tema claro y oscuro, búsqueda global (Ctrl+K) y concurrencia del campus vía CampuStatus.",
+      ],
+      stack: ["Next.js 16 (App Router)", "React 19", "Tailwind CSS 4 y shadcn/ui", "Prisma 7", "PostgreSQL (Neon)", "Zod", "Resend", "Vitest", "Vercel"],
+    },
   },
   {
     slug: "numerika-ai",
@@ -112,7 +126,20 @@ export const projects: Project[] = [
     demoUrl: "https://numerika-ai.vercel.app",
     repoUrl: "https://github.com/lautioliver/numerika-ai",
     accent: "secundario",
-    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
+    caso: {
+      problema:
+        "A los estudiantes de ingeniería les cuesta comprender los métodos numéricos, no solo calcularlos: saber por qué un método converge, diverge o falla.",
+      solucion:
+        "Una plataforma educativa en español que resuelve paso a paso, muestra el resultado en un gráfico y explica cada caso, con apoyo de inteligencia artificial.",
+      funcionalidades: [
+        "Solver interactivo con cinco métodos: bisección, regla falsa, Newton-Raphson, secante y punto fijo.",
+        "Tabla de iteraciones paso a paso y gráfico de f(x) con zoom y la raíz marcada.",
+        "Análisis de convergencia que explica por qué el método convergió o no, con mensajes de error claros.",
+        "Comparador que corre los métodos sobre la misma función y compara iteraciones, error y tiempo.",
+        "Explicaciones con IA y un asistente contextual (en desarrollo).",
+      ],
+      stack: ["React 19", "Vite 7", "Recharts", "Node.js y Express 5", "PostgreSQL 15", "OpenAI API", "math.js", "JWT y bcrypt", "Vercel"],
+    },
   },
   {
     slug: "campustatus",
@@ -125,7 +152,19 @@ export const projects: Project[] = [
     demoUrl: "https://campu-status.vercel.app",
     repoUrl: "https://github.com/lautioliver/CampuStatus",
     accent: "acento",
-    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
+    caso: {
+      problema:
+        "Saber cuánta gente hay en la biblioteca, el comedor y otros espacios del campus antes de ir.",
+      solucion:
+        "Un sistema colaborativo de concurrencia: se consulta la ocupación de cada espacio y se envían reportes anónimos, con un cooldown por zona para evitar abusos.",
+      funcionalidades: [
+        "Consulta de la ocupación de bibliotecas, comedores y otros espacios, por zona.",
+        "Reportes anónimos con cooldown por zona.",
+        "Los reportes solo se aceptan desde IPs del campus.",
+        "API REST con health check, listado y detalle de zonas, y registro de reportes.",
+      ],
+      stack: ["Next.js 15", "React 19", "Prisma", "PostgreSQL (Neon)", "Tailwind CSS", "Vercel"],
+    },
   },
   {
     slug: "barrilete-kit",
@@ -138,7 +177,19 @@ export const projects: Project[] = [
     demoUrl: "https://barrilete-kit-lp-5n68.vercel.app",
     repoUrl: "https://github.com/lautioliver/barrilete-kit",
     accent: "primario",
-    caso: { problema: "", solucion: "", funcionalidades: [], stack: [] },
+    caso: {
+      problema:
+        "Trabajar con agentes de código sin perder el control de lo que cambian.",
+      solucion:
+        "Una plantilla de repo con reglas, skills y documentación que se testea, con un flujo de issue a PR donde las personas aprueban el plan y mergean.",
+      funcionalidades: [
+        "AGENTS.md define qué puede hacer un agente solo, qué tiene que consultar y qué nunca.",
+        "Skills para el ciclo completo: planificar, abrir issues, implementar con TDD, revisar PRs, debuggear y migrar la base.",
+        "CI que valida links, rutas y ADRs, y avisa qué docs revisar según lo que cambió.",
+        "Cada corrida deja una retro, y los ajustes a las skills llegan siempre en un PR.",
+      ],
+      stack: ["Bash", "Python 3", "GitHub Actions", "GitHub CLI", "Claude Code y Cursor"],
+    },
   },
 ];
 

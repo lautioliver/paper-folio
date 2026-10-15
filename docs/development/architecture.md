@@ -37,7 +37,8 @@ Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(au
 
 - **Auth.js v5** con Google y sesión JWT (`src/auth.ts`, rutas en `/api/auth/*`). Al ingresar se crea o actualiza el usuario en `usuarios` con su rol (`ADMIN_EMAILS` y `OPERADOR_EMAILS`).
 - **Permisos:** `requerirSesion` y `requerirRol` (`src/lib/permisos.ts`) releen el rol de la base. Sin sesión redirigen a `/ingresar`; sin permiso, `forbidden()` responde 403 (`experimental.authInterrupts` en `next.config.ts`).
-- **Todavía no hay nada protegido:** el detalle de proyectos (#34), la pantalla de ingreso (#35) y el panel (#37) lo usan.
+- **Detalle de proyectos (#34):** `/proyectos/[slug]` llama a `requerirSesion` en el servidor; ese es el control real. `src/proxy.ts` solo adelanta la redirección a `/ingresar?callbackUrl=…` antes de renderizar: usa `auth` de Auth.js como wrapper (valida la firma del JWT; como la configuración es perezosa, `auth(callback)` devuelve una promesa y se espera) y decide con `redireccionDeProxy` (`src/lib/proteccion.ts`). El `matcher` es un literal (Next lo exige): para proteger otra ruta (por ejemplo `/panel`), sumala a `PREFIJOS_PROTEGIDOS` y al `matcher`. Como la página usa la sesión, se renderiza dentro de `Suspense` (`cacheComponents`): el 404 de un slug inexistente sale con HTTP 200 y `noindex`, porque el estado ya se envió con la cabecera.
+- **Todavía no hay nada más protegido:** la pantalla de ingreso (#35) y el panel (#37) lo usan.
 
 ## Landing (PoC, #18)
 

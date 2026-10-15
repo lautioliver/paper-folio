@@ -1,19 +1,10 @@
 import { forbidden, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, rutaInterna, type Acceso } from "./acceso";
+import { evaluarAcceso, urlDeIngreso } from "./acceso";
 import { buscarRol } from "./usuarios";
 
-export { evaluarAcceso, rutaInterna, type Acceso, type SesionMinima } from "./acceso";
-
-/** Página de ingreso (la arma #35). */
-export const RUTA_INGRESO = "/ingresar";
-
-function urlDeIngreso(volverA: string, motivo: Exclude<Acceso, { ok: true }>["motivo"]): string {
-  const url = `${RUTA_INGRESO}?callbackUrl=${encodeURIComponent(rutaInterna(volverA))}`;
-  // Con sesión huérfana /ingresar (#35) no debe devolverlo a la página: tiene que ofrecer ingresar de nuevo.
-  return motivo === "sesion-huerfana" ? `${url}&error=sesion` : url;
-}
+export { evaluarAcceso, rutaInterna, RUTA_INGRESO, type Acceso, type SesionMinima } from "./acceso";
 
 /**
  * Para páginas y server actions: devuelve el usuario con sesión o redirige a `/ingresar`,

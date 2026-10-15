@@ -114,7 +114,7 @@
       "rutas": [
         "src/auth.ts",
         "?src/auth.config.ts",
-        "?src/proxy.ts",
+        "src/proxy.ts",
         "?src/middleware.ts",
         "?src/app/(auth)/**",
         "src/app/api/auth/**",

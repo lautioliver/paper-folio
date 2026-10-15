@@ -33,9 +33,14 @@ export function rutaInterna(ruta: string): string {
   return /^\/(?![/\\])[^\s\u0000-\u001f\u007f]*$/.test(ruta) ? ruta : "/";
 }
 
-/** URL de `/ingresar` para volver a `volverA` después de ingresar (stub). */
+/** Página de ingreso (la arma #35). */
+export const RUTA_INGRESO = "/ingresar";
+
+/**
+ * URL de `/ingresar` para volver a `volverA` (solo rutas internas) después de ingresar. Con sesión huérfana
+ * suma `error=sesion`: /ingresar (#35) no debe devolverlo a la página, tiene que ofrecer ingresar de nuevo.
+ */
 export function urlDeIngreso(volverA: string, motivo?: "sin-sesion" | "sin-permiso" | "sesion-huerfana"): string {
-  void volverA;
-  void motivo;
-  return "";
+  const url = `${RUTA_INGRESO}?callbackUrl=${encodeURIComponent(rutaInterna(volverA))}`;
+  return motivo === "sesion-huerfana" ? `${url}&error=sesion` : url;
 }
