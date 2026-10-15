@@ -32,6 +32,18 @@ case "$*" in
 esac
 SH
 chmod +x "$TMP/bin/gh"
+# npm falso: registra "<dir>|<args>". Con NPM_FALLA deja node_modules a medias (sin el
+# .package-lock.json que npm escribe al terminar) y falla.
+export NPM_LOG="$TMP/npm.log"
+: >"$NPM_LOG"
+cat >"$TMP/bin/npm" <<'SH'
+#!/usr/bin/env bash
+echo "$(pwd -P)|$*" >>"$NPM_LOG"
+mkdir -p node_modules
+[ -n "${NPM_FALLA:-}" ] && { echo "npm falso: falla" >&2; exit 1; }
+echo '{}' >node_modules/.package-lock.json
+SH
+chmod +x "$TMP/bin/npm"
 # Aislado de la config de git de quien corre los tests (firma de commits, hooks globales…).
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export PATH="$TMP/bin:$PATH" BASE=main GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=t@t
@@ -217,6 +229,27 @@ s=$(cd "$TMP/proj" && "$PREPARAR" 56 2>&1); c=$?
 git -C "$TMP/proj" remote set-url origin "$TMP/remoto.git"
 es "$c" -ne 0 && ! asignado 56 && ! git -C "$TMP/proj" show-ref -q --verify refs/heads/claude/56-sin-remoto
 afirmar $? "si no puede consultar las ramas de origin, falla sin asignar ni crear una rama nueva"
+
+# 11. Dependencias de npm en el worktree (#9): con package-lock.json, npm ci antes de asignar.
+! [ -s "$NPM_LOG" ]; afirmar $? "sin package-lock.json no llama a npm"
+(cd "$TMP/proj" && echo '{}' >package-lock.json && git add package-lock.json && git commit -qm lock && git push -q origin main) 2>/dev/null
+issue 57 "Con dependencias"
+s=$(cd "$TMP/proj" && "$PREPARAR" 57 --worktree 2>&1); c=$?
+afirmar $c "--worktree con package-lock.json termina bien"
+grep -qx "$WT/57|ci.*" "$NPM_LOG"; afirmar $? "corre npm ci adentro del worktree"
+asignado 57 && es -f "$WT/57/node_modules/.package-lock.json"; afirmar $? "asigna con las dependencias instaladas"
+antes=$(wc -l <"$NPM_LOG")
+(cd "$TMP/proj" && "$PREPARAR" 57 --worktree >/dev/null 2>&1); c=$?
+es "$c" -eq 0 && es "$(wc -l <"$NPM_LOG")" -eq "$antes"; afirmar $? "al retomar con las dependencias instaladas no reinstala"
+
+issue 58 "Npm falla"
+s=$(cd "$TMP/proj" && NPM_FALLA=1 "$PREPARAR" 58 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "npm ci" <<<"$s"; afirmar $? "si npm ci falla, sale con error y lo dice"
+! asignado 58; afirmar $? "si npm ci falla, no asigna"
+antes=$(wc -l <"$NPM_LOG")
+s=$(cd "$TMP/proj" && "$PREPARAR" 58 --worktree 2>&1); c=$?
+es "$c" -eq 0 && es "$(wc -l <"$NPM_LOG")" -gt "$antes" && asignado 58
+afirmar $? "después de una instalación a medias, reintenta npm ci y asigna"
 
 # Plantilla sin inicializar (BASE=main) y sin BASE: usa la rama por defecto del remoto y avisa.
 # Después del init la base ya está configurada (puede ser develop, que este remoto no tiene) y estos
