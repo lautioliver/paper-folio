@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { Container } from "@/components/Container";
-import { milestones, profile, projects, services } from "@/content/profile";
+import { milestones, profile, projects, services, type Project } from "@/content/profile";
 import { cn } from "@/lib/cn";
+import { RUTA_PROYECTOS, rutaDemo, rutaDetalle } from "@/lib/proyectos";
 import { Highlight, SectionTitle } from "./Highlight";
 import { BrowserMock, HeroCharacter, Portrait, ServiceIcon } from "./Illustrations";
 import { HeroMotion } from "./HeroMotion";
@@ -9,7 +11,7 @@ import { ShareButton } from "./ShareButton";
 import { PANEL_BG, TONE_BG } from "./tones";
 
 // Botón de marca: contorno, radio y sombra (marca) más el "apretar" (apretable).
-const BUTTON = "marca apretable inline-flex items-center justify-center gap-2 px-5 py-3 text-cuerpo font-bold";
+export const BUTTON = "marca apretable inline-flex items-center justify-center gap-2 px-5 py-3 text-cuerpo font-bold";
 
 export function Hero() {
   return (
@@ -114,6 +116,59 @@ export function About() {
   );
 }
 
+/** Tarjeta de un proyecto: la usan la landing y el listado `/proyectos`. */
+export function ProjectCard({ project }: { project: Project }) {
+  return (
+    <Reveal>
+      <article className="contorno grid overflow-hidden bg-papel lg:grid-cols-2">
+        <div className="order-2 p-6 sm:p-8 lg:order-1">
+          <span
+            className={cn(
+              "grid size-11 place-items-center rounded-lg border-2 border-tinta text-h3 font-bold",
+              TONE_BG[project.accent],
+            )}
+            aria-hidden="true"
+          >
+            {project.initial}
+          </span>
+          <p className="mt-4 inline-block rounded-md bg-tinta px-2 py-0.5 text-xs font-bold text-papel">
+            {project.category}
+          </p>
+          <h3 className="mt-3 text-h3 font-bold">{project.name}</h3>
+          <p className="mt-2 text-pequeno">{project.description}</p>
+          <p className="mt-3 text-xs font-bold">{project.stack.join(" · ")}</p>
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-pequeno font-bold">
+            {/* Detalle y demo solo para registrados: sin prefetch, así no se pide la ruta protegida antes de un clic. */}
+            <Link
+              href={rutaDetalle(project.slug)}
+              prefetch={false}
+              className={cn(BUTTON, "bg-tinta px-4 py-2 text-papel")}
+            >
+              Ver caso de estudio
+            </Link>
+            {/* La demo también es solo para registrados: pasa por el ingreso y vuelve al detalle. */}
+            <Link href={rutaDemo(project.slug)} prefetch={false} className="underline decoration-2 underline-offset-4">
+              Ver demo →
+            </Link>
+            <a href={project.repoUrl} target="_blank" rel="noreferrer" className="underline decoration-2 underline-offset-4">
+              Ver en GitHub →
+            </a>
+            <ShareButton title={project.name} slug={project.slug} />
+          </div>
+        </div>
+        <div
+          className={cn(
+            "order-1 grid place-items-center border-b-(length:--borde-marca) border-tinta p-8 lg:order-2 lg:border-b-0 lg:border-l-(length:--borde-marca)",
+            PANEL_BG[project.accent],
+          )}
+        >
+          <BrowserMock tone={project.accent} />
+        </div>
+      </article>
+    </Reveal>
+  );
+}
+
 export function Projects() {
   return (
     <section id="proyectos" className="py-16">
@@ -124,47 +179,15 @@ export function Projects() {
         <ul className="mt-12 grid gap-8">
           {projects.map((project) => (
             <li key={project.slug} id={`proyecto-${project.slug}`} className="scroll-mt-28">
-              <Reveal>
-                <article className="contorno grid overflow-hidden bg-papel lg:grid-cols-2">
-                  <div className="order-2 p-6 sm:p-8 lg:order-1">
-                    <span
-                      className={cn(
-                        "grid size-11 place-items-center rounded-lg border-2 border-tinta text-h3 font-bold",
-                        TONE_BG[project.accent],
-                      )}
-                      aria-hidden="true"
-                    >
-                      {project.initial}
-                    </span>
-                    <p className="mt-4 inline-block rounded-md bg-tinta px-2 py-0.5 text-xs font-bold text-papel">
-                      {project.category}
-                    </p>
-                    <h3 className="mt-3 text-h3 font-bold">{project.name}</h3>
-                    <p className="mt-2 text-pequeno">{project.description}</p>
-                    <p className="mt-3 text-xs font-bold">{project.stack.join(" · ")}</p>
-                    <div className="mt-6 flex flex-wrap gap-6 text-pequeno font-bold">
-                      <a href={project.demoUrl} target="_blank" rel="noreferrer" className="underline decoration-2 underline-offset-4">
-                        Ver demo →
-                      </a>
-                      <a href={project.repoUrl} target="_blank" rel="noreferrer" className="underline decoration-2 underline-offset-4">
-                        Ver en GitHub →
-                      </a>
-                      <ShareButton title={project.name} slug={project.slug} />
-                    </div>
-                  </div>
-                  <div
-                    className={cn(
-                      "order-1 grid place-items-center border-b-(length:--borde-marca) border-tinta p-8 lg:order-2 lg:border-b-0 lg:border-l-(length:--borde-marca)",
-                      PANEL_BG[project.accent],
-                    )}
-                  >
-                    <BrowserMock tone={project.accent} />
-                  </div>
-                </article>
-              </Reveal>
+              <ProjectCard project={project} />
             </li>
           ))}
         </ul>
+        <div className="mt-10 text-center">
+          <Link href={RUTA_PROYECTOS} className={cn(BUTTON, "bg-papel")}>
+            Ver todos los proyectos
+          </Link>
+        </div>
       </Container>
     </section>
   );
