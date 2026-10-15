@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { conectar, desconectar } from "./db";
 
 let servidor: MongoMemoryServer;
@@ -13,6 +13,10 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await desconectar();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -35,6 +39,13 @@ describe("conectar", () => {
     expect(b).toBe(c);
     expect(spy).toHaveBeenCalledTimes(1);
     spy.mockRestore();
+  });
+
+  it("reconecta si la conexión se cerró por fuera del cache", async () => {
+    await conectar();
+    await mongoose.disconnect();
+    const m = await conectar();
+    expect(m.connection.readyState).toBe(1);
   });
 
   it("no loguea la URI", async () => {
