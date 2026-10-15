@@ -116,11 +116,14 @@ describe("leerAuthConfig", () => {
   it("nombra la variable que falta o es corta, sin mostrar valores", () => {
     expect(() => leerAuthConfig({ ...completa, AUTH_SECRET: "corta" })).toThrow(/AUTH_SECRET: debe tener al menos 32/);
     expect(() => leerAuthConfig({ ...completa, AUTH_GOOGLE_ID: undefined })).toThrow(/AUTH_GOOGLE_ID: falta/);
+    let error: unknown;
     try {
       leerAuthConfig({ ...completa, AUTH_SECRET: "valor-secreto" });
     } catch (e) {
-      expect(String(e)).not.toContain("valor-secreto");
+      error = e;
     }
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).not.toContain("valor-secreto");
   });
 });
 

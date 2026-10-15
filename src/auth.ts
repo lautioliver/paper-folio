@@ -24,9 +24,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
       async jwt({ token, user, account }) {
         // `account` solo viene en el ingreso: ahí se registra el usuario y se fija su rol en el token.
         if (account && user?.email) {
-          const ingresado = await registrarIngreso({ email: user.email, nombre: user.name, imagen: user.image });
-          token.id = ingresado.id;
-          token.rol = ingresado.rol;
+          try {
+            const ingresado = await registrarIngreso({ email: user.email, nombre: user.name, imagen: user.image });
+            token.id = ingresado.id;
+            token.rol = ingresado.rol;
+          } catch (error) {
+            // Solo el nombre: el mensaje puede traer la URI de la base. El ingreso falla y Auth.js muestra su error.
+            console.error("auth: no se pudo registrar el ingreso", error instanceof Error ? error.name : "desconocido");
+            throw error;
+          }
         }
         return token;
       },

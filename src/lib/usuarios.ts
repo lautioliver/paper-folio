@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import { z } from "zod";
-import { conectar } from "./db";
+import { asegurarIndicesDe, conectar } from "./db";
 import { leerAuthRoles } from "./env";
-import { ROLES, Usuario, type Rol } from "@/models/Usuario";
+import { Usuario, type Rol } from "@/models/Usuario";
 
 /** Emails separados por comas (`ADMIN_EMAILS`, `OPERADOR_EMAILS`). */
 export type ListasDeRoles = { admin: string; operador: string };
@@ -28,24 +28,6 @@ export function rolParaEmail(email: string, listas: ListasDeRoles): Rol {
   return "usuario";
 }
 
-let indices: Promise<unknown> | null = null;
-let escuchando = false;
-
-/** Crea el índice único de email una vez por proceso (el modelo no lo hace solo, ver `Usuario.ts`). */
-function asegurarIndices(): Promise<unknown> {
-  if (!escuchando) {
-    escuchando = true;
-    mongoose.connection.on("close", () => {
-      indices = null;
-    });
-  }
-  indices ??= Usuario.createIndexes().catch((error: unknown) => {
-    indices = null;
-    throw error;
-  });
-  return indices;
-}
-
 /**
  * Crea o actualiza el usuario que acaba de ingresar con Google (upsert por email).
  * El rol se recalcula en cada ingreso según `ADMIN_EMAILS` y `OPERADOR_EMAILS` (épica #31, decisión 3).
@@ -57,22 +39,26 @@ export async function registrarIngreso(
   const email = emailValido.parse(datos.email);
   const rol = rolParaEmail(email, listas);
   await conectar();
-  await asegurarIndices();
+  await asegurarIndicesDe(Usuario);
   const doc = await Usuario.findOneAndUpdate(
     { email },
     {
       $set: { nombre: datos.nombre ?? "", imagen: datos.imagen ?? "", rol, ultimoAcceso: new Date() },
       $setOnInsert: { email },
     },
-    { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true },
   ).lean();
   return { id: String(doc._id), email: doc.email, rol: doc.rol };
 }
 
-/** Rol guardado en la base (la fuente de verdad para el panel). `null` si no existe. */
-export async function buscarRol(id: string, _listas: ListasDeRoles = leerAuthRoles()): Promise<Rol | null> {
+/**
+ * Rol vigente de un usuario para los permisos. `null` si no existe.
+ * Hasta el hito 5 los roles salen de `ADMIN_EMAILS` y `OPERADOR_EMAILS` (ADR-002 R-4): se recalculan
+ * también al leer, así sacar a alguien de la lista le quita el rol aunque su sesión siga viva.
+ */
+export async function buscarRol(id: string, listas: ListasDeRoles = leerAuthRoles()): Promise<Rol | null> {
   if (!mongoose.isValidObjectId(id)) return null;
   await conectar();
-  const doc = await Usuario.findById(id, { rol: 1 }).lean();
-  return doc && (ROLES as readonly string[]).includes(doc.rol) ? doc.rol : null;
+  const doc = await Usuario.findById(id, { email: 1 }).lean();
+  return doc ? rolParaEmail(doc.email, listas) : null;
 }

@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
-import mongoose from "mongoose";
 import { Consulta } from "@/models/Consulta";
 import type { ContactField, ContactRequest } from "./contact";
 import { parseContactRequest } from "./contact";
-import { conectar } from "./db";
+import { asegurarIndicesDe, conectar } from "./db";
 import { avisarConsultaNueva } from "./email";
 import { leerIpHashSal } from "./env";
 
@@ -30,25 +29,6 @@ export type OpcionesConsulta = {
   /** Reloj inyectable para los tests. */
   ahora?: () => Date;
 };
-
-let indices: Promise<unknown> | null = null;
-let escuchando = false;
-
-/** Crea el índice de `consultas` una vez por proceso (el modelo no lo hace solo, ver `Consulta.ts`). */
-function asegurarIndices(): Promise<unknown> {
-  // Al cerrarse la conexión (como en db.ts) el índice puede faltar en la próxima base.
-  if (!escuchando) {
-    escuchando = true;
-    mongoose.connection.on("close", () => {
-      indices = null;
-    });
-  }
-  indices ??= Consulta.createIndexes().catch((error: unknown) => {
-    indices = null;
-    throw error;
-  });
-  return indices;
-}
 
 function nombreDe(error: unknown): string {
   return error instanceof Error ? error.name : "error";
@@ -87,7 +67,7 @@ export async function crearConsulta(
   const ahora = opciones.ahora?.() ?? new Date();
 
   await conectar();
-  await asegurarIndices();
+  await asegurarIndicesDe(Consulta);
 
   const recientes = await Consulta.countDocuments({
     ipHash,

@@ -18,8 +18,8 @@ La consigna pide registro obligatorio para ver el detalle de proyectos y demos (
 4. **R-4. Roles por email hasta el hito 5:**
    - Todo usuario nuevo es `usuario`.
    - `ADMIN_EMAILS` da `admin` y `OPERADOR_EMAILS` da `operador`. Son listas separadas por comas, solo en el entorno y nunca en el repo.
-   - El rol se recalcula en cada ingreso.
-5. **R-5. Sin permiso, 403 con `forbidden()`.** Usa `experimental.authInterrupts` de Next 16 y la página `src/app/forbidden.tsx`. Sin sesión, se redirige a `/ingresar?callbackUrl=…`.
+   - El rol se recalcula en cada ingreso y **también al leerlo** (`buscarRol`): sacar a alguien de la lista le quita el rol aunque su sesión siga viva.
+5. **R-5. Sin permiso, 403 con `forbidden()`.** Usa `experimental.authInterrupts` de Next 16 y la página `src/app/forbidden.tsx`. Sin sesión, se redirige a `/ingresar?callbackUrl=…`, solo con rutas internas (`rutaInterna`). Si el token es válido pero el usuario ya no existe en la base, se agrega `&error=sesion` para que `/ingresar` no lo devuelva a la página.
 
 ## Alternativas descartadas
 
