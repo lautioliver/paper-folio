@@ -1,6 +1,7 @@
 # .github/workflows/ci.yml — Paperfolio
 # Corre lint, typecheck y tests del proyecto Next.js en cada PR y en cada push a main.
-# Sin secretos: los tests no usan servicios externos. Node sale de .nvmrc.
+# Sin secretos. Node sale de .nvmrc. Los tests de la base usan mongodb-memory-server: la primera
+# corrida sin caché descarga el binario de mongod (~80 MB) de fastdl.mongodb.org.
 name: CI
 
 on:
@@ -26,6 +27,14 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      # npm no corre el postinstall de mongodb-memory-server (allowScripts): mongod se descarga
+      # en el primer test. Se cachea entre corridas; la clave cambia con el lock (nueva versión).
+      - name: Caché del binario de mongod
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongod-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: mongod-${{ runner.os }}-
       - name: Instalar dependencias
         id: instalar
         run: npm ci
