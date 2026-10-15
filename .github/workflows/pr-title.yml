@@ -31,11 +31,16 @@ jobs:
             ci
             chore
             revert
-          # TODO: lista cerrada de scopes (§2). Mientras esté vacía, cualquier scope es válido.
-          # scopes: |
-          #   api
-          #   db
-          #   docs
+          # Lista cerrada de scopes (docs/convencion-nombres-github.md §2).
+          scopes: |
+            web
+            auth
+            panel
+            api
+            db
+            diseno
+            infra
+            docs
           requireScope: false
           # Descripción en minúscula, sin punto final.
           subjectPattern: ^(?![A-ZÁÉÍÓÚÑ]).+[^.]$
