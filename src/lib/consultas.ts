@@ -50,6 +50,10 @@ function asegurarIndices(): Promise<unknown> {
   return indices;
 }
 
+function nombreDe(error: unknown): string {
+  return error instanceof Error ? error.name : "error";
+}
+
 /** El campo trampa `sitio_web` está oculto en el formulario: cualquier valor no vacío es un bot. */
 function traeTrampa(input: unknown): boolean {
   if (typeof input !== "object" || input === null) return false;
@@ -64,7 +68,10 @@ function traeTrampa(input: unknown): boolean {
  * que uno válido y no aprende nada. El límite es de `LIMITE_POR_HORA` por IP; cuenta solo las
  * guardadas. Contar y guardar no son atómicos: en ráfagas concurrentes puede pasarse por poco.
  */
-export async function crearConsulta(input: unknown, opciones: OpcionesConsulta): Promise<ResultadoConsulta> {
+export async function crearConsulta(
+  input: unknown,
+  opciones: OpcionesConsulta,
+): Promise<ResultadoConsulta> {
   // Error de programación del llamador (no leyó la IP): sin la IP, todos caerían en un mismo balde.
   const ip = opciones.ip.trim();
   if (ip === "") throw new Error("crearConsulta: falta la IP de la consulta");
@@ -97,15 +104,24 @@ export async function crearConsulta(input: unknown, opciones: OpcionesConsulta):
     creadaEn: ahora,
   });
   const consulta: ConsultaCreada = { id: String(doc._id), ...parsed.data };
+  let avisada = false;
   try {
     await (opciones.avisar ?? avisarConsultaNueva)(consulta);
-    await Consulta.findByIdAndUpdate(doc._id, { emailEnviado: true });
+    avisada = true;
   } catch (error) {
     // Solo el nombre del error: el mensaje puede traer la clave o datos del visitante.
-    console.error(
-      "crearConsulta: no se pudo avisar la consulta nueva por email:",
-      error instanceof Error ? error.name : "error",
-    );
+    console.error("crearConsulta: no se pudo avisar la consulta nueva por email:", nombreDe(error));
+  }
+  if (avisada) {
+    try {
+      await Consulta.findByIdAndUpdate(doc._id, { emailEnviado: true });
+    } catch (error) {
+      // El email ya salió: la consulta queda con `emailEnviado: false` aunque se avisó.
+      console.error(
+        "crearConsulta: el email salió pero no se pudo marcar emailEnviado:",
+        nombreDe(error),
+      );
+    }
   }
   return { tipo: "creada", consulta };
 }
