@@ -27,14 +27,21 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      # npm no corre el postinstall de mongodb-memory-server (allowScripts): mongod se descarga
-      # en el primer test. Se cachea entre corridas; la clave cambia con el lock (nueva versión).
-      - name: Caché del binario de mongod
-        uses: actions/cache@v4
+      # mongod se descarga en el postinstall de mongodb-memory-server o, si npm no lo corre
+      # (npm 11 bloquea scripts no aprobados), en el primer test. Se restaura antes de los dos.
+      # Clave: imagen del runner (el binario depende de la versión de Ubuntu) + versión de
+      # mongodb-memory-server-core (define qué mongod baja). Sin restore-keys: no acumula versiones.
+      - name: Clave de la caché de mongod
+        id: clave-mongod
+        run: |
+          v=$(node -p "require('./package-lock.json').packages['node_modules/mongodb-memory-server-core'].version")
+          echo "clave=mongod-$ImageOS-$RUNNER_ARCH-mms$v" >> "$GITHUB_OUTPUT"
+      - name: Restaurar el binario de mongod
+        id: cache-mongod
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/mongodb-binaries
-          key: mongod-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: mongod-${{ runner.os }}-
+          key: ${{ steps.clave-mongod.outputs.clave }}
       - name: Instalar dependencias
         id: instalar
         run: npm ci
@@ -46,3 +53,10 @@ jobs:
       - name: Tests
         if: ${{ !cancelled() && steps.instalar.outcome == 'success' }}
         run: npm test
+      # Se guarda aunque falle lint o un test: si no, cada corrida roja vuelve a descargar mongod.
+      - name: Guardar el binario de mongod
+        if: ${{ !cancelled() && steps.cache-mongod.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: ${{ steps.clave-mongod.outputs.clave }}

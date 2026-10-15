@@ -25,7 +25,7 @@ npm run dev          # http://localhost:3000
 
 ## CI
 
-`.github/workflows/ci.yml` corre en cada PR y en cada push a `main`: `npm ci`, `npm run lint`, `npm run typecheck` y `npm test`, con Node tomado de `.nvmrc`. Cachea `~/.cache/mongodb-binaries` entre corridas (`actions/cache`, clave por SO y `package-lock.json`), así los tests no vuelven a descargar `mongod`. Antes de abrir un PR, correr en local lint, typecheck y tests (`npm run lint`, `npm run typecheck`, `npm test`). No usa secretos.
+`.github/workflows/ci.yml` corre en cada PR y en cada push a `main`: `npm ci`, `npm run lint`, `npm run typecheck` y `npm test`, con Node tomado de `.nvmrc`. Cachea `~/.cache/mongodb-binaries` entre corridas (`actions/cache`, clave por imagen del runner y versión de `mongodb-memory-server-core`; se guarda aunque el job falle), así los tests no vuelven a descargar `mongod`. Antes de abrir un PR, correr en local lint, typecheck y tests (`npm run lint`, `npm run typecheck`, `npm test`). No usa secretos.
 
 ## Variables de entorno
 
@@ -50,7 +50,7 @@ No corras scripts de seed ni de borrado contra la base compartida: usá `paperfo
 
 ## Tests con MongoDB
 
-Los tests de la base usan `mongodb-memory-server`: levantan un `mongod` efímero en memoria, así que no necesitan Atlas ni `.env.local`. El binario de MongoDB se descarga **la primera vez que corre un test** y queda en `~/.cache/mongodb-binaries` (el `postinstall` de `mongodb-memory-server` no corre: npm 11 bloquea los scripts de instalación no aprobados, y los worktrees instalan además con `--ignore-scripts`). Esa primera corrida necesita red y tarda; las siguientes son offline. Para usar un `mongod` ya instalado, `MONGOMS_SYSTEM_BINARY=/ruta/a/mongod npm test`.
+Los tests de la base usan `mongodb-memory-server`: levantan un `mongod` efímero en memoria, así que no necesitan Atlas ni `.env.local`. El binario de MongoDB se descarga **la primera vez que corre un test** y queda en `~/.cache/mongodb-binaries` (si npm no corre el `postinstall` de `mongodb-memory-server`: npm 11 bloquea los scripts de instalación no aprobados, y los worktrees instalan con `--ignore-scripts`). Esa primera corrida necesita red y tarda; las siguientes son offline. Para usar un `mongod` ya instalado, `MONGOMS_SYSTEM_BINARY=/ruta/a/mongod npm test`.
 
 ## Problemas conocidos
 
