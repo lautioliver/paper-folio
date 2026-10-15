@@ -31,13 +31,14 @@ src/
   styles/globals.css  # Tailwind y tokens
 ```
 
-Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` y `panel/` llegan con sus features.
+Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` tiene `/ingresar` (#35); `panel/` llega con su feature.
 
 ## Autenticación y roles (#32, ADR-002)
 
 - **Auth.js v5** con Google y sesión JWT (`src/auth.ts`, rutas en `/api/auth/*`). Al ingresar se crea o actualiza el usuario en `usuarios` con su rol (`ADMIN_EMAILS` y `OPERADOR_EMAILS`).
 - **Permisos:** `requerirSesion` y `requerirRol` (`src/lib/permisos.ts`) releen el rol de la base. Sin sesión redirigen a `/ingresar`; sin permiso, `forbidden()` responde 403 (`experimental.authInterrupts` en `next.config.ts`).
-- **Todavía no hay nada protegido:** el detalle de proyectos (#34), la pantalla de ingreso (#35) y el panel (#37) lo usan.
+- **Ingreso y sesión en la barra (#35):** `/ingresar` (`src/app/(auth)/ingresar/page.tsx`) muestra "Continuar con Google" y decide qué hacer con `decidirIngreso` (`src/lib/ingreso.ts`): con sesión válida redirige al `callbackUrl` (siempre por `rutaInterna`; uno externo vuelve a `/`); con `error=sesion` o con sesión huérfana no redirige y ofrece salir e ingresar de nuevo. Sin variables `AUTH_*` muestra que el ingreso no está disponible. La barra recibe la sesión como slot (`CuentaBarra`, de servidor, dentro de `Suspense`): "Ingresar" sin sesión, o el avatar con el menú (`MenuCuenta`: "Mi cuenta", "Panel" solo para `operador` y `admin`, "Salir"; Escape cierra y devuelve el foco). El menú usa el rol del token, solo para la UI; `/cuenta` (`requerirSesion`) muestra los datos con el rol de la base. Las rutas que leen la sesión van en `Suspense` y llaman antes a `connection()` (Auth.js genera valores al azar y el prerender los toma por una lectura estática).
+- **Todavía no hay nada protegido** salvo `/cuenta`: el detalle de proyectos (#34) y el panel (#37) usan los permisos.
 
 ## Landing (PoC, #18)
 
