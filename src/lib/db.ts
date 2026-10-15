@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { leerEnv } from "./env";
 
-type CacheMongoose = { promesa: Promise<typeof mongoose> | null };
+type CacheMongoose = { promesa: Promise<typeof mongoose> | null; escuchando?: boolean };
 
 // En serverless (Vercel) el módulo se puede reevaluar con la misma instancia: la conexión
 // se guarda en globalThis para no abrir una por invocación ni en cada recarga de `next dev`.
@@ -10,9 +10,15 @@ const cache: CacheMongoose = (global_.__paperfolioMongoose ??= { promesa: null }
 
 /** Conecta con Mongoose y reusa la conexión. Nunca loguea la URI. */
 export async function conectar(): Promise<typeof mongoose> {
-  // readyState 0: la conexión se cerró (disconnect() o reintentos agotados), la promesa vieja ya no sirve.
-  if (cache.promesa && mongoose.connection.readyState === 0) cache.promesa = null;
   if (!cache.promesa) {
+    // Solo `close` (cierre explícito) invalida el cache. En un corte o failover Mongoose pasa por
+    // readyState 0 mientras el driver reintenta solo: reconectar a mano dejaría un cliente huérfano.
+    if (!cache.escuchando) {
+      cache.escuchando = true;
+      mongoose.connection.on("close", () => {
+        cache.promesa = null;
+      });
+    }
     const { MONGODB_URI, MONGODB_DB } = leerEnv();
     const promesa: Promise<typeof mongoose> = mongoose
       .connect(MONGODB_URI, {

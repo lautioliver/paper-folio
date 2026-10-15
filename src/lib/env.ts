@@ -7,6 +7,10 @@ const esquema = z.object({
   MONGODB_DB: z.string({ error: "falta" }).min(1, { error: "no puede estar vacía" }),
 });
 
+export class EnvInvalidoError extends Error {
+  name = "EnvInvalidoError";
+}
+
 export type Env = z.infer<typeof esquema>;
 
 /**
@@ -19,7 +23,7 @@ export function leerEnv(fuente: Record<string, string | undefined> = process.env
     const problemas = resultado.error.issues
       .map((i) => `${i.path.join(".")}: ${i.message}`)
       .join("; ");
-    throw new Error(`Variables de entorno inválidas: ${problemas}`);
+    throw new EnvInvalidoError(`Variables de entorno inválidas: ${problemas}`);
   }
   return resultado.data;
 }
