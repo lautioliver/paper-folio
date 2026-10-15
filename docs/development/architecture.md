@@ -31,18 +31,19 @@ src/
   styles/globals.css  # Tailwind y tokens
 ```
 
-Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` y `panel/` llegan con sus features.
+Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(auth)` tiene `/ingresar` (#35); `panel/` llega con su feature.
 
 ## Autenticación y roles (#32, ADR-002)
 
 - **Auth.js v5** con Google y sesión JWT (`src/auth.ts`, rutas en `/api/auth/*`). Al ingresar se crea o actualiza el usuario en `usuarios` con su rol (`ADMIN_EMAILS` y `OPERADOR_EMAILS`).
 - **Permisos:** `requerirSesion` y `requerirRol` (`src/lib/permisos.ts`) releen el rol de la base. Sin sesión redirigen a `/ingresar`; sin permiso, `forbidden()` responde 403 (`experimental.authInterrupts` en `next.config.ts`).
+- **Ingreso y sesión en la barra (#35):** `/ingresar` (`src/app/(auth)/ingresar/page.tsx`) muestra "Continuar con Google" y decide qué hacer con `decidirIngreso` (`src/lib/ingreso.ts`): con sesión válida redirige al `callbackUrl` (siempre por `rutaInterna`; uno externo vuelve a `/`); con `error=sesion` o con sesión huérfana no redirige y ofrece salir e ingresar de nuevo. Sin variables `AUTH_*` muestra que el ingreso no está disponible. La barra recibe la sesión como slot (`CuentaBarra`, de servidor, dentro de `Suspense`): "Ingresar" sin sesión, o el avatar con el menú (`MenuCuenta`: "Mi cuenta", "Panel" solo para `operador` y `admin`, "Salir"; Escape cierra y devuelve el foco). El menú usa el rol del token, solo para la UI; `/cuenta` (`requerirSesion`) muestra los datos con el rol de la base. Las rutas que leen la sesión van en `Suspense` y llaman antes a `connection()` (Auth.js genera valores al azar y el prerender los toma por una lectura estática).
 - **Detalle de proyectos (#34):** `/proyectos/[slug]` llama a `requerirSesion` en el servidor; ese es el control real. `src/proxy.ts` solo adelanta la redirección a `/ingresar?callbackUrl=…` antes de renderizar: usa `auth` de Auth.js como wrapper (valida la firma del JWT; como la configuración es perezosa, `auth(callback)` devuelve una promesa y se espera) y decide con `redireccionDeProxy` (`src/lib/proteccion.ts`). El `matcher` es un literal (Next lo exige): para proteger otra ruta (por ejemplo `/panel`), sumala a `PREFIJOS_PROTEGIDOS` y al `matcher`. Como la página usa la sesión, se renderiza dentro de `Suspense` (`cacheComponents`): el 404 de un slug inexistente y las redirecciones de la página salen con HTTP 200 y `noindex`, porque el estado ya se envió con la cabecera.
-- **Todavía no hay nada más protegido:** la pantalla de ingreso (#35) y el panel (#37) lo usan.
+- **El panel (#37) todavía no está:** va a usar `requerirRol` en cada página.
 
 ## Landing (PoC, #18)
 
-- **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `StackBand`, `Reveal`, `HeroMotion`, `ShareButton`, `CopyProfileLink` y `ContactForm` son de cliente.
+- **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `MenuCuenta`, `StackBand`, `Reveal`, `HeroMotion`, `ShareButton`, `CopyProfileLink` y `ContactForm` son de cliente.
 - **Contenido** estático en `src/content/profile.ts`, con datos públicos de GitHub. Lo reemplaza el CRUD del admin (hito 5).
 - **Formulario de contacto:** valida con `parseContactRequest` (`src/lib/contact.ts`, Zod), la misma regla del servidor, y envía con `POST /api/consultas`. Muestra "Enviando…" con el botón deshabilitado, un agradecimiento al guardarse, los errores del servidor (400) en sus campos y un mensaje general con 429, 503 o un error de red. El campo trampa `sitio_web` está oculto para personas y lectores de pantalla y fuera del tabulador.
 - **Movimiento:** GSAP (registrado en `src/lib/gsap.ts`, solo en componentes de cliente). `HeroMotion` anima en secuencia los elementos `data-hero` del hero (menos de 1 s) y `Reveal` hace la entrada al hacer scroll con `ScrollTrigger` (lo que ya está en pantalla al cargar no se anima). Las animaciones se crean dentro de `gsap.matchMedia` con `prefers-reduced-motion: no-preference`: sin JS o con reduced-motion el contenido se ve fijo. La banda del stack se desplaza con CSS (se pausa con un botón o con el hover).

@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Container } from "@/components/Container";
 import { Footer } from "@/components/sitio/Contact";
+import { CuentaBarra } from "@/components/sitio/CuentaBarra";
 import { Highlight } from "@/components/sitio/Highlight";
+import { Navbar } from "@/components/sitio/Navbar";
 import { BUTTON } from "@/components/sitio/Sections";
 import { TONE_BG } from "@/components/sitio/tones";
 import { cn } from "@/lib/cn";
@@ -18,14 +20,15 @@ export const metadata: Metadata = { title: "Caso de estudio", robots: { index: f
 export default function DetallePage({ params }: PageProps<"/proyectos/[slug]">) {
   return (
     <>
-      <header className="py-6">
-        <Container>
-          <Link href={RUTA_PROYECTOS} className="text-pequeno font-bold underline decoration-2 underline-offset-4">
-            ← Todos los proyectos
-          </Link>
-        </Container>
-      </header>
+      <Navbar cuenta={<CuentaBarra />} />
       <main className="flex-1 pb-16">
+        <div className="py-6">
+          <Container>
+            <Link href={RUTA_PROYECTOS} className="text-pequeno font-bold underline decoration-2 underline-offset-4">
+              ← Todos los proyectos
+            </Link>
+          </Container>
+        </div>
         <Suspense fallback={<Container><p className="text-cuerpo">Cargando…</p></Container>}>
           <Detalle params={params} />
         </Suspense>

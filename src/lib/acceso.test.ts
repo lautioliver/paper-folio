@@ -69,6 +69,7 @@ describe("urlDeIngreso", () => {
 
   it("una ruta externa vuelve al inicio", () => {
     expect(urlDeIngreso("//evil.com", "sin-sesion")).toBe("/ingresar?callbackUrl=%2F");
+    expect(urlDeIngreso("/cuenta?a=1", "sin-sesion")).toBe("/ingresar?callbackUrl=%2Fcuenta%3Fa%3D1");
   });
 
   it("con sesión huérfana suma error=sesion", () => {
