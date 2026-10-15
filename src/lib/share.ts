@@ -36,6 +36,6 @@ export async function shareOrCopy(data: ShareData, nav: ShareNavigator): Promise
 }
 
 /** Link al portfolio apuntando a la tarjeta de un proyecto. */
-export function projectShareUrl(_origin: string, _slug: string): string {
-  return "";
+export function projectShareUrl(origin: string, slug: string): string {
+  return `${origin}/#proyecto-${slug}`;
 }

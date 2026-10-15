@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
-import { shareOrCopy, type ShareResult } from "@/lib/share";
+import { projectShareUrl, shareOrCopy, type ShareResult } from "@/lib/share";
+import { useTransientMessage } from "@/lib/useTransientMessage";
 
 const MESSAGES: Record<ShareResult, string> = {
   compartido: "",
@@ -13,23 +13,16 @@ const MESSAGES: Record<ShareResult, string> = {
 
 type ShareButtonProps = {
   title: string;
-  url: string;
+  slug: string;
   className?: string;
 };
 
-/** "Compartir" con Web Share API; sin ella copia el link y avisa en un role="status". */
-export function ShareButton({ title, url, className }: ShareButtonProps) {
-  const [message, setMessage] = useState("");
-
-  // El aviso se borra solo: así un segundo clic con el mismo resultado se vuelve a anunciar.
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(""), 3000);
-    return () => clearTimeout(timer);
-  }, [message]);
+/** "Compartir" el portfolio, en la tarjeta del proyecto, con Web Share API; sin ella copia el link y avisa en un role="status". */
+export function ShareButton({ title, slug, className }: ShareButtonProps) {
+  const [message, setMessage] = useTransientMessage();
 
   async function onClick() {
-    const result = await shareOrCopy({ title, url }, navigator);
+    const result = await shareOrCopy({ title, url: projectShareUrl(window.location.origin, slug) }, navigator);
     setMessage(MESSAGES[result]);
   }
 
