@@ -152,4 +152,9 @@ describe("crearConsulta", () => {
       process.env.MONGODB_DB = "paperfolio-test";
     }
   });
+
+  it("trata igual la IP con espacios alrededor", async () => {
+    for (let i = 0; i < 5; i++) await crearConsulta(valida, { ip: " 10.0.0.8 " });
+    expect((await crearConsulta(valida, { ip: "10.0.0.8" })).tipo).toBe("limite");
+  });
 });

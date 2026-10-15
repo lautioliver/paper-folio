@@ -61,7 +61,8 @@ function traeTrampa(input: unknown): boolean {
  */
 export async function crearConsulta(input: unknown, opciones: OpcionesConsulta): Promise<ResultadoConsulta> {
   // Error de programación del llamador (no leyó la IP): sin la IP, todos caerían en un mismo balde.
-  if (opciones.ip.trim() === "") throw new Error("crearConsulta: falta la IP de la consulta");
+  const ip = opciones.ip.trim();
+  if (ip === "") throw new Error("crearConsulta: falta la IP de la consulta");
   if (traeTrampa(input)) return { tipo: "descartada" };
 
   const parsed = parseContactRequest(input);
@@ -69,7 +70,7 @@ export async function crearConsulta(input: unknown, opciones: OpcionesConsulta):
 
   const sal = leerIpHashSal();
   const ipHash = createHash("sha256")
-    .update(sal + opciones.ip)
+    .update(sal + ip)
     .digest("hex");
   const ahora = opciones.ahora?.() ?? new Date();
 
