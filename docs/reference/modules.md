@@ -19,14 +19,17 @@
 | `src/app/api/salud/route.ts` | `GET /api/salud`: health check de la base (ping) |
 | `src/components/Container.tsx` | Ancho máximo y márgenes laterales de las secciones |
 | `src/lib/contact.ts` | `parseContactRequest()`: valida la consulta del formulario (nombre, email, tipo `general`/`cotizacion`/`asesoria`, mensaje de 10 a 2000 caracteres) y devuelve un error por campo |
-| `src/content/profile.ts` | Datos del PoC: perfil, stack, servicios, proyectos y trayectoria, con datos públicos de GitHub |
+| `src/content/profile.ts` | Datos del PoC: perfil, stack, servicios, proyectos (cada uno con su `caso` de estudio: problema, solución, funcionalidades y stack) y trayectoria, con datos públicos de GitHub |
 | `src/components/sitio/` | Secciones de la landing (`Sections.tsx`, `Contact.tsx`), `Navbar` (menú de celular: inerte afuera, Escape, se cierra en PC; recibe la sesión como slot), `CuentaBarra` y `MenuCuenta` (Ingresar o avatar con menú: Mi cuenta, Panel, Salir), `StackBand` (banda con pausa), `ContactForm`, `Reveal` (entrada con GSAP ScrollTrigger; sin JS o con reduced-motion se ve fijo), `HeroMotion`, `ShareButton` y `CopyProfileLink`, `Highlight` y `SectionTitle`, `tones.ts` (clases de color por tono) e ilustraciones SVG con tokens |
 | `src/auth.ts` | Auth.js v5 con Google y sesión JWT (`handlers`, `auth`, `signIn`, `signOut`). Registra al usuario al ingresar. Ver ADR-002 |
 | `src/models/Usuario.ts` | Modelo de `usuarios` y la lista de roles (`ROLES`) |
 | `src/lib/usuarios.ts` | `rolParaEmail()`, `registrarIngreso()` (upsert por email con el rol según `ADMIN_EMAILS` y `OPERADOR_EMAILS`) y `buscarRol()` (rol vigente, recalculado con esas listas) |
-| `src/lib/acceso.ts` | `evaluarAcceso()`: decide si una sesión alcanza para unos roles, releyendo el rol de la base (`sin-sesion`, `sin-permiso`, `sesion-huerfana`), y `rutaInterna()`. Lógica pura, sin Next |
-| `src/lib/ingreso.ts` | `decidirIngreso({ sesion, error, callbackUrl })` (redirigir o mostrar /ingresar; el `callbackUrl` pasa por `rutaInterna`), `urlDeIngreso()` y `puedeVerPanel(rol)` (solo UI). Lógica pura |
+| `src/lib/acceso.ts` | `evaluarAcceso()`: decide si una sesión alcanza para unos roles, releyendo el rol de la base (`sin-sesion`, `sin-permiso`, `sesion-huerfana`), `rutaInterna()` y `urlDeIngreso()` (la URL de `/ingresar?callbackUrl=…`). Lógica pura, sin Next |
+| `src/lib/ingreso.ts` | `decidirIngreso({ sesion, error, callbackUrl })` (redirigir o mostrar /ingresar; el `callbackUrl` pasa por `rutaInterna`) y `puedeVerPanel(rol)` (solo UI). Lógica pura |
 | `src/lib/sesion.ts` | `sesionParaLaBarra()` (token, sin base; `null` sin sesión o sin variables `AUTH_*`) y `estadoDeSesion()` (`ninguna`, `valida` o `huerfana`, releyendo el rol de la base) |
 | `src/lib/sesion-acciones.ts` | Server actions `ingresarConGoogle`, `salir` y `salirEIngresarDeNuevo` |
 | `src/lib/permisos.ts` | `requerirSesion(volverA)` y `requerirRol(volverA, rol, ...otros)` (al menos un rol) para páginas y server actions: redirigen a `/ingresar` o responden 403 (`forbidden()`) |
+| `src/proxy.ts` | Proxy de Next 16: redirige a `/ingresar?callbackUrl=…` si no hay sesión en las rutas protegidas (hoy `/proyectos/:path+`). Solo adelanta la redirección; el control real es `requerirSesion` en cada página |
+| `src/lib/proteccion.ts` | `redireccionDeProxy(pathname, haySesion)` y `PREFIJOS_PROTEGIDOS`: la decisión del proxy, pura y testeable |
+| `src/lib/proyectos.ts` | `buscarProyecto(slug)`, `rutaDetalle(slug)` y `RUTA_PROYECTOS` |
 

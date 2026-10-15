@@ -32,10 +32,6 @@ export function decidirIngreso(entrada: {
 }
 
 /** URL de /ingresar para volver después a `callbackUrl` (solo rutas internas). */
-export function urlDeIngreso(callbackUrl: string): string {
-  return `/ingresar?callbackUrl=${encodeURIComponent(rutaInterna(callbackUrl))}`;
-}
-
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */
 export function puedeVerPanel(rol: Rol | null | undefined): boolean {
   return rol === "operador" || rol === "admin";

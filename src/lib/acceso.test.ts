@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, rutaInterna } from "./acceso";
+import { evaluarAcceso, rutaInterna, urlDeIngreso } from "./acceso";
 
 const base: Record<string, Rol> = { u1: "usuario", o1: "operador", a1: "admin" };
 const buscarRol = async (id: string) => base[id] ?? null;
@@ -59,5 +59,21 @@ describe("rutaInterna", () => {
     ["/ok con espacio", "/"],
   ])("%j → %s", (entrada, salida) => {
     expect(rutaInterna(entrada)).toBe(salida);
+  });
+});
+
+describe("urlDeIngreso", () => {
+  it("arma /ingresar con callbackUrl codificado", () => {
+    expect(urlDeIngreso("/proyectos/ucanode", "sin-sesion")).toBe("/ingresar?callbackUrl=%2Fproyectos%2Fucanode");
+  });
+
+  it("una ruta externa vuelve al inicio", () => {
+    expect(urlDeIngreso("//evil.com", "sin-sesion")).toBe("/ingresar?callbackUrl=%2F");
+    expect(urlDeIngreso("/cuenta?a=1", "sin-sesion")).toBe("/ingresar?callbackUrl=%2Fcuenta%3Fa%3D1");
+  });
+
+  it("con sesión huérfana suma error=sesion", () => {
+    expect(urlDeIngreso("/panel", "sesion-huerfana")).toBe("/ingresar?callbackUrl=%2Fpanel&error=sesion");
+    expect(urlDeIngreso("/panel", "sin-sesion")).toBe("/ingresar?callbackUrl=%2Fpanel");
   });
 });

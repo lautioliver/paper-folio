@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
-import { puedeVerPanel, urlDeIngreso } from "@/lib/ingreso";
+import { urlDeIngreso } from "@/lib/acceso";
+import { puedeVerPanel } from "@/lib/ingreso";
 import { alAbrirOtroMenu, avisarMenuAbierto } from "@/lib/menus";
 import { salir } from "@/lib/sesion-acciones";
 import type { Rol } from "@/models/Usuario";
@@ -20,7 +21,7 @@ export function EnlaceIngresar() {
   const ruta = usePathname();
   return (
     <Link
-      href={urlDeIngreso(ruta)}
+      href={urlDeIngreso(ruta, "sin-sesion")}
       className="marca apretable inline-flex min-h-11 items-center bg-papel px-4 text-pequeno font-bold"
     >
       Ingresar

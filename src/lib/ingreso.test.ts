@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comprobarSesion, decidirIngreso, puedeVerPanel, urlDeIngreso } from "./ingreso";
+import { comprobarSesion, decidirIngreso, puedeVerPanel } from "./ingreso";
 
 describe("decidirIngreso", () => {
   it("sin sesión muestra la pantalla con el callbackUrl interno", () => {
@@ -37,13 +37,6 @@ describe("decidirIngreso", () => {
 
   it("error=sesion sin ninguna sesión muestra la pantalla normal", () => {
     expect(decidirIngreso({ sesion: "ninguna", error: "sesion" })).toEqual({ accion: "mostrar", aviso: null, callbackUrl: "/" });
-  });
-});
-
-describe("urlDeIngreso", () => {
-  it("arma /ingresar con el callbackUrl codificado y sanitizado", () => {
-    expect(urlDeIngreso("/cuenta?a=1")).toBe("/ingresar?callbackUrl=%2Fcuenta%3Fa%3D1");
-    expect(urlDeIngreso("https://otro.sitio")).toBe("/ingresar?callbackUrl=%2F");
   });
 });
 

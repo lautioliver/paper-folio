@@ -2,7 +2,7 @@
 
 import { signIn, signOut } from "@/auth";
 import { rutaInterna } from "./acceso";
-import { urlDeIngreso } from "./ingreso";
+import { urlDeIngreso } from "./acceso";
 
 /** Server action del botón "Continuar con Google". El destino sale siempre de `rutaInterna`: nunca un sitio externo. */
 export async function ingresarConGoogle(formData: FormData): Promise<void> {
@@ -18,5 +18,5 @@ export async function salir(): Promise<void> {
 /** Para la sesión huérfana: cierra la sesión y deja a la persona en /ingresar para empezar de nuevo. */
 export async function salirEIngresarDeNuevo(formData: FormData): Promise<void> {
   const destino = formData.get("callbackUrl");
-  await signOut({ redirectTo: urlDeIngreso(typeof destino === "string" ? destino : "/") });
+  await signOut({ redirectTo: urlDeIngreso(typeof destino === "string" ? destino : "/", "sin-sesion") });
 }
