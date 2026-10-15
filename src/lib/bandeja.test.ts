@@ -114,6 +114,28 @@ describe("listarConsultas", () => {
   });
 });
 
+describe("hallazgos de la autorevisión", () => {
+  it("un estado desconocido o ausente se muestra como nueva", async () => {
+    await sembrar(2, (i) => (i === 0 ? { estado: "raro" } : {}));
+    const r = await listarConsultas({ pagina: 1 });
+    expect(r.items.map((c) => c.estado)).toEqual(["nueva", "nueva"]);
+  });
+
+  it("una página enorme devuelve la última, como cualquier página fuera de rango", async () => {
+    await sembrar(45);
+    const r = await listarConsultas({ pagina: "99999999999" });
+    expect(r.pagina).toBe(3);
+  });
+
+  it("el extracto no corta un emoji por la mitad", async () => {
+    await sembrar(1, () => ({ mensaje: "a".repeat(139) + "😀".repeat(5) }));
+    const r = await listarConsultas({ pagina: 1 });
+    expect(r.items[0]?.extracto).not.toMatch(
+      /[\ud800-\udbff](?![\udc00-\udfff])/,
+    );
+  });
+});
+
 describe("parsearFiltros", () => {
   it("valida tipo, estado y pagina; lo inválido se descarta", () => {
     expect(
