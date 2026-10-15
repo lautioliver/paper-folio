@@ -7,7 +7,7 @@ Fechas: las exposiciones son del **26/10 al 13/11/2026**.
 | # | Hito | Contenido | Estado |
 |---|---|---|---|
 | 0 | Anteproyecto | Manual de marca: paleta con HEX, tipografías y jerarquías, layouts y prototipos, navegación en PC y celular | En curso |
-| 1 | Scaffold | Next.js + Tailwind con tokens + Mongoose + CI de lint, typecheck y tests | Pendiente |
+| 1 | Scaffold | Next.js + Tailwind con tokens + Mongoose + CI de lint, typecheck y tests | Hecho (2026-10-15, épica #3) |
 | 2 | Sitio público | Secciones del diseño, animaciones y formulario de contacto por email | Pendiente |
 | 3 | Registro | Auth.js con Google, roles y detalle de proyectos y demos protegido | Pendiente |
 | 4 | Operador | Bandeja de consultas, respuesta por email y seguimiento | Pendiente |
