@@ -30,4 +30,5 @@ Van en `.env.local`, que no se commitea. Todavía no se usan: las agrega el #6 (
 ## Problemas conocidos
 
 - `npm install` avisa que `unrs-resolver` tiene un script de instalación sin aprobar. ESLint funciona igual.
+- Los worktrees de los agentes (`preparar.sh --worktree`) instalan con `npm ci --ignore-scripts`. Si una dependencia nueva necesita su `postinstall`, va a fallar solo ahí: hay que decidir cómo instalarla antes de sumarla.
 - `next dev` agrega un bloque `nextjs-agent-rules` a `AGENTS.md` si no está. Ya está commiteado: no lo borres.
