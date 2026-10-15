@@ -7,6 +7,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // Solo .ts: los tests de componentes (.tsx) necesitan un DOM (jsdom), que todavía no está instalado.
+    include: ["src/**/*.test.ts"],
   },
 });

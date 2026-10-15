@@ -7,8 +7,8 @@ describe("cn", () => {
   });
 
   it("descarta los valores vacíos para las clases condicionales", () => {
-    const activo = false;
-    expect(cn("p-4", activo && "bg-black", null, undefined, "")).toBe("p-4");
+    const isActive = false;
+    expect(cn("p-4", isActive && "bg-black", null, undefined, "")).toBe("p-4");
   });
 
   it("sin clases devuelve un string vacío", () => {
