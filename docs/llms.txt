@@ -23,4 +23,6 @@ Instrucciones para modelos: leer este archivo y AGENTS.md. Spec aspiracional = /
 
 ## Código ancla
 
-- Todavía no hay código. Cuando exista: src/models/, src/lib/permisos.ts, src/auth.ts y src/app/api/.
+- src/app/layout.tsx — layout raíz (idioma, fuentes, metadata)
+- src/lib/ — utilidades y servicios (ver docs/reference/modules.md)
+- Pendientes de sus features: src/models/, src/lib/permisos.ts, src/auth.ts y src/app/api/.

@@ -1,6 +1,7 @@
-# Secretos
+# Secretos (*.env: el onboarding de Atlas genera atlas-credentials.env)
 .env
 .env.*
+*.env
 !.env.example
 
 # Generados por los scripts de agentes
@@ -10,3 +11,18 @@ __pycache__
 
 # Worktrees del aislamiento de Claude Code (subagentes)
 .claude/worktrees/
+
+# Next.js y Node
+/node_modules
+/.next/
+/out/
+/build
+/coverage
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+npm-debug.log*
+
+# Sistema
+.DS_Store
+*.pem

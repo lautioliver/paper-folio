@@ -1,5 +1,5 @@
 {
-  "_ayuda": "Mapa para agentes y CI. 'docs': qué documento revisar cuando cambian ciertos archivos (lo usan update-docs, implement-issue y review-pr). 'sensibles': rutas que exigen consultar antes de cambiarlas y correr /security-review (ver AGENTS.md, Autonomía). 'verificar': qué correr antes del PR según lo que cambió (scripts/agentes/verificar.py). 'obligatorios': documentos que tienen que existir (lo valida scripts/agentes/check-docs.py). 'ignorar_check': rutas que check-docs.py no valida, como bitácoras históricas que citan archivos que ya no existen. Globs estilo git: ** cualquier profundidad, * un nivel. Una ruta que empieza con ? es opcional: check-docs no falla si no coincide con ningún archivo (sirve para alternativas de stack, como package.json o *.lock). Las rutas propias del proyecto van sin ?: si dejan de existir, el check falla. Paperfolio: las rutas de src/ llevan ? hasta que exista el scaffold; el issue del scaffold se las saca.",
+  "_ayuda": "Mapa para agentes y CI. 'docs': qué documento revisar cuando cambian ciertos archivos (lo usan update-docs, implement-issue y review-pr). 'sensibles': rutas que exigen consultar antes de cambiarlas y correr /security-review (ver AGENTS.md, Autonomía). 'verificar': qué correr antes del PR según lo que cambió (scripts/agentes/verificar.py). 'obligatorios': documentos que tienen que existir (lo valida scripts/agentes/check-docs.py). 'ignorar_check': rutas que check-docs.py no valida, como bitácoras históricas que citan archivos que ya no existen. Globs estilo git: ** cualquier profundidad, * un nivel. Una ruta que empieza con ? es opcional: check-docs no falla si no coincide con ningún archivo (sirve para alternativas de stack, como package.json o *.lock). Las rutas propias del proyecto van sin ?: si dejan de existir, el check falla. Paperfolio: una ruta de src/ lleva ? hasta que el archivo existe (épica #3, decisión 5).",
   "docs": [
     {
       "cuando": [
@@ -14,7 +14,7 @@
     {
       "cuando": [
         "?src/app/api/**",
-        "?src/app/**/page.tsx",
+        "src/app/**/page.tsx",
         "?src/app/**/route.ts"
       ],
       "revisar": [
@@ -25,7 +25,8 @@
     },
     {
       "cuando": [
-        "?src/lib/**"
+        "src/lib/**",
+        "src/components/**"
       ],
       "revisar": [
         "docs/reference/modules.md"
@@ -34,9 +35,24 @@
     },
     {
       "cuando": [
-        "?package.json",
+        "src/app/layout.tsx",
+        "src/styles/**"
+      ],
+      "revisar": [
+        "docs/development/architecture.md"
+      ],
+      "motivo": "cambió el layout raíz o los estilos globales"
+    },
+    {
+      "cuando": [
+        "package.json",
         "?**/package.json",
-        "?.github/workflows/**"
+        "?.github/workflows/**",
+        "next.config.ts",
+        "tsconfig.json",
+        "eslint.config.mjs",
+        "vitest.config.ts",
+        ".nvmrc"
       ],
       "revisar": [
         "AGENTS.md",
@@ -105,7 +121,8 @@
     {
       "tipo": "dependencias",
       "rutas": [
-        "?package.json",
+        "package.json",
+        "package-lock.json",
         "?**/package.json",
         "?*.lock",
         "?pnpm-lock.yaml"
@@ -200,6 +217,31 @@
         ".cursor/hooks.json"
       ],
       "correr": "python3 -m unittest scripts/agentes/test_barandas.py"
+    },
+    {
+      "nombre": "lint",
+      "siempre": true,
+      "correr": "npm run lint"
+    },
+    {
+      "nombre": "typecheck",
+      "siempre": true,
+      "correr": "npm run typecheck"
+    },
+    {
+      "nombre": "tests",
+      "siempre": true,
+      "correr": "npx vitest related {archivos} --run --passWithNoTests"
+    },
+    {
+      "nombre": "tests-completos",
+      "cuando": [
+        "package.json",
+        "package-lock.json",
+        "vitest.config.ts",
+        "tsconfig.json"
+      ],
+      "correr": "npm test"
     }
   ],
   "obligatorios": [

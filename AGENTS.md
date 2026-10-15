@@ -19,7 +19,7 @@ Portfolio de un desarrollador fullstack (TPI de Lenguajes 4, 2026, apuntando a p
 - Vitest para los tests.
 - Deploy en Vercel.
 
-Todavía no hay código: el scaffold es un issue aparte.
+La estructura de `src/` está en `docs/development/architecture.md`.
 
 ## Comandos
 
@@ -27,8 +27,8 @@ Todavía no hay código: el scaffold es un issue aparte.
 npm install
 npm run dev          # http://localhost:3000
 npm run lint
-npx tsc --noEmit
-npx vitest run       # o: npx vitest related <archivos> --run
+npm run typecheck    # next typegen + tsc --noEmit
+npm test             # o: npx vitest related <archivos> --run
 ```
 
 No se corren:
@@ -116,3 +116,13 @@ Nada entra a las ramas troncales sin PR. La única rama que se escribe sin PR es
 - `docs/decisions/` — ADRs
 - `docs/agentes/lecciones.md` — lo aprendido de las retros, revisado en un PR
 - `docs/agentes/contrato-subagentes.md` — reglas y salida común de los subagentes (`.claude/agents/`)
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

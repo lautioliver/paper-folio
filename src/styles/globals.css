@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* Tokens provisorios: los define el issue #7 y después el manual de marca. */
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}

@@ -45,3 +45,7 @@ Las exposiciones son del 26/10 al 13/11/2026. Hay poco tiempo, así que conviene
 - Los contadores de visitas se actualizan con `$inc` atómico. Los gráficos salen de agregaciones de Mongo.
 - Se necesitan cuentas de MongoDB Atlas, Google Cloud (OAuth) y Resend. Sus claves van en `.env.local`, nunca en el repo.
 - Falta el scaffold del proyecto: se hace en un issue aparte. Hasta entonces, las rutas de `docs/mapa-agentes.json` son opcionales (`?`).
+
+## Enmienda 2026-10-15
+
+El scaffold ya existe (#4). A cada ruta de `src/` en `docs/mapa-agentes.json` se le saca el `?` recién cuando el archivo existe (épica #3, decisión 5). Las reglas R-1 a R-8 no cambian.
