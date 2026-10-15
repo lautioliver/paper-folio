@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { redireccionDeProxy } from "./proteccion";
+import { PREFIJOS_PROTEGIDOS, redireccionDeProxy } from "./proteccion";
 
 describe("redireccionDeProxy", () => {
   it("sin sesión, el detalle de un proyecto redirige a /ingresar con callbackUrl", () => {
@@ -23,5 +24,14 @@ describe("redireccionDeProxy", () => {
 
   it("no se deja engañar por prefijos parecidos", () => {
     expect(redireccionDeProxy("/proyectosx/ucanode", false)).toBeNull();
+  });
+});
+
+describe("matcher de proxy.ts", () => {
+  it("cubre cada prefijo de PREFIJOS_PROTEGIDOS (si no, el proxy no corre y la redirección rápida se pierde)", () => {
+    const fuente = readFileSync("src/proxy.ts", "utf8");
+    for (const prefijo of PREFIJOS_PROTEGIDOS) {
+      expect(fuente, prefijo).toContain(`"${prefijo}:path+"`);
+    }
   });
 });

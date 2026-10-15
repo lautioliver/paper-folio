@@ -11,7 +11,8 @@ import { cn } from "@/lib/cn";
 import { requerirSesion } from "@/lib/permisos";
 import { buscarProyecto, RUTA_PROYECTOS, rutaDetalle } from "@/lib/proyectos";
 
-export const metadata: Metadata = { title: "Caso de estudio" };
+// Contenido para registrados: que los buscadores no lo indexen.
+export const metadata: Metadata = { title: "Caso de estudio", robots: { index: false, follow: false } };
 
 // Detalle solo para registrados. `proxy.ts` redirige antes de renderizar, pero el control real es `requerirSesion`.
 export default function DetallePage({ params }: PageProps<"/proyectos/[slug]">) {
