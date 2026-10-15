@@ -11,6 +11,7 @@ Stack: [ADR-001](../decisions/ADR-001-stack.md). Hoy existe el scaffold: un proy
 - **Fuente:** Onest con `next/font/google`, la del diseño (identificada en el manual de marca, #18).
 - **MongoDB con Mongoose 9.** `src/lib/db.ts` exporta `conectar()`, que abre la conexión una vez y la reusa (se cachea en `globalThis`, para serverless y para las recargas de `next dev`). Las variables las valida con Zod `src/lib/env.ts`. Los modelos van en `src/models/` (hoy, `Consulta`). Como la conexión usa `bufferCommands: false`, los modelos se registran con `autoIndex` y `autoCreate` en `false` y el servicio que los usa crea sus índices (`crearConsulta()` lo hace para `consultas`).
 - **`GET /api/salud`:** `200 { ok: true }` si la base responde a un ping; si no, `503` con `{ error: { codigo, mensaje } }`, sin el detalle del fallo.
+- **`POST /api/consultas`:** ruta fina sobre `crearConsulta()`. Lee la IP de `x-forwarded-for` (primer valor) o `x-real-ip` (`src/lib/ip.ts`) y responde `201 { ok: true }` (`creada` o `descartada`, para que un bot no distinga), `400 CONSULTA_INVALIDA` (con `campos`), `400 IP_NO_DETECTADA` (sin IP no hay límite por visitante, así que no se guarda), `429 DEMASIADAS_CONSULTAS`, `503 CONFIGURACION_INVALIDA` o `503 BASE_NO_DISPONIBLE`. Los 503 se manejan como en `/api/salud`: nada sensible en el log ni en la respuesta.
 - **ESLint 9** con `eslint-config-next` (core-web-vitals + TypeScript), en `eslint.config.mjs`.
 - **Vitest 5** en entorno `node`, con `mongodb-memory-server` para los tests de la base (ver [setup](setup.md)). Toma solo los tests `src/**/*.test.ts`: los de componentes (`.tsx`) esperan a que haya jsdom. Resuelve el alias `@/` → `src/` (`vitest.config.ts`).
 
@@ -22,6 +23,7 @@ src/
     layout.tsx        # html lang="es-AR", fuentes, metadata desde siteConfig
     (sitio)/page.tsx  # landing: arma las secciones de components/sitio
     api/salud/route.ts # health check de la base
+    api/consultas/route.ts # POST: guarda una consulta de contacto
   components/         # componentes de UI compartidos
     sitio/            # secciones de la landing, formulario de contacto, ilustraciones
   content/profile.ts  # datos del PoC (#18): perfil y repos públicos de GitHub
@@ -35,7 +37,7 @@ Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(au
 
 - **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `StackBand`, `Reveal` y `ContactForm` son de cliente.
 - **Contenido** estático en `src/content/profile.ts`, con datos públicos de GitHub. Lo reemplaza el CRUD del admin (hito 5).
-- **Formulario de contacto:** valida con `parseContactRequest` (`src/lib/contact.ts`, Zod), la misma regla que va a usar el servidor, pero todavía no envía. El envío por email llega con el hito 2.
+- **Formulario de contacto:** valida con `parseContactRequest` (`src/lib/contact.ts`, Zod), la misma regla del servidor, y envía con `POST /api/consultas`. Muestra "Enviando…" con el botón deshabilitado, un agradecimiento al guardarse, los errores del servidor (400) en sus campos y un mensaje general con 429, 503 o un error de red. El campo trampa `sitio_web` está oculto para personas y lectores de pantalla y fuera del tabulador.
 - **Movimiento:** `Reveal` marca `data-visible` con IntersectionObserver (entrada al hacer scroll) y la banda del stack se desplaza con CSS (se pausa con un botón o con el hover). Sin JS el contenido se ve; con `prefers-reduced-motion` todo queda fijo.
 
 ## Tokens de diseño

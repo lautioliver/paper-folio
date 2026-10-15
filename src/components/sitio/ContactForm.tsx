@@ -9,36 +9,63 @@ type Errors = Partial<Record<ContactField, string>>;
 const FIELD = "w-full rounded-lg border-(length:--borde-marca) border-tinta bg-papel px-3 py-2.5 text-cuerpo";
 
 /**
- * Formulario de contacto del PoC (#18): valida con parseContactRequest (la misma regla que usará el
- * servidor) pero todavía no envía. El email al operador llega con el hito 2.
+ * Formulario de contacto: valida con parseContactRequest (la misma regla del servidor) y envía a
+ * POST /api/consultas. El campo `sitio_web` es una trampa para bots: oculto para personas.
  */
 export function ContactForm() {
   const [errors, setErrors] = useState<Errors>({});
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [serverError, setServerError] = useState("");
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const result = parseContactRequest(Object.fromEntries(form));
-    if (!result.ok) {
-      setErrors(result.errors);
-      setSent(false);
-      const first = Object.keys(result.errors)[0];
-      event.currentTarget.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
-      return;
-    }
+    const formElement = event.currentTarget;
+    const values = Object.fromEntries(new FormData(formElement));
+    const result = parseContactRequest(values);
+    setStatus("idle");
+    setServerError("");
+    if (!result.ok) return showErrors(formElement, result.errors);
     setErrors({});
-    setSent(true);
-    event.currentTarget.reset();
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/consultas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...result.data, sitio_web: values.sitio_web ?? "" }),
+      });
+      if (res.ok) {
+        formElement.reset();
+        setStatus("sent");
+        return;
+      }
+      const body = await res.json().catch(() => null);
+      setStatus("idle");
+      if (res.status === 400 && body?.error?.campos) return showErrors(formElement, body.error.campos);
+      setServerError(
+        res.status === 429
+          ? "Enviaste muchas consultas seguidas. Probá de nuevo en una hora."
+          : "No pudimos enviar tu consulta. Probá de nuevo en un rato.",
+      );
+    } catch {
+      setStatus("idle");
+      setServerError("No pudimos conectar con el servidor. Revisá tu conexión y probá de nuevo.");
+    }
+  }
+
+  function showErrors(formElement: HTMLFormElement, next: Errors) {
+    setErrors(next);
+    const first = Object.keys(next)[0];
+    formElement.querySelector<HTMLElement>(`[name="${first}"]`)?.focus();
   }
 
   const describedBy = (field: ContactField) => (errors[field] ? `${field}-error` : undefined);
 
   return (
-    <form noValidate onSubmit={onSubmit} className="grid gap-5" aria-describedby="contacto-poc">
-      <p id="contacto-poc" className="rounded-lg bg-superficie px-3 py-2 text-pequeno">
-        Versión de prueba: valida la consulta pero todavía no envía el email.
-      </p>
+    <form noValidate onSubmit={onSubmit} className="relative grid gap-5">
+      <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+        <label htmlFor="sitio_web">No completes este campo</label>
+        <input id="sitio_web" name="sitio_web" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Nombre" field="name" error={errors.name}>
           <input id="name" name="name" autoComplete="name" className={FIELD} aria-invalid={!!errors.name} aria-describedby={describedBy("name")} />
@@ -63,11 +90,15 @@ export function ContactForm() {
         <textarea id="message" name="message" rows={5} className={FIELD} aria-invalid={!!errors.message} aria-describedby={describedBy("message")} />
       </Field>
       <div className="flex flex-wrap items-center gap-4">
-        <button type="submit" className="apretable marca bg-tinta px-6 py-3 text-cuerpo font-bold text-papel">
-          Enviar consulta
+        <button
+          type="submit"
+          disabled={status === "sending"}
+          className="apretable marca bg-tinta px-6 py-3 text-cuerpo font-bold text-papel disabled:opacity-60"
+        >
+          {status === "sending" ? "Enviando…" : "Enviar consulta"}
         </button>
         <p role="status" className="text-pequeno font-bold">
-          {sent ? "¡Consulta válida! En esta versión de prueba no se envía." : ""}
+          {status === "sent" ? "¡Gracias! Te respondo por email." : serverError}
         </p>
       </div>
     </form>
