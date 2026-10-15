@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { leerEmailConfig, leerEnv, leerIpHashSal, leerAuthConfig, leerAuthRoles } from "./env";
+import { leerBlobConfig } from "./env";
 
 const valida = { MONGODB_URI: "mongodb://localhost:27017", MONGODB_DB: "paperfolio-dev" };
 
@@ -134,5 +135,28 @@ describe("leerAuthRoles", () => {
       operador: "o@example.com",
     });
     expect(leerAuthRoles({})).toEqual({ admin: "", operador: "" });
+  });
+});
+
+describe("leerBlobConfig (Vercel Blob por OIDC, #47)", () => {
+  it("devuelve BLOB_STORE_ID si empieza con store_, sin espacios del borde", () => {
+    expect(leerBlobConfig({ BLOB_STORE_ID: "store_AbC123" })).toEqual({ BLOB_STORE_ID: "store_AbC123" });
+    expect(leerBlobConfig({ BLOB_STORE_ID: " store_AbC123\n" }).BLOB_STORE_ID).toBe("store_AbC123");
+  });
+
+  it("falla nombrando BLOB_STORE_ID si falta o no empieza con store_, sin mostrar el valor", () => {
+    expect(() => leerBlobConfig({})).toThrow(/BLOB_STORE_ID: falta/);
+    let mensaje = "";
+    try {
+      leerBlobConfig({ BLOB_STORE_ID: "vercel_blob_rw_secreto" });
+    } catch (e) {
+      mensaje = (e as Error).message;
+    }
+    expect(mensaje).toMatch(/BLOB_STORE_ID: debe empezar con store_/);
+    expect(mensaje).not.toContain("vercel_blob_rw_secreto");
+  });
+
+  it("leerEnv no la exige (next build y /api/salud andan sin ella)", () => {
+    expect(() => leerEnv(valida)).not.toThrow();
   });
 });
