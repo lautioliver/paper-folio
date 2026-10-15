@@ -25,7 +25,12 @@ case "$*" in
   api\ repos/o/r/issues/*/dependencies/*) echo '[]' ;;
   api\ repos/o/r/issues/*/parent*) exit 1 ;;
   api\ repos/o/r/issues/*/comments*) ;;
-  api\ repos/o/r/issues/*) cat "$GH_ISSUES/${2##*/}.json" ;;
+  api\ repos/o/r/issues/*)
+    # Con GH_ASIGNA_AL_RELEER=<json>, la segunda lectura de ese issue ya lo tiene asignado a otro.
+    if [ "${GH_ASIGNA_AL_RELEER:-}" = "$GH_ISSUES/${2##*/}.json" ]; then
+      if [ -f "$GH_ISSUES/releido" ]; then perl -pi -e 's/"assignees":\[\]/"assignees":[{"login":"otro"}]/' "$GH_ASIGNA_AL_RELEER"; else : >"$GH_ISSUES/releido"; fi
+    fi
+    cat "$GH_ISSUES/${2##*/}.json" ;;
   "issue edit"*) ;;
   "pr list"*) r=$(sed -E 's/.*--head ([^ ]+).*/\1/' <<<"$*"); [ -f "$GH_ISSUES/pr-${r//\//_}" ] && cat "$GH_ISSUES/pr-${r//\//_}" ;;
   *) echo "gh falso: $*" >&2; exit 1 ;;
@@ -41,6 +46,8 @@ cat >"$TMP/bin/npm" <<'SH'
 echo "$(pwd -P)|$*" >>"$NPM_LOG"
 echo "npm falso: salida"
 # Con NPM_ASIGNA=<json del issue>, otra persona toma el issue mientras corre npm ci.
+# Con NPM_BORRA=<json del issue>, el issue deja de poder leerse (gh falla al releerlo).
+[ -n "${NPM_BORRA:-}" ] && rm -f "$NPM_BORRA"
 [ -n "${NPM_ASIGNA:-}" ] && perl -pi -e 's/"assignees":\[\]/"assignees":[{"login":"otro"}]/' "$NPM_ASIGNA"
 mkdir -p node_modules
 [ -n "${NPM_FALLA:-}" ] && { echo "npm falso: falla" >&2; exit 1; }
@@ -258,6 +265,25 @@ issue 59 "Lo toma otro"
 s=$(cd "$TMP/proj" && NPM_ASIGNA="$TMP/issues/59.json" "$PREPARAR" 59 --worktree 2>&1); c=$?
 es "$c" -ne 0 && grep -q "otro" <<<"$s" && ! asignado 59
 afirmar $? "si otra persona toma el issue mientras corre npm ci, no lo asigna"
+
+issue 61 "Gh falla al releer"
+s=$(cd "$TMP/proj" && NPM_BORRA="$TMP/issues/61.json" "$PREPARAR" 61 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "NO SE PUEDE TOMAR #61" <<<"$s" && grep -q "reintentá" <<<"$s" && ! asignado 61
+afirmar $? "si no puede volver a leer el issue antes de asignar, falla con el mensaje de reintento y sin asignar"
+
+issue 62 "Sin npm"
+s=$(cd "$TMP/proj" && NPM=npm-que-no-existe "$PREPARAR" 62 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "npm no está instalado" <<<"$s" && ! [ -e "$WT/62" ] && ! asignado 62
+afirmar $? "sin npm y con package-lock.json, falla antes de crear el worktree"
+
+issue 63 "Ya instalado y lo toma otro"
+(cd "$TMP/proj" && "$PREPARAR" 63 --worktree >/dev/null 2>&1)
+: >"$GH_LOG"
+# Retoma con las dependencias al día (no instala) y otra persona se asigna entre la primera
+# lectura del issue y la segunda: el releer tiene que estar antes de asignar, instale o no.
+s=$(cd "$TMP/proj" && GH_ASIGNA_AL_RELEER="$TMP/issues/63.json" "$PREPARAR" 63 --worktree 2>&1); c=$?
+es "$c" -ne 0 && grep -q "otro" <<<"$s" && ! grep -q "^issue edit 63 .*--add-assignee" "$GH_LOG"
+afirmar $? "vuelve a mirar los asignados antes de asignar aunque no haya instalado nada"
 
 issue 58 "Npm falla"
 s=$(cd "$TMP/proj" && NPM_FALLA=1 "$PREPARAR" 58 --worktree 2>&1); c=$?
