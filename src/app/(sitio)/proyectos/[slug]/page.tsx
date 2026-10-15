@@ -21,14 +21,14 @@ export default function DetallePage({ params }: PageProps<"/proyectos/[slug]">) 
   return (
     <>
       <Navbar cuenta={<CuentaBarra />} />
-      <div className="py-6">
-        <Container>
-          <Link href={RUTA_PROYECTOS} className="text-pequeno font-bold underline decoration-2 underline-offset-4">
-            ← Todos los proyectos
-          </Link>
-        </Container>
-      </div>
       <main className="flex-1 pb-16">
+        <div className="py-6">
+          <Container>
+            <Link href={RUTA_PROYECTOS} className="text-pequeno font-bold underline decoration-2 underline-offset-4">
+              ← Todos los proyectos
+            </Link>
+          </Container>
+        </div>
         <Suspense fallback={<Container><p className="text-cuerpo">Cargando…</p></Container>}>
           <Detalle params={params} />
         </Suspense>

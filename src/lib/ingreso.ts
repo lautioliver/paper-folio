@@ -31,7 +31,6 @@ export function decidirIngreso(entrada: {
   return { accion: "mostrar", aviso: null, callbackUrl };
 }
 
-/** URL de /ingresar para volver después a `callbackUrl` (solo rutas internas). */
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */
 export function puedeVerPanel(rol: Rol | null | undefined): boolean {
   return rol === "operador" || rol === "admin";

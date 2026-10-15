@@ -18,14 +18,14 @@ export default function ProyectosPage() {
   return (
     <>
       <Navbar cuenta={<CuentaBarra />} />
-      <div className="py-6">
-        <Container>
-          <Link href="/" className="text-pequeno font-bold underline decoration-2 underline-offset-4">
-            ← Volver al inicio
-          </Link>
-        </Container>
-      </div>
       <main className="flex-1 pb-16">
+        <div className="py-6">
+          <Container>
+            <Link href="/" className="text-pequeno font-bold underline decoration-2 underline-offset-4">
+              ← Volver al inicio
+            </Link>
+          </Container>
+        </div>
         <Container>
           <h1 className="text-center text-[1.75rem] leading-[1.15] font-bold sm:text-h2">
             Todos mis <Highlight tone="primario">proyectos</Highlight>

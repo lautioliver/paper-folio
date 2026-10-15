@@ -1,8 +1,7 @@
 "use server";
 
 import { signIn, signOut } from "@/auth";
-import { rutaInterna } from "./acceso";
-import { urlDeIngreso } from "./acceso";
+import { rutaInterna, urlDeIngreso } from "./acceso";
 
 /** Server action del botón "Continuar con Google". El destino sale siempre de `rutaInterna`: nunca un sitio externo. */
 export async function ingresarConGoogle(formData: FormData): Promise<void> {

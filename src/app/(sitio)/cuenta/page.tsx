@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { auth } from "@/auth";
@@ -15,7 +16,20 @@ const ROLES = { usuario: "Usuario", operador: "Operador", admin: "Administrador"
 async function Datos() {
   await connection(); // Auth.js usa valores al azar: sin esto el prerender los toma por una lectura estática.
   // Redirige a /ingresar sin sesión o con sesión huérfana; el rol sale de la base, no del token.
-  const { rol } = await requerirSesion("/cuenta");
+  let rol;
+  try {
+    ({ rol } = await requerirSesion("/cuenta"));
+  } catch (error) {
+    // La redirección a /ingresar es una excepción de Next: se deja pasar. Lo demás (la base caída) no puede
+    // terminar en un 500 en la página de la cuenta, igual que en /ingresar.
+    unstable_rethrow(error);
+    console.error("cuenta: no se pudo comprobar la sesión", error instanceof Error ? error.name : "desconocido");
+    return (
+      <p role="alert" className="mt-8 text-cuerpo">
+        No pudimos comprobar tu sesión. Probá de nuevo en un rato.
+      </p>
+    );
+  }
   const usuario = (await auth())?.user;
   return (
     <>
