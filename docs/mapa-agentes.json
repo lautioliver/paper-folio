@@ -3,7 +3,7 @@
   "docs": [
     {
       "cuando": [
-        "?src/models/**"
+        "src/models/**"
       ],
       "revisar": [
         "docs/reference/domain.md",
@@ -103,7 +103,7 @@
     {
       "tipo": "schema",
       "rutas": [
-        "?src/models/**"
+        "src/models/**"
       ],
       "skill": "db-migration"
     },
