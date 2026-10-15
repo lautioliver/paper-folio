@@ -26,7 +26,8 @@
     {
       "cuando": [
         "src/lib/**",
-        "src/components/**"
+        "src/components/**",
+        "src/content/**"
       ],
       "revisar": [
         "docs/reference/modules.md"
