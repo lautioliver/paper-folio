@@ -43,7 +43,7 @@ export type Bandeja = {
 const filtrosSchema = z.object({
   tipo: z.enum(CONTACT_TYPES).optional().catch(undefined),
   estado: z.enum(ESTADOS_CONSULTA).optional().catch(undefined),
-  pagina: z.coerce.number().int().min(1).max(1_000_000).catch(1),
+  pagina: z.coerce.number().int().min(1).catch(1),
 });
 
 export type FiltrosBandeja = {
@@ -67,7 +67,10 @@ export function parsearFiltros(input: unknown): FiltrosValidos {
   const pagina =
     typeof crudo.pagina === "number" ||
     (typeof crudo.pagina === "string" && /^\d+$/.test(crudo.pagina))
-      ? crudo.pagina
+      ? // Un número gigante cuenta como "más allá del final", no como inválido.
+        typeof crudo.pagina === "string" && crudo.pagina.length > 9
+        ? 1_000_000_000
+        : crudo.pagina
       : undefined;
   const r = filtrosSchema.parse({
     tipo: crudo.tipo,
@@ -82,8 +85,10 @@ export function parsearFiltros(input: unknown): FiltrosValidos {
 
 function extractoDe(mensaje: string): string {
   const limpio = mensaje.replace(/\s+/g, " ").trim();
-  return limpio.length > LARGO_EXTRACTO
-    ? `${limpio.slice(0, LARGO_EXTRACTO).trimEnd()}…`
+  // Por puntos de código, no por unidades UTF-16: así no se corta un emoji por la mitad.
+  const letras = Array.from(limpio);
+  return letras.length > LARGO_EXTRACTO
+    ? `${letras.slice(0, LARGO_EXTRACTO).join("").trimEnd()}…`
     : limpio;
 }
 
@@ -120,7 +125,10 @@ export async function listarConsultas(
     id: String(d._id),
     nombre: d.nombre,
     tipo: d.tipo,
-    estado: d.estado as EstadoConsulta,
+    // `estado` no tiene enum en el schema: uno desconocido (dato viejo o editado a mano) se ve como nueva.
+    estado: (ESTADOS_CONSULTA as readonly string[]).includes(d.estado)
+      ? (d.estado as EstadoConsulta)
+      : "nueva",
     extracto: extractoDe(d.mensaje),
     creadaEn: d.creadaEn,
   }));
