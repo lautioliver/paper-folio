@@ -1,0 +1,39 @@
+# .github/workflows/ci.yml — Paperfolio
+# Corre lint, typecheck y tests del proyecto Next.js en cada PR y en cada push a main.
+# Sin secretos: los tests no usan servicios externos. Node sale de .nvmrc.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Un push nuevo a un PR cancela la corrida anterior (obsoleta). En main no se cancela nada.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Instalar dependencias
+        id: instalar
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.instalar.outcome == 'success' }}
+        run: npm run typecheck
+      - name: Tests
+        if: ${{ !cancelled() && steps.instalar.outcome == 'success' }}
+        run: npm test
