@@ -1,6 +1,7 @@
 import { Container } from "@/components/Container";
 import { profile } from "@/content/profile";
 import { ContactForm } from "./ContactForm";
+import { CopyProfileLink } from "./CopyProfileLink";
 import { Highlight, SectionTitle } from "./Highlight";
 
 export function Contact() {
@@ -14,6 +15,7 @@ export function Contact() {
           <p className="mt-6 text-cuerpo">
             Contame si es una consulta general, una cotización o una asesoría técnica, y te respondo por email.
           </p>
+          <CopyProfileLink className="marca apretable inline-flex items-center justify-center bg-papel px-5 py-3 text-cuerpo font-bold" />
         </div>
         <div className="marca bg-papel p-6 sm:p-8">
           <ContactForm />

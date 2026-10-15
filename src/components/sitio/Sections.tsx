@@ -3,7 +3,9 @@ import { milestones, profile, projects, services } from "@/content/profile";
 import { cn } from "@/lib/cn";
 import { Highlight, SectionTitle } from "./Highlight";
 import { BrowserMock, HeroCharacter, Portrait, ServiceIcon } from "./Illustrations";
+import { HeroMotion } from "./HeroMotion";
 import { Reveal } from "./Reveal";
+import { ShareButton } from "./ShareButton";
 import { PANEL_BG, TONE_BG } from "./tones";
 
 // Botón de marca: contorno, radio y sombra (marca) más el "apretar" (apretable).
@@ -12,26 +14,28 @@ const BUTTON = "marca apretable inline-flex items-center justify-center gap-2 px
 export function Hero() {
   return (
     <section id="inicio" className="pt-12 pb-16 lg:pt-20">
-      <Container className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
-        <div>
-          <h1 className="text-[2.25rem] leading-[1.1] font-bold tracking-tight sm:text-h1 lg:text-[3.75rem]">
-            Soy <Highlight tone="acento">{profile.firstName}</Highlight>, desarrollador fullstack de{" "}
-            <Highlight tone="secundario">{profile.city}</Highlight>
-          </h1>
-          <p className="mt-6 max-w-xl text-cuerpo">{profile.intro}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a href="#contacto" className={cn(BUTTON, "bg-tinta text-papel")}>
-              Contactame
-            </a>
-            <a href="#proyectos" className={cn(BUTTON, "bg-papel")}>
-              Ver proyectos
-            </a>
+      <HeroMotion>
+        <Container className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
+          <div>
+            <h1 data-hero className="text-[2.25rem] leading-[1.1] font-bold tracking-tight sm:text-h1 lg:text-[3.75rem]">
+              Soy <Highlight tone="acento">{profile.firstName}</Highlight>, desarrollador fullstack de{" "}
+              <Highlight tone="secundario">{profile.city}</Highlight>
+            </h1>
+            <p data-hero className="mt-6 max-w-xl text-cuerpo">{profile.intro}</p>
+            <div data-hero className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <a href="#contacto" className={cn(BUTTON, "bg-tinta text-papel")}>
+                Contactame
+              </a>
+              <a href="#proyectos" className={cn(BUTTON, "bg-papel")}>
+                Ver proyectos
+              </a>
+            </div>
           </div>
-        </div>
-        <div className="marca mx-auto aspect-square w-full max-w-md overflow-hidden bg-primario">
-          <HeroCharacter />
-        </div>
-      </Container>
+          <div data-hero className="marca mx-auto aspect-square w-full max-w-md overflow-hidden bg-primario">
+            <HeroCharacter />
+          </div>
+        </Container>
+      </HeroMotion>
     </section>
   );
 }
@@ -119,7 +123,7 @@ export function Projects() {
         </SectionTitle>
         <ul className="mt-12 grid gap-8">
           {projects.map((project) => (
-            <li key={project.slug}>
+            <li key={project.slug} id={`proyecto-${project.slug}`} className="scroll-mt-28">
               <Reveal>
                 <article className="contorno grid overflow-hidden bg-papel lg:grid-cols-2">
                   <div className="order-2 p-6 sm:p-8 lg:order-1">
@@ -145,6 +149,7 @@ export function Projects() {
                       <a href={project.repoUrl} target="_blank" rel="noreferrer" className="underline decoration-2 underline-offset-4">
                         Ver en GitHub →
                       </a>
+                      <ShareButton title={project.name} slug={project.slug} />
                     </div>
                   </div>
                   <div

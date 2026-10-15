@@ -35,10 +35,11 @@ Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público. `(au
 
 ## Landing (PoC, #18)
 
-- **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `StackBand`, `Reveal` y `ContactForm` son de cliente.
+- **Secciones**, en el orden del manual: barra, hero, banda del stack, servicios, sobre mí, proyectos, trayectoria, contacto y pie. Son componentes de servidor; solo `Navbar`, `StackBand`, `Reveal`, `HeroMotion`, `ShareButton`, `CopyProfileLink` y `ContactForm` son de cliente.
 - **Contenido** estático en `src/content/profile.ts`, con datos públicos de GitHub. Lo reemplaza el CRUD del admin (hito 5).
 - **Formulario de contacto:** valida con `parseContactRequest` (`src/lib/contact.ts`, Zod), la misma regla del servidor, y envía con `POST /api/consultas`. Muestra "Enviando…" con el botón deshabilitado, un agradecimiento al guardarse, los errores del servidor (400) en sus campos y un mensaje general con 429, 503 o un error de red. El campo trampa `sitio_web` está oculto para personas y lectores de pantalla y fuera del tabulador.
-- **Movimiento:** `Reveal` marca `data-visible` con IntersectionObserver (entrada al hacer scroll) y la banda del stack se desplaza con CSS (se pausa con un botón o con el hover). Sin JS el contenido se ve; con `prefers-reduced-motion` todo queda fijo.
+- **Movimiento:** GSAP (registrado en `src/lib/gsap.ts`, solo en componentes de cliente). `HeroMotion` anima en secuencia los elementos `data-hero` del hero (menos de 1 s) y `Reveal` hace la entrada al hacer scroll con `ScrollTrigger` (lo que ya está en pantalla al cargar no se anima). Las animaciones se crean dentro de `gsap.matchMedia` con `prefers-reduced-motion: no-preference`: sin JS o con reduced-motion el contenido se ve fijo. La banda del stack se desplaza con CSS (se pausa con un botón o con el hover).
+- **APIs Web:** `ShareButton` (en cada proyecto) usa `navigator.share` y, si no existe o falla, copia el link con la Clipboard API; `CopyProfileLink` (en el contacto) copia el link del perfil. Los dos avisan en un `role="status"`. La lógica está en `src/lib/share.ts` (`shareOrCopy`, `copyText`), que no lanza: si no hay API devuelve el error y la UI lo dice.
 
 ## Tokens de diseño
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { cn } from "@/lib/cn";
+import { gsap, MOTION_OK } from "@/lib/gsap";
 
 type RevealProps = {
   children: ReactNode;
@@ -9,33 +9,33 @@ type RevealProps = {
 };
 
 /**
- * Entrada al hacer scroll: sube 16 px y aparece. Sin JS (o antes de hidratar) el contenido se ve:
- * solo lo que está debajo de la pantalla al cargar se oculta (data-visible="false") y se muestra
- * con IntersectionObserver. Marca el elemento por dataset, sin estado de React.
+ * Entrada al hacer scroll con GSAP ScrollTrigger: sube 16 px y aparece. Sin JS (o antes de hidratar)
+ * el contenido se ve, con prefers-reduced-motion no se crea ninguna animación, y lo que ya está en
+ * pantalla al cargar no se anima.
  */
 export function Reveal({ children, className }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const element = ref.current;
-    if (!element || !("IntersectionObserver" in window)) return;
-    if (element.getBoundingClientRect().top < window.innerHeight) return;
-    element.dataset.visible = "false";
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          element.dataset.visible = "true";
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15 },
-    );
-    observer.observe(element);
-    return () => observer.disconnect();
+    if (!element) return;
+    const mm = gsap.matchMedia();
+    mm.add(MOTION_OK, () => {
+      if (element.getBoundingClientRect().top < window.innerHeight) return;
+      gsap.from(element, {
+        opacity: 0,
+        y: 16,
+        duration: 0.4,
+        ease: "power2.out",
+        clearProps: "opacity,transform",
+        scrollTrigger: { trigger: element, start: "top 85%", once: true },
+      });
+    });
+    return () => mm.revert();
   }, []);
 
   return (
-    <div ref={ref} className={cn("revelar", className)}>
+    <div ref={ref} className={className}>
       {children}
     </div>
   );
