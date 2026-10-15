@@ -1,5 +1,6 @@
 // Colores de la paleta como clases de Tailwind, en un solo lugar.
-export type Tone = "primario" | "acento" | "secundario" | "terciario";
+export const TONES = ["primario", "acento", "secundario", "terciario"] as const;
+export type Tone = (typeof TONES)[number];
 
 export const TONE_BG: Record<Tone, string> = {
   primario: "bg-primario",
