@@ -23,8 +23,9 @@ haya cambiado; si hay más de una, falla y las lista) e imprime el issue con su 
                 git -C <ruta>: si el directorio actual se reinicia entre comandos,
                 commitearías en el checkout principal.
               - Si la rama ya está en otro worktree, falla sin asignar.
-              - Si hay package-lock.json, corre npm ci en el worktree antes de asignar
-                (verificar.py lo necesita). Si falla, no asigna; reintentá igual.
+              - Si hay package-lock.json, corre npm ci --ignore-scripts en el worktree
+                antes de asignar (verificar.py lo necesita), y de nuevo si el lock es
+                más nuevo que lo instalado. Si falla, no asigna; reintentá igual.
               - Con el PR mergeado, borralo con: git worktree remove <ruta>
 AYUDA
   exit 0
@@ -195,11 +196,18 @@ else
   echo "Rama nueva: $RAMA (desde origin/$BASE)"
 fi
 # Dependencias de npm: verificar.py corre lint, typecheck y tests, que las necesitan. npm escribe
-# node_modules/.package-lock.json recién al terminar bien: sin él, una instalación a medias se repite.
-if [ -f "$WT/package-lock.json" ] && [ ! -f "$WT/node_modules/.package-lock.json" ]; then
-  echo "Instalando dependencias (npm ci)…"
-  (cd "$WT" && npm ci --no-audit --no-fund --loglevel=error) \
+# node_modules/.package-lock.json recién al terminar bien: sin él (instalación a medias) o si
+# package-lock.json es más nuevo (cambiaron las dependencias), se instala. Todo a stderr: stdout
+# es de las líneas que leen los agentes. --ignore-scripts: la rama puede venir de origin sin revisar.
+lock="$WT/package-lock.json"; instalado="$WT/node_modules/.package-lock.json"
+if [ -f "$lock" ] && { [ ! -f "$instalado" ] || [ "$lock" -nt "$instalado" ]; }; then
+  command -v npm >/dev/null || error "el repo usa npm (package-lock.json) y npm no está instalado. Instalá Node (ver docs/development/setup.md) y reintentá."
+  echo "Instalando dependencias (npm ci)…" >&2
+  (cd "$WT" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error) >&2 \
     || error "npm ci falló en $WT. Revisá el error, y reintentá con el mismo comando: el worktree ya está creado."
+  # npm ci tarda: si en ese rato otra persona tomó el issue, es de ella.
+  otros=$(gh api "repos/$REPO/issues/$N" | jq -r --arg yo "$YO" '[.assignees[].login | select(. != $yo)] | join(", ")')
+  [ -n "$otros" ] && error "mientras se instalaban las dependencias lo tomó $otros. El worktree $WT queda creado; si no lo vas a usar: git worktree remove $WT"
 fi
 gh issue edit "$N" -R "$REPO" --add-assignee @me >/dev/null
 echo "Worktree: $WT"
