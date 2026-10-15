@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { shareOrCopy, type ShareResult } from "@/lib/share";
 
@@ -20,6 +20,13 @@ type ShareButtonProps = {
 /** "Compartir" con Web Share API; sin ella copia el link y avisa en un role="status". */
 export function ShareButton({ title, url, className }: ShareButtonProps) {
   const [message, setMessage] = useState("");
+
+  // El aviso se borra solo: así un segundo clic con el mismo resultado se vuelve a anunciar.
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   async function onClick() {
     const result = await shareOrCopy({ title, url }, navigator);

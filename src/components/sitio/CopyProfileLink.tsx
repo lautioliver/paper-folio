@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { copyText } from "@/lib/share";
 
@@ -11,6 +11,13 @@ type CopyProfileLinkProps = {
 /** Copia el link del perfil (esta página) con la Clipboard API y avisa "Copiado" en un role="status". */
 export function CopyProfileLink({ className }: CopyProfileLinkProps) {
   const [message, setMessage] = useState("");
+
+  // El aviso se borra solo: así un segundo clic con el mismo resultado se vuelve a anunciar.
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 3000);
+    return () => clearTimeout(timer);
+  }, [message]);
 
   async function onClick() {
     const ok = await copyText(`${window.location.origin}/`, navigator);
