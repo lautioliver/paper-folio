@@ -44,3 +44,9 @@ export function urlDeIngreso(volverA: string, motivo: Exclude<Acceso, { ok: true
   const url = `${RUTA_INGRESO}?callbackUrl=${encodeURIComponent(rutaInterna(volverA))}`;
   return motivo === "sesion-huerfana" ? `${url}&error=sesion` : url;
 }
+
+/** Respuesta JSON de una API cuando la sesión no alcanza (stub). */
+export function respuestaSinAcceso(motivo: Exclude<Acceso, { ok: true }>["motivo"]): Response {
+  void motivo;
+  return new Response(null, { status: 500 });
+}

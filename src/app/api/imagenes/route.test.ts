@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // La ruta no puede importar `@/auth` en Vitest (next-auth no resuelve next/server): se mockea el permiso.
 // `@vercel/blob` también se mockea: ningún test sube a Vercel Blob real.
-const requerirRol = vi.fn();
+const requerirRolApi = vi.fn();
 const put = vi.fn();
 vi.mock("@/lib/permisos", () => ({
-  requerirRol: (...args: unknown[]) => requerirRol(...args),
+  requerirRolApi: (...args: unknown[]) => requerirRolApi(...args),
+  // Transición (commit en rojo): la ruta todavía usa requerirRol y deja pasar a todos.
+  requerirRol: async () => ({ id: "1", rol: "admin" }),
 }));
 vi.mock("@vercel/blob", () => ({
   put: (...args: unknown[]) => put(...args),
@@ -25,11 +27,15 @@ function pedido(archivo?: Blob, nombre = "foto.png"): Request {
   return new Request("http://localhost:3480/api/imagenes", { method: "POST", body: form });
 }
 
-/** Lo que tira `forbidden()` de next/navigation; Next lo convierte en un 403. */
-const prohibido = () => Object.assign(new Error("NEXT_HTTP_ERROR_FALLBACK;403"), { digest: "NEXT_HTTP_ERROR_FALLBACK;403" });
+const admin = { ok: true, id: "1", rol: "admin" };
+/** Lo que devuelve requerirRolApi cuando no alcanza: la respuesta JSON lista para devolver. */
+const sinAcceso = (status: number, codigo: string) => ({
+  ok: false,
+  respuesta: Response.json({ error: { codigo, mensaje: "x" } }, { status }),
+});
 
 beforeEach(() => {
-  requerirRol.mockReset();
+  requerirRolApi.mockReset();
   put.mockReset();
   vi.stubEnv("BLOB_STORE_ID", "store_dePrueba123");
 });
@@ -39,21 +45,36 @@ afterEach(() => {
 });
 
 describe("POST /api/imagenes: permisos", () => {
-  it("exige admin, con la ruta del panel a la que volver", async () => {
-    requerirRol.mockResolvedValue({ id: "1", rol: "admin" });
+  it("exige admin con requerirRolApi (JSON, sin redirect)", async () => {
+    requerirRolApi.mockResolvedValue(admin);
     put.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/contenido/a.png" });
     await POST(pedido(new Blob([PNG])));
-    expect(requerirRol).toHaveBeenCalledWith("/panel", "admin");
+    expect(requerirRolApi).toHaveBeenCalledWith("admin");
   });
 
-  it("un usuario que no es admin recibe 403 y no se escribe nada en Blob", async () => {
-    requerirRol.mockRejectedValue(prohibido());
-    await expect(POST(pedido(new Blob([PNG])))).rejects.toThrow("403");
+  it("sin sesión responde 401 JSON SIN_SESION, sin leer el cuerpo ni escribir en Blob", async () => {
+    requerirRolApi.mockResolvedValue(sinAcceso(401, "SIN_SESION"));
+    const req = pedido(new Blob([PNG]));
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+    expect(res.headers.get("location")).toBeNull();
+    expect(await res.json()).toMatchObject({ error: { codigo: "SIN_SESION" } });
+    expect(req.bodyUsed).toBe(false);
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("un usuario que no es admin recibe 403 JSON SIN_PERMISO y no se escribe nada en Blob", async () => {
+    requerirRolApi.mockResolvedValue(sinAcceso(403, "SIN_PERMISO"));
+    const req = pedido(new Blob([PNG]));
+    const res = await POST(req);
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ error: { codigo: "SIN_PERMISO" } });
+    expect(req.bodyUsed).toBe(false);
     expect(put).not.toHaveBeenCalled();
   });
 
   it("rechaza con 403 JSON un envío de otro sitio o de un subdominio (Sec-Fetch-Site), sin leer el cuerpo", async () => {
-    requerirRol.mockResolvedValue({ id: "1", rol: "admin" });
+    requerirRolApi.mockResolvedValue(admin);
     for (const sitio of ["cross-site", "same-site"]) {
       const form = new FormData();
       form.append("archivo", new Blob([PNG]), "foto.png");
@@ -71,7 +92,7 @@ describe("POST /api/imagenes: permisos", () => {
   });
 
   it("acepta el envío del mismo origen (Sec-Fetch-Site: same-origin)", async () => {
-    requerirRol.mockResolvedValue({ id: "1", rol: "admin" });
+    requerirRolApi.mockResolvedValue(admin);
     put.mockResolvedValue({ url: "https://x.public.blob.vercel-storage.com/contenido/a.png" });
     const form = new FormData();
     form.append("archivo", new Blob([PNG]), "foto.png");
@@ -85,17 +106,11 @@ describe("POST /api/imagenes: permisos", () => {
     expect(res.status).toBe(201);
   });
 
-  it("chequea el permiso antes de leer el cuerpo", async () => {
-    requerirRol.mockRejectedValue(prohibido());
-    const req = pedido(new Blob([PNG]));
-    await expect(POST(req)).rejects.toThrow("403");
-    expect(req.bodyUsed).toBe(false);
-  });
 });
 
 describe("POST /api/imagenes: subida (admin)", () => {
   beforeEach(() => {
-    requerirRol.mockResolvedValue({ id: "1", rol: "admin" });
+    requerirRolApi.mockResolvedValue(admin);
   });
 
   it("sube una imagen válida con nombre generado y responde 201 con la URL", async () => {

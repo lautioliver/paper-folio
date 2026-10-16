@@ -35,3 +35,12 @@ export async function requerirRol(
   if (!acceso.ok) forbidden();
   return { id: acceso.id, rol: acceso.rol };
 }
+
+/** Para route handlers (stub). */
+export async function requerirRolApi(
+  rol: Rol,
+  ...otros: Rol[]
+): Promise<{ ok: true; id: string; rol: Rol } | { ok: false; respuesta: Response }> {
+  void otros;
+  return { ok: true, id: "", rol };
+}
