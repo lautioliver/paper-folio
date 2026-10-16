@@ -1,4 +1,4 @@
-import nodemailer, { type SendMailOptions } from "nodemailer";
+import nodemailer, { type SendMailOptions } from "nodemailer-10";
 import { z } from "zod";
 import { Consulta } from "@/models/Consulta";
 import { CONTACT_TYPE_LABELS, type ContactType } from "./contact";

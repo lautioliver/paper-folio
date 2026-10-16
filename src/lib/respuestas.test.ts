@@ -1,6 +1,6 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
-import nodemailer, { type SendMailOptions } from "nodemailer";
+import nodemailer, { type SendMailOptions } from "nodemailer-10";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { conectar, desconectar } from "./db";
 import { responderConsulta, type TransporteEmail } from "./respuestas";
