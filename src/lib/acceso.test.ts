@@ -152,11 +152,11 @@ describe("permiteIngreso (callback signIn, #49)", () => {
     expect(consultas).toBe(0);
   });
 
-  it("si la base falla, no ingresa y va a /ingresar?error=verificacion, no al aviso de cuenta (revisión del PR #69)", async () => {
+  it("si la base falla, no ingresa y va a /ingresar?error=reintentar, no al aviso de cuenta (revisión del PR #69)", async () => {
     const caida = async (): Promise<boolean> => {
       throw new Error("MongoServerSelectionError");
     };
-    expect(await permiteIngreso(google, caida)).toBe("/ingresar?error=verificacion");
+    expect(await permiteIngreso(google, caida)).toBe("/ingresar?error=reintentar");
   });
 });
 

@@ -112,12 +112,13 @@ describe("ingreso rechazado por Auth.js (error=AccessDenied, code-review)", () =
 describe("errores del ingreso en /ingresar (revisión del PR #69)", () => {
   const mostrar = (error: string | string[] | undefined) => decidirIngreso({ sesion: "ninguna", error, callbackUrl: "/cuenta" });
 
-  it("error=bloqueado (signIn de una cuenta bloqueada) avisa el bloqueo", () => {
-    expect(mostrar("bloqueado")).toEqual({ accion: "mostrar", aviso: "bloqueada", callbackUrl: "/cuenta" });
+  it("error=bloqueado sin sesión (signIn de una cuenta bloqueada, o un link armado) avisa, pero deja ingresar con otra cuenta", () => {
+    // "bloqueada" (solo "Salir") queda para cuando la base dice que la sesión actual está bloqueada.
+    expect(mostrar("bloqueado")).toEqual({ accion: "mostrar", aviso: "ingreso-bloqueado", callbackUrl: "/cuenta" });
   });
 
-  it("error=verificacion (la base no respondió) pide reintentar, sin culpar a la cuenta", () => {
-    expect(mostrar("verificacion")).toEqual({ accion: "mostrar", aviso: "reintentar", callbackUrl: "/cuenta" });
+  it("error=reintentar (la base no respondió en signIn) pide reintentar, sin culpar a la cuenta", () => {
+    expect(mostrar("reintentar")).toEqual({ accion: "mostrar", aviso: "reintentar", callbackUrl: "/cuenta" });
   });
 
   it("cualquier otro código de Auth.js muestra un aviso genérico (nunca el texto crudo)", () => {
