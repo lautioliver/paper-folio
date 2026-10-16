@@ -73,13 +73,14 @@ function validos<E extends z.ZodType>(que: string, esquema: E, docs: unknown[]):
   return docs.map((doc) => validar(que, esquema, doc)).filter((d): d is z.output<E> => d !== null);
 }
 
+const EN_ORDEN = { orden: 1, _id: 1 } as const;
+const CAMPOS_DEMO = { titulo: 1, url: 1, descripcion: 1 } as const;
+
 /** Ids (como texto) de los proyectos que tienen al menos una demo activa y válida. */
 async function conDemoActiva(ids: Types.ObjectId[]): Promise<Set<string>> {
-  const demos = await DemoModelo.find({ proyecto: { $in: ids }, activa: true }).lean();
+  const demos = await DemoModelo.find({ proyecto: { $in: ids }, activa: true }, { proyecto: 1, ...CAMPOS_DEMO }).lean();
   return new Set(demos.filter((d) => demoEsquema.safeParse(d).success).map((d) => String(d.proyecto)));
 }
-
-const EN_ORDEN = { orden: 1, _id: 1 } as const;
 
 function leerProyectos(): Promise<Leido<Proyecto[]>> {
   return conRespaldo(
@@ -97,47 +98,31 @@ function leerProyectos(): Promise<Leido<Proyecto[]>> {
   );
 }
 
-/** El proyecto publicado (y válido) con ese slug; `null` si no hay; `SIN_CONTENIDO` si la colección está vacía. */
-async function proyectoPublicado(slug: string) {
-  const doc = await ProyectoModelo.findOne({ slug, publicado: true }).lean();
-  if (!doc) return (await ProyectoModelo.exists({})) ? null : SIN_CONTENIDO;
-  const proyecto = validar("proyectos", proyectoEsquema, doc);
-  return proyecto ? { id: doc._id, proyecto } : null;
-}
+export type Detalle = { proyecto: Proyecto; demos: Demo[] };
 
 function perfilDe(slug: string) {
   return projects.find((project) => project.slug === slug);
 }
 
-function leerProyecto(slug: string): Promise<Leido<Proyecto | null>> {
+/**
+ * El proyecto publicado con ese slug y sus demos activas, en una sola lectura: los dos salen de la base
+ * o los dos del respaldo, nunca mezclados. `null` si no está publicado (o no pasa la validación).
+ */
+function leerDetalle(slug: string): Promise<Leido<Detalle | null>> {
   return conRespaldo(
-    "el proyecto",
+    "el detalle",
     async () => {
-      const encontrado = await proyectoPublicado(slug);
-      if (encontrado === SIN_CONTENIDO || encontrado === null) return encontrado;
-      const conDemo = await conDemoActiva([encontrado.id]);
-      return { ...encontrado.proyecto, tieneDemo: conDemo.has(String(encontrado.id)) };
+      const doc = await ProyectoModelo.findOne({ slug, publicado: true }).lean();
+      if (!doc) return (await ProyectoModelo.exists({})) ? null : SIN_CONTENIDO;
+      const proyecto = validar("proyectos", proyectoEsquema, doc);
+      if (!proyecto) return null;
+      const docsDemos = await DemoModelo.find({ proyecto: doc._id, activa: true }, CAMPOS_DEMO).sort(EN_ORDEN).lean();
+      const demos = validos("demos", demoEsquema, docsDemos);
+      return { proyecto: { ...proyecto, tieneDemo: demos.length > 0 }, demos };
     },
     () => {
       const project = perfilDe(slug);
-      return project ? proyectoDesdePerfil(project) : null;
-    },
-  );
-}
-
-function leerDemos(slug: string): Promise<Leido<Demo[]>> {
-  return conRespaldo(
-    "las demos",
-    async () => {
-      const encontrado = await proyectoPublicado(slug);
-      if (encontrado === SIN_CONTENIDO) return encontrado;
-      if (encontrado === null) return [];
-      const demos = await DemoModelo.find({ proyecto: encontrado.id, activa: true }).sort(EN_ORDEN).lean();
-      return validos("demos", demoEsquema, demos);
-    },
-    () => {
-      const project = perfilDe(slug);
-      return project ? [demoDesdePerfil(project)] : [];
+      return project ? { proyecto: proyectoDesdePerfil(project), demos: [demoDesdePerfil(project)] } : null;
     },
   );
 }
@@ -164,32 +149,28 @@ export async function listarProyectos(): Promise<Proyecto[]> {
   return datos;
 }
 
-/** El proyecto publicado con ese slug, o `null` (el detalle da 404). */
-export async function buscarProyecto(slug: string): Promise<Proyecto | null> {
+/** El proyecto publicado con ese slug y sus demos activas, o `null` (el detalle da 404). */
+export async function detalleProyecto(slug: string): Promise<Detalle | null> {
   "use cache";
   cacheTag(TAG_CONTENIDO);
   if (!SLUG.test(slug)) {
     cacheLife("hours");
     return null;
   }
-  const { datos, origen } = await leerProyecto(slug);
+  const { datos, origen } = await leerDetalle(slug);
   if (origen === "base") cacheLife("hours");
   else cacheLife("minutes");
   return datos;
 }
 
+/** El proyecto publicado con ese slug, o `null`. */
+export async function buscarProyecto(slug: string): Promise<Proyecto | null> {
+  return (await detalleProyecto(slug))?.proyecto ?? null;
+}
+
 /** Demos activas del proyecto publicado con ese slug, en orden. Vacío si el proyecto no está publicado. */
 export async function demosDe(slug: string): Promise<Demo[]> {
-  "use cache";
-  cacheTag(TAG_CONTENIDO);
-  if (!SLUG.test(slug)) {
-    cacheLife("hours");
-    return [];
-  }
-  const { datos, origen } = await leerDemos(slug);
-  if (origen === "base") cacheLife("hours");
-  else cacheLife("minutes");
-  return datos;
+  return (await detalleProyecto(slug))?.demos ?? [];
 }
 
 /** Servicios publicados, en orden. */
@@ -202,7 +183,3 @@ export async function listarServicios(): Promise<Servicio[]> {
   return datos;
 }
 
-export async function detalleProyecto(slug: string): Promise<{ proyecto: Proyecto; demos: Demo[] } | null> {
-  void slug;
-  return null;
-}

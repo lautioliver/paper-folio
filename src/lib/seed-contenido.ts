@@ -18,6 +18,15 @@ export type ResultadoSeed = {
  * - Demos: la `demoUrl` de cada proyecto, solo si el proyecto no tiene ninguna demo (activa o no).
  * No es para correr en paralelo consigo mismo: dos corridas a la vez podrían duplicar una demo.
  */
+// Sin `timestamps`: si no, Mongoose suma `$set: { actualizadoEn }` y tocaría cada documento existente.
+// Las fechas van dentro de `$setOnInsert`, así solo se escriben al insertar.
+const SIN_TOCAR = { upsert: true, timestamps: false } as const;
+
+function insertado<T extends object>(datos: T): T & { creadoEn: Date; actualizadoEn: Date } {
+  const ahora = new Date();
+  return { ...datos, creadoEn: ahora, actualizadoEn: ahora };
+}
+
 export async function sembrarContenido(): Promise<ResultadoSeed> {
   await conectar();
   await Promise.all([asegurarIndicesDe(Proyecto), asegurarIndicesDe(Demo), asegurarIndicesDe(Servicio)]);
@@ -34,17 +43,13 @@ export async function sembrarContenido(): Promise<ResultadoSeed> {
     const nuevo = { ...datos, orden, publicado: true };
     // Los validadores de Mongoose no corren sobre `$setOnInsert`: se valida antes.
     await new Proyecto(nuevo).validate();
-    const r = await Proyecto.updateOne(
-      { slug: datos.slug },
-      { $setOnInsert: nuevo },
-      { upsert: true },
-    );
+    const r = await Proyecto.updateOne({ slug: datos.slug }, { $setOnInsert: insertado(nuevo) }, SIN_TOCAR);
     if (r.upsertedCount > 0) resultado.proyectos.creados++;
     else resultado.proyectos.existentes++;
 
-    const proyecto = await Proyecto.findOne({ slug: datos.slug }, { _id: 1 }).lean();
-    if (proyecto && !(await Demo.exists({ proyecto: proyecto._id }))) {
-      await Demo.create({ ...demoDesdePerfil(project), proyecto: proyecto._id, activa: true, orden: 0 });
+    const id = r.upsertedId ?? (await Proyecto.findOne({ slug: datos.slug }, { _id: 1 }).lean())?._id;
+    if (id && !(await Demo.exists({ proyecto: id }))) {
+      await Demo.create({ ...demoDesdePerfil(project), proyecto: id, activa: true, orden: 0 });
       resultado.demos.creadas++;
     }
   }
@@ -53,11 +58,7 @@ export async function sembrarContenido(): Promise<ResultadoSeed> {
     const datos = servicioDesdePerfil(service);
     const nuevo = { ...datos, orden, publicado: true };
     await new Servicio(nuevo).validate();
-    const r = await Servicio.updateOne(
-      { titulo: datos.titulo },
-      { $setOnInsert: nuevo },
-      { upsert: true },
-    );
+    const r = await Servicio.updateOne({ titulo: datos.titulo }, { $setOnInsert: insertado(nuevo) }, SIN_TOCAR);
     if (r.upsertedCount > 0) resultado.servicios.creados++;
     else resultado.servicios.existentes++;
   }

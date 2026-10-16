@@ -54,12 +54,15 @@ export const demoEsquema = z.object({
   descripcion: z.string().trim().default(""),
 });
 
-export const servicioEsquema = z.object({
-  titulo: texto,
-  descripcion: texto,
-  icono: opcional(z.enum(SERVICE_ICONS)),
-  imagen: opcional(urlHttps),
-});
+export const servicioEsquema = z
+  .object({
+    titulo: texto,
+    descripcion: texto,
+    icono: opcional(z.enum(SERVICE_ICONS)),
+    imagen: opcional(urlHttps),
+  })
+  // Como en el modelo: sin ícono ni imagen la tarjeta queda sin ilustración.
+  .refine((s) => s.icono !== undefined || s.imagen !== undefined, { error: "falta el ícono o la imagen" });
 
 /** Proyecto tal como lo muestra el sitio. `tieneDemo`: si tiene al menos una demo activa. */
 export type Proyecto = z.output<typeof proyectoEsquema> & { tieneDemo: boolean };

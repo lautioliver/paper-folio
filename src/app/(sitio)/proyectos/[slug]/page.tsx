@@ -10,7 +10,8 @@ import { Navbar } from "@/components/sitio/Navbar";
 import { BUTTON } from "@/components/sitio/Sections";
 import { TONE_BG } from "@/components/sitio/tones";
 import { cn } from "@/lib/cn";
-import { buscarProyecto, demosDe, type Demo } from "@/lib/contenido";
+import { detalleProyecto, type Demo } from "@/lib/contenido";
+import { esUrlHttps } from "@/lib/contenido-esquemas";
 import { requerirSesion } from "@/lib/permisos";
 import { RUTA_PROYECTOS, rutaDetalle } from "@/lib/proyectos";
 
@@ -43,9 +44,11 @@ async function Detalle({ params }: { params: PageProps<"/proyectos/[slug]">["par
   const { slug } = await params;
   // Primero la sesión: sin ella nadie ve nada, ni siquiera si el slug existe.
   await requerirSesion(rutaDetalle(slug));
-  // Solo lo publicado: un proyecto despublicado (o inexistente) da 404.
-  const [project, demos] = await Promise.all([buscarProyecto(slug), demosDe(slug)]);
-  if (!project) notFound();
+  // Solo lo publicado: un proyecto despublicado (o inexistente) da 404. Proyecto y demos en una sola
+  // lectura, así no se mezclan la base y el respaldo estático.
+  const detalle = await detalleProyecto(slug);
+  if (!detalle) notFound();
+  const { proyecto: project, demos } = detalle;
   const { caso } = project;
   const [principal] = demos;
 
@@ -135,20 +138,25 @@ function VistaDemo({ demo, conTitulo }: { demo: Demo; conTitulo: boolean }) {
       {conTitulo && <h3 className="mt-2 text-cuerpo font-bold">{demo.titulo}</h3>}
       {demo.descripcion && <p className="mt-2 text-cuerpo">{demo.descripcion}</p>}
       <p className="mt-2 text-pequeno">
-        Si el sitio no se ve acá (algunos no permiten mostrarse dentro de otra página), abrilo en otra pestaña:{" "}
+        {esUrlHttps(demo.url)
+          ? "Si el sitio no se ve acá (algunos no permiten mostrarse dentro de otra página), abrilo en otra pestaña: "
+          : "Esta demo no usa https, así que no se puede mostrar acá: "}
         <a href={demo.url} target="_blank" rel="noreferrer" className="font-bold underline decoration-2 underline-offset-4">
           Abrir en otra pestaña
         </a>
         .
       </p>
-      <iframe
-        src={demo.url}
-        title={demo.titulo}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        loading="lazy"
-        referrerPolicy="no-referrer"
-        className="marca mt-4 h-[32rem] w-full bg-papel"
-      />
+      {/* Una demo http no se embebe: el navegador la bloquea como contenido mixto. Queda el enlace. */}
+      {esUrlHttps(demo.url) && (
+        <iframe
+          src={demo.url}
+          title={demo.titulo}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="marca mt-4 h-[32rem] w-full bg-papel"
+        />
+      )}
     </div>
   );
 }

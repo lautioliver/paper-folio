@@ -61,7 +61,7 @@ Modelo: `src/models/Demo.ts`. Un proyecto puede tener varias; el detalle muestra
 |---|---|---|
 | `proyecto` | ObjectId (ref `Proyecto`) | |
 | `titulo` | string | Título del iframe (y encabezado si hay más de una) |
-| `url` | string | URL `http` o `https` (nada de `javascript:` ni `data:`) |
+| `url` | string | URL `http` o `https` (nada de `javascript:` ni `data:`). Solo las `https` se embeben; una `http` va como enlace |
 | `descripcion` | string | Opcional (`""`) |
 | `activa` | boolean | `true` por defecto |
 | `orden` | number | `0` por defecto |
