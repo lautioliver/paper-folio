@@ -6,6 +6,7 @@ export type EnlacePanel = { href: string; etiqueta: string };
 // y cada acción de la sección exige su rol en el servidor.
 const SECCIONES: (EnlacePanel & { roles: readonly Rol[] })[] = [
   { href: "/panel/consultas", etiqueta: "Consultas", roles: ["operador", "admin"] },
+  { href: "/panel/proyectos", etiqueta: "Proyectos", roles: ["admin"] },
   { href: "/panel/servicios", etiqueta: "Servicios", roles: ["admin"] },
 ];
 
