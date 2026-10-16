@@ -209,6 +209,15 @@ describe("listar y obtener", () => {
   });
 });
 
+describe("índices (ADR-003)", () => {
+  it("crear una demo en una base sin seed crea el índice del detalle", async () => {
+    await Demo.collection.drop().catch(() => {});
+    await crear();
+    const nombres = (await Demo.collection.indexes()).map((i) => i.name);
+    expect(nombres).toContain("proyecto_1_activa_1_orden_1");
+  });
+});
+
 describe("orden", () => {
   it("una demo nueva va al final de las de su proyecto", async () => {
     await crear({ titulo: "A" });
@@ -301,6 +310,23 @@ describe("editar y borrar", () => {
       descripcion: "Algo",
       activa: false,
     });
+  });
+
+  it("la versión cambia con cada guardado (editar, activar, mover): es la key del formulario", async () => {
+    const id = await crear();
+    await crear({ titulo: "Otra" });
+    const versiones = [(await obtenerDemoAdmin(id))?.version];
+    for (const escribir of [
+      () => editarDemo(id, entrada({ titulo: "Editada" })),
+      () => activarDemo(id, false),
+      () => moverDemo(id, "bajar"),
+    ]) {
+      await new Promise((r) => setTimeout(r, 5));
+      await escribir();
+      versiones.push((await obtenerDemoAdmin(id))?.version);
+    }
+    expect(versiones.every((v) => typeof v === "string" && v !== "")).toBe(true);
+    expect(new Set(versiones).size).toBe(versiones.length);
   });
 
   it("borrar la saca de la base y del detalle", async () => {

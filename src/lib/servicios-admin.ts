@@ -23,6 +23,8 @@ export type ServicioAdmin = {
   imagen?: string;
   orden: number;
   publicado: boolean;
+  /** Cambia con cada guardado: la `key` del formulario de edición. */
+  version: string;
 };
 
 export type ResultadoServicio =
@@ -139,6 +141,7 @@ function aAdmin(d: DocLeido): ServicioAdmin {
     imagen: d.imagen ?? undefined,
     orden: d.orden ?? 0,
     publicado: d.publicado ?? false,
+    version: "",
   };
 }
 

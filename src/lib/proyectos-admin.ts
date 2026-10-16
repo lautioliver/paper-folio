@@ -29,7 +29,8 @@ export type ProyectoEnLista = {
   demos: number;
 };
 
-export type ProyectoEditable = ProyectoEntrada & { id: string };
+/** `version` cambia con cada guardado: la `key` del formulario de edición. */
+export type ProyectoEditable = ProyectoEntrada & { id: string; version: string };
 
 // Solo el formato hexadecimal de 24: `isValidObjectId` de Mongoose acepta cualquier cadena de 12 caracteres.
 const ID_VALIDO = /^[0-9a-f]{24}$/i;
@@ -102,6 +103,7 @@ export async function obtenerProyectoAdmin(id: string): Promise<ProyectoEditable
     },
     imagen: d.imagen ?? undefined,
     publicado: d.publicado ?? false,
+    version: "",
   };
 }
 

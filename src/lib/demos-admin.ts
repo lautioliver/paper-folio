@@ -24,6 +24,8 @@ export type DemoAdmin = {
   descripcion: string;
   activa: boolean;
   orden: number;
+  /** Cambia con cada guardado: la `key` del formulario de edición. */
+  version: string;
 };
 
 export type ProyectoDeDemo = { id: string; nombre: string };
@@ -126,6 +128,7 @@ function aAdmin(d: DocLeido): DemoAdmin {
     descripcion: d.descripcion ?? "",
     activa: d.activa ?? true,
     orden: d.orden ?? 0,
+    version: "",
   };
 }
 
