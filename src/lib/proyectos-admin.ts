@@ -4,6 +4,7 @@ import { Demo } from "@/models/Demo";
 import { Proyecto } from "@/models/Proyecto";
 import { asegurarIndicesDe, conectar } from "./db";
 import { erroresPorCampo, proyectoEntradaEsquema, type ProyectoEntrada } from "./proyecto-entrada";
+import { versionDe } from "./version-formulario";
 
 // Escritura de los proyectos desde el panel (#51). Solo `admin`: el rol lo exigen las server actions
 // (`requerirRol`), no este módulo. Toda entrada se valida con `proyectoEntradaEsquema` antes de tocar la base.
@@ -29,7 +30,8 @@ export type ProyectoEnLista = {
   demos: number;
 };
 
-export type ProyectoEditable = ProyectoEntrada & { id: string };
+/** `version` cambia con cada guardado: la `key` del formulario de edición. */
+export type ProyectoEditable = ProyectoEntrada & { id: string; version: string };
 
 // Solo el formato hexadecimal de 24: `isValidObjectId` de Mongoose acepta cualquier cadena de 12 caracteres.
 const ID_VALIDO = /^[0-9a-f]{24}$/i;
@@ -102,6 +104,7 @@ export async function obtenerProyectoAdmin(id: string): Promise<ProyectoEditable
     },
     imagen: d.imagen ?? undefined,
     publicado: d.publicado ?? false,
+    version: versionDe(d.actualizadoEn),
   };
 }
 
@@ -141,7 +144,7 @@ export async function actualizarProyecto(id: string, datos: unknown): Promise<Re
 }
 
 /**
- * Borra el proyecto y todas sus demos (activas o no): una demo sin proyecto no se puede mostrar ni editar.
+ * Borra el proyecto y todas sus demos (activas o no): una demo sin proyecto no se muestra en el sitio.
  * Primero el proyecto: si borrar las demos falla, quedan huérfanas pero invisibles (el sitio las busca por
  * proyecto), nunca un proyecto sin las demos que tenía; devuelve `ok` (se escribió: quien llama invalida el
  * sitio) con un `aviso`. La imagen de Blob no se borra.

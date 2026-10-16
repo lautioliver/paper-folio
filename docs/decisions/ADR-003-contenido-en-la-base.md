@@ -39,3 +39,7 @@ Origen: épica [#46](https://github.com/lautioliver/paper-folio/issues/46) (deci
 - Si la base falla, se ve el contenido estático, que puede no coincidir con lo editado (por ejemplo, un proyecto despublicado vuelve a verse hasta que la base responda).
 - Renombrar un slug o un título desde el panel, o borrar todas las demos de un proyecto, y volver a correr el seed recarga el original de `profile.ts`.
 - Pendiente: el CRUD del panel (C3 a C5 de la épica #46), que tiene que crear los índices con `asegurarIndicesDe()` y llamar a `updateTag(TAG_CONTENIDO)` al guardar.
+
+## Enmienda 2026-10-16
+
+R-8 suma una regla para el panel (#50): `/panel/demos` solo acepta `https` para una URL de demo nueva o cambiada, así toda demo cargada desde el panel se puede embeber. Las `http` que ya existen (o que entran por el seed) se siguen mostrando como enlace, y se pueden editar sin cambiarles la URL. El modelo y la lectura del sitio siguen aceptando `http` o `https`. Lo aprobó @lautioliver en https://github.com/lautioliver/paper-folio/issues/50#issuecomment-6223796606.
