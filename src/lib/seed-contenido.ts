@@ -65,3 +65,10 @@ export async function sembrarContenido(): Promise<ResultadoSeed> {
 
   return resultado;
 }
+
+export type DestinoSeed = { host: string; base: string; esAtlas: boolean };
+
+export function destinoDelSeed(env: { MONGODB_URI: string; MONGODB_DB: string }): DestinoSeed {
+  return { host: "", base: env.MONGODB_DB, esAtlas: false };
+}
+

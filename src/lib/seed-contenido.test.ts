@@ -1,4 +1,7 @@
 import { execFile } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -7,7 +10,7 @@ import { Demo } from "@/models/Demo";
 import { Proyecto } from "@/models/Proyecto";
 import { Servicio } from "@/models/Servicio";
 import { conectar, desconectar } from "./db";
-import { sembrarContenido } from "./seed-contenido";
+import { destinoDelSeed, sembrarContenido } from "./seed-contenido";
 
 const exec = promisify(execFile);
 
@@ -126,3 +129,57 @@ describe("npm run seed:contenido", () => {
     });
   }, 60_000);
 });
+
+describe("destinoDelSeed", () => {
+  it("da el host y la base sin credenciales", () => {
+    expect(
+      destinoDelSeed({ MONGODB_URI: "mongodb://usuario:secreto@localhost:27017/?authSource=admin", MONGODB_DB: "pf" }),
+    ).toEqual({ host: "localhost:27017", base: "pf", esAtlas: false });
+  });
+
+  it("reconoce Atlas (mongodb.net), también con varios hosts", () => {
+    expect(destinoDelSeed({ MONGODB_URI: "mongodb+srv://u:p@cluster0.abc.mongodb.net/?retryWrites=true", MONGODB_DB: "pf" })).toEqual({
+      host: "cluster0.abc.mongodb.net",
+      base: "pf",
+      esAtlas: true,
+    });
+    expect(
+      destinoDelSeed({ MONGODB_URI: "mongodb://u:p@a-00.x.mongodb.net:27017,a-01.x.mongodb.net:27017/db", MONGODB_DB: "pf" }).esAtlas,
+    ).toBe(true);
+    expect(destinoDelSeed({ MONGODB_URI: "mongodb://mongodb.net.example.com/", MONGODB_DB: "pf" }).esAtlas).toBe(false);
+  });
+});
+
+describe("seed:contenido elige la base que se le indicó", () => {
+  function archivoEnv(contenido: string): string {
+    const ruta = join(mkdtempSync(join(tmpdir(), "seed-env-")), ".env.seed");
+    writeFileSync(ruta, contenido);
+    return ruta;
+  }
+
+  it("con --env-file, el archivo manda aunque la shell tenga otra MONGODB_URI o MONGODB_DB, e imprime host y base", async () => {
+    const ruta = archivoEnv(`MONGODB_URI=${servidor.getUri()}\nMONGODB_DB=pf-del-archivo\n`);
+    const env = { ...process.env, MONGODB_URI: "mongodb://127.0.0.1:1/", MONGODB_DB: "pf-de-la-shell" };
+    const r = await exec("npm", ["run", "--silent", "seed:contenido", "--", "--env-file", ruta], { env });
+    const host = new URL(servidor.getUri()).host;
+    expect(r.stdout).toContain(`host ${host}`);
+    expect(r.stdout).toContain(`base "pf-del-archivo"`);
+    const cliente = (await conectar()).connection.getClient();
+    expect(await cliente.db("pf-del-archivo").collection("proyectos").countDocuments()).toBe(projects.length);
+    expect(await cliente.db("pf-de-la-shell").collection("proyectos").countDocuments()).toBe(0);
+  }, 60_000);
+
+  it("se niega a escribir en Atlas sin --atlas, sin conectarse ni mostrar credenciales", async () => {
+    const env = { ...process.env, MONGODB_URI: "mongodb+srv://usuario:secreto@cluster0.abc.mongodb.net/", MONGODB_DB: "paperfolio" };
+    const error = await exec("npm", ["run", "--silent", "seed:contenido"], { env }).then(
+      () => null,
+      (e: { code: number; stdout: string; stderr: string }) => e,
+    );
+    expect(error?.code).toBe(1);
+    expect(error?.stderr).toMatch(/Atlas/);
+    expect(error?.stderr).toMatch(/--atlas/);
+    expect(`${error?.stdout}${error?.stderr}`).not.toMatch(/secreto|usuario/);
+    expect(error?.stdout).not.toMatch(/Proyectos:/);
+  }, 60_000);
+});
+
