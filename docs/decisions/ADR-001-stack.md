@@ -49,3 +49,7 @@ Las exposiciones son del 26/10 al 13/11/2026. Hay poco tiempo, así que conviene
 ## Enmienda 2026-10-15
 
 El scaffold ya existe (#4). A cada ruta de `src/` en `docs/mapa-agentes.json` se le saca el `?` recién cuando el archivo existe (épica #3, decisión 5). Las reglas R-1 a R-8 no cambian.
+
+## Enmienda 2026-10-16
+
+R-4 cambia para las respuestas del operador: salen por SMTP de Gmail con `nodemailer`, desde la cuenta de la persona con una contraseña de aplicación (aprobado por @lautioliver en #40: la dependencia y los secretos `GMAIL_USER` y `GMAIL_APP_PASSWORD` en https://github.com/lautioliver/paper-folio/issues/40#issuecomment-6207525984, y la enmienda en https://github.com/lautioliver/paper-folio/issues/40#issuecomment-6207978132). Resend sin dominio verificado solo entrega al email de la cuenta, así que sigue solo para el aviso de consulta nueva. Cada respuesta sigue quedando registrada en la consulta, enviada o no.

@@ -7,13 +7,15 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    // Ningún test puede mandar un email real ni subir a Vercel Blob real, aunque las claves estén exportadas en el shell.
+    // Ningún test puede mandar un email real (Resend o Gmail) ni subir a Vercel Blob real, aunque las claves estén exportadas en el shell.
     env: {
       RESEND_API_KEY: "",
       CONTACTO_EMAIL_DESTINO: "",
       BLOB_STORE_ID: "",
       BLOB_READ_WRITE_TOKEN: "",
       VERCEL_OIDC_TOKEN: "",
+      GMAIL_USER: "",
+      GMAIL_APP_PASSWORD: "",
     },
     // Solo .ts: los tests de componentes (.tsx) necesitan un DOM (jsdom), que todavía no está instalado.
     include: ["src/**/*.test.ts"],

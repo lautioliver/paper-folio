@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { leerEmailConfig, leerEnv, leerIpHashSal, leerAuthConfig, leerAuthRoles } from "./env";
-import { leerBlobConfig } from "./env";
+import { leerBlobConfig, leerGmailConfig } from "./env";
 
 const valida = { MONGODB_URI: "mongodb://localhost:27017", MONGODB_DB: "paperfolio-dev" };
 
@@ -161,5 +161,41 @@ describe("leerBlobConfig (Vercel Blob por OIDC, #47)", () => {
 
   it("leerEnv no la exige (next build y /api/salud andan sin ella)", () => {
     expect(() => leerEnv(valida)).not.toThrow();
+  });
+});
+
+describe("leerGmailConfig (respuestas por SMTP de Gmail, #40)", () => {
+  it("devuelve GMAIL_USER y la contraseña de aplicación sin los espacios con que la muestra Google", () => {
+    expect(
+      leerGmailConfig({ GMAIL_USER: " persona@gmail.com ", GMAIL_APP_PASSWORD: "abcd efgh ijkl mnop" }),
+    ).toEqual({ GMAIL_USER: "persona@gmail.com", GMAIL_APP_PASSWORD: "abcdefghijklmnop" });
+  });
+
+  it("falla nombrando la variable si falta, está vacía o es inválida, sin mostrar el valor", () => {
+    expect(() => leerGmailConfig({})).toThrow(/GMAIL_USER: falta/);
+    expect(() => leerGmailConfig({ GMAIL_USER: "", GMAIL_APP_PASSWORD: "" })).toThrow(/GMAIL_USER: falta/);
+    expect(() => leerGmailConfig({ GMAIL_USER: "", GMAIL_APP_PASSWORD: "" })).toThrow(/GMAIL_APP_PASSWORD: falta/);
+    // Vacía es un solo problema: no suma "debe tener 16 caracteres" (hallazgo de la autorevisión).
+    expect(() => leerGmailConfig({ GMAIL_USER: "a@b.com", GMAIL_APP_PASSWORD: "" })).not.toThrow(/16 caracteres/);
+    expect(() =>
+      leerGmailConfig({ GMAIL_USER: "no-es-email", GMAIL_APP_PASSWORD: "abcdabcdabcdabcd" }),
+    ).toThrow(/GMAIL_USER: debe ser un email/);
+    let mensaje = "";
+    try {
+      leerGmailConfig({ GMAIL_USER: "persona@gmail.com", GMAIL_APP_PASSWORD: "clave-corta-secreta" });
+    } catch (e) {
+      mensaje = (e as Error).message;
+    }
+    expect(mensaje).toMatch(/GMAIL_APP_PASSWORD: debe tener 16 caracteres/);
+    expect(mensaje).not.toContain("clave-corta-secreta");
+  });
+
+  it("leerEnv no la exige (next build y /api/salud andan sin ella)", () => {
+    expect(() => leerEnv(valida)).not.toThrow();
+  });
+
+  it("el entorno de Vitest las vacía: ningún test puede usar Gmail real", () => {
+    expect(process.env.GMAIL_USER).toBe("");
+    expect(process.env.GMAIL_APP_PASSWORD).toBe("");
   });
 });

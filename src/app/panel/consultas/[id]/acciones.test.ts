@@ -5,6 +5,7 @@ const requerirRol = vi.fn();
 const cambiarEstado = vi.fn();
 const agregarNota = vi.fn();
 const refresh = vi.fn();
+const responderConsulta = vi.fn();
 vi.mock("@/lib/permisos", () => ({
   requerirRol: (...args: unknown[]) => requerirRol(...args),
 }));
@@ -12,9 +13,12 @@ vi.mock("@/lib/seguimiento", () => ({
   cambiarEstado: (...args: unknown[]) => cambiarEstado(...args),
   agregarNota: (...args: unknown[]) => agregarNota(...args),
 }));
+vi.mock("@/lib/respuestas", () => ({
+  responderConsulta: (...args: unknown[]) => responderConsulta(...args),
+}));
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
 
-import { agregarNotaAccion, cambiarEstadoAccion } from "./acciones";
+import { agregarNotaAccion, cambiarEstadoAccion, responderAccion } from "./acciones";
 
 const ID = "6528f0c2a1b2c3d4e5f60718";
 const OPERADOR = "6528f0c2a1b2c3d4e5f60001";
@@ -27,8 +31,9 @@ function form(campos: Record<string, string>): FormData {
 }
 
 beforeEach(() => {
-  for (const m of [requerirRol, cambiarEstado, agregarNota, refresh])
+  for (const m of [requerirRol, cambiarEstado, agregarNota, refresh, responderConsulta])
     m.mockReset();
+  responderConsulta.mockResolvedValue({ ok: true, estadoCambiado: true });
   requerirRol.mockResolvedValue({ id: OPERADOR, rol: "operador" });
   cambiarEstado.mockResolvedValue({ ok: true });
   agregarNota.mockResolvedValue({ ok: true });
@@ -45,6 +50,11 @@ const ACCIONES = [
     nombre: "agregarNotaAccion",
     correr: () => agregarNotaAccion(ID, previo, form({ texto: "Una nota" })),
     servicio: agregarNota,
+  },
+  {
+    nombre: "responderAccion",
+    correr: () => responderAccion(ID, previo, form({ texto: "Hola" })),
+    servicio: responderConsulta,
   },
 ];
 
@@ -128,6 +138,50 @@ describe("agregarNotaAccion", () => {
     expect(r.error).toMatch(/2000/);
     // React resetea el formulario después de la acción: el texto vuelve para no perder la nota.
     expect(r.texto).toBe("x".repeat(2500));
+    expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("responderAccion", () => {
+  it("pasa el texto y el autor de la sesión; un destino o autor del formulario se ignora", async () => {
+    const r = await responderAccion(
+      ID,
+      previo,
+      form({ texto: "Hola", email: "otro@example.com", to: "otro@example.com", autor: "otro" }),
+    );
+    expect(responderConsulta).toHaveBeenCalledTimes(1);
+    expect(responderConsulta).toHaveBeenCalledWith(ID, "Hola", OPERADOR);
+    expect(r).toEqual({ error: null, texto: "" });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("si el envío falla, devuelve el error, conserva el texto y refresca (quedó la entrada no enviada)", async () => {
+    responderConsulta.mockResolvedValue({
+      ok: false,
+      error: "envio-fallido",
+      mensaje: "No se pudo enviar el email (EAUTH).",
+    });
+    const r = await responderAccion(ID, previo, form({ texto: "Hola" }));
+    expect(r).toEqual({ error: "No se pudo enviar el email (EAUTH).", texto: "Hola" });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("si ya no está en curso, otra respuesta se está enviando o falló el registro, devuelve el mensaje y refresca", async () => {
+    // En los tres casos la pantalla quedó vieja: el estado o el seguimiento cambiaron.
+    for (const error of ["estado-invalido", "en-envio", "registro-fallido"]) {
+      refresh.mockReset();
+      responderConsulta.mockResolvedValue({ ok: false, error, mensaje: "x" });
+      const r = await responderAccion(ID, previo, form({ texto: "Hola" }));
+      expect(r).toEqual({ error: "x", texto: "Hola" });
+      expect(refresh).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("con un texto inválido o una consulta inexistente, devuelve el mensaje y no refresca", async () => {
+    for (const error of ["invalida", "no-encontrada"]) {
+      responderConsulta.mockResolvedValue({ ok: false, error, mensaje: "x" });
+      expect(await responderAccion(ID, previo, form({ texto: "" }))).toEqual({ error: "x", texto: "" });
+    }
     expect(refresh).not.toHaveBeenCalled();
   });
 });

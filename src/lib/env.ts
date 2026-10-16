@@ -46,6 +46,25 @@ const esquemaBlob = z.object({
     .startsWith("store_", { error: "debe empezar con store_" }),
 });
 
+// Gmail por SMTP (#40): responde las consultas desde la cuenta de la persona con una contraseña de aplicación.
+// Aparte para que `next build` y /api/salud no la exijan.
+const esquemaGmail = z.object({
+  GMAIL_USER: z
+    .string({ error: "falta" })
+    .trim()
+    .min(1, { error: "falta" }) // vacía, como queda al copiar .env.example
+    .pipe(z.email({ error: "debe ser un email" })),
+  GMAIL_APP_PASSWORD: z
+    .string({ error: "falta" })
+    .transform((v) => v.replace(/\s/g, "")) // Google la muestra en cuatro grupos separados por espacios
+    .pipe(
+      z
+        .string()
+        .min(1, { error: "falta", abort: true })
+        .length(16, { error: "debe tener 16 caracteres (la contraseña de aplicación de Google)" }),
+    ),
+});
+
 export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal> & z.infer<typeof esquemaEmail>;
 
 /**
@@ -85,6 +104,11 @@ export function leerAuthRoles(fuente: Record<string, string | undefined> = proce
 /** Valida `BLOB_STORE_ID` (el store de Vercel Blob de las imágenes). Mismas reglas que `leerEnv`. */
 export function leerBlobConfig(fuente: Record<string, string | undefined> = process.env): z.infer<typeof esquemaBlob> {
   return validar(esquemaBlob, fuente);
+}
+
+/** Valida `GMAIL_USER` (email) y `GMAIL_APP_PASSWORD` (16 caracteres; los espacios con que la muestra Google no cuentan). */
+export function leerGmailConfig(fuente: Record<string, string | undefined> = process.env): z.infer<typeof esquemaGmail> {
+  return validar(esquemaGmail, fuente);
 }
 
 function validar<T extends z.ZodType>(schema: T, fuente: Record<string, string | undefined>): z.infer<T> {

@@ -37,6 +37,16 @@ export function origenesDe(hacia: EstadoConsulta): EstadoConsulta[] {
   return ESTADOS_CONSULTA.filter((e) => TRANSICIONES[e].includes(hacia));
 }
 
+/**
+ * Estados desde los que se puede responder por email (#40). Responder pasa la consulta a `respondida`, y a
+ * mano a `respondida` solo se llega desde `en_curso`: responder no abre otro camino. Desde `nueva`,
+ * `respondida` o `archivada` no se responde.
+ */
+export const ESTADOS_PARA_RESPONDER: readonly EstadoConsulta[] = ["en_curso"];
+
+/** Largo máximo de una respuesta por email. Lo usan el `maxLength` del formulario y la validación del servidor. */
+export const LARGO_MAXIMO_RESPUESTA = 5000;
+
 /** Largo máximo de una nota del seguimiento. Lo usan el `maxLength` del formulario y la validación del servidor. */
 export const LARGO_MAXIMO_NOTA = 2000;
 

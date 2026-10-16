@@ -42,9 +42,10 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 | `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET` | Cliente OAuth de Google (ver "Ingreso con Google"). Obligatorias para iniciar sesión; sin ellas la landing funciona y `/api/auth/*` responde 500 con las variables que faltan en el log |
 | `ADMIN_EMAILS` y `OPERADOR_EMAILS` | Emails separados por comas que reciben el rol `admin` u `operador` en cada ingreso (ADR-002). Opcionales: vacías, todos son `usuario`. Nunca en el repo |
 | `CONTACTO_EMAIL_DESTINO` | Email que recibe el aviso de cada consulta nueva. Con el remitente de pruebas `onboarding@resend.dev`, Resend solo entrega al email con el que se creó la cuenta. Va solo en `.env.local` y en las variables de Vercel, nunca en el repo |
+| `GMAIL_USER` y `GMAIL_APP_PASSWORD` | Cuenta de Gmail que responde las consultas desde el panel y una contraseña de aplicación de esa cuenta (16 caracteres; ver "Respuestas por Gmail"). Obligatorias para responder; sin ellas el panel funciona y responder muestra el error `configuracion`, sin enviar ni registrar nada. Nunca en el repo |
 | `BLOB_STORE_ID` | Id del store de Vercel Blob de las imágenes (empieza con `store_`; ver "Imágenes en Vercel Blob"). Obligatoria para subir imágenes; la base y `/api/salud` no la piden |
 
-`src/lib/env.ts` las valida con Zod cada vez que se leen (`IP_HASH_SAL`, `RESEND_API_KEY` y `CONTACTO_EMAIL_DESTINO` aparte, así la base y `/api/salud` no las exigen). Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
+`src/lib/env.ts` las valida con Zod cada vez que se leen (`IP_HASH_SAL`, `RESEND_API_KEY` y `CONTACTO_EMAIL_DESTINO`, `GMAIL_USER` y `GMAIL_APP_PASSWORD` aparte, así la base y `/api/salud` no las exigen). Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
 
 ### Ingreso con Google
 
@@ -61,6 +62,17 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 2. La autenticación es por **OIDC**: en Vercel, `VERCEL_OIDC_TOKEN` lo inyecta la plataforma; no hace falta `BLOB_READ_WRITE_TOKEN`.
 3. En local hacen falta `BLOB_STORE_ID` y `VERCEL_OIDC_TOKEN` en `.env.local`. El token vence a las ~12 h: para renovarlo, **no** corras `vercel env pull` sobre `.env.local` (lo pisa entero); bajalo a un archivo aparte (`vercel env pull .env.oidc`) y copiá solo esa variable. Si la subida responde `503 SUBIDA_FALLIDA` en local, lo primero es renovarlo.
 4. Los tests no las necesitan: el cliente de Blob se inyecta y `vitest.config.ts` las vacía.
+
+### Respuestas por Gmail
+
+El operador responde las consultas por SMTP de Gmail, desde la cuenta de la persona (épica #36, decisión 4). Resend sigue solo para los avisos internos.
+
+1. En la cuenta de Google que va a enviar, activar la **verificación en dos pasos** (sin ella Google no ofrece contraseñas de aplicación).
+2. Ir a [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), crear una contraseña de aplicación ("Paperfolio") y copiarla. Google la muestra en cuatro grupos: los espacios no cuentan.
+3. Cargar `GMAIL_USER` (el email de esa cuenta) y `GMAIL_APP_PASSWORD` en `.env.local` y en las variables de Vercel. Nunca la contraseña normal de la cuenta.
+4. Gmail permite unos 500 envíos por día. Si un envío falla, el panel muestra el código del error (por ejemplo `EAUTH` si la contraseña es incorrecta) y la respuesta queda en el seguimiento como "no se pudo confirmar el envío". Si falta una variable, el código es `configuracion` y no se registra nada. Si Gmail no confirma en 10 s (`timeout`), el email puede haber llegado: revisá Enviados en Gmail antes de volver a responder.
+5. Los tests no las necesitan: el transporte se inyecta y `vitest.config.ts` las vacía.
+6. `nodemailer` está instalado con el alias `nodemailer-10` (`"nodemailer-10": "npm:nodemailer@^10.1.1"` en `package.json`) y se importa con ese nombre. `@auth/core`, que viene con `next-auth` 5 beta, declara `nodemailer` como peer opcional `^7 || ^8`. Con la 10 instalada como `nodemailer`, npm anida `@auth/core` dentro de `next-auth` y la augmentación de `@auth/core/jwt` (`src/types/next-auth.d.ts`) deja de aplicar: el typecheck de `src/auth.ts` falla. Con el alias no hay `nodemailer` en el primer nivel, así que `@auth/core` queda arriba. La 10 trae sus propios tipos (`dist/*/nodemailer.d.ts`), que TypeScript resolvió con el alias sin necesidad de un shim. Aprobado por @lautioliver en https://github.com/lautioliver/paper-folio/issues/40#issuecomment-6221640394. Cuando `next-auth` acepte la 10 en ese peer, se puede volver a `nodemailer` a secas.
 
 ### Crear el cluster de Atlas
 

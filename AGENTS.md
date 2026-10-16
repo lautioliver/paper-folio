@@ -15,7 +15,7 @@ Portfolio de un desarrollador fullstack (TPI de Lenguajes 4, 2026, apuntando a p
 - Auth.js con Google. Los roles son `usuario`, `operador` y `admin`.
 - Zod para validar toda entrada en el servidor.
 - Tailwind CSS (es el framework CSS que exige la consigna) con los tokens del manual de marca.
-- Resend para los emails, Recharts para los gráficos y GSAP para las animaciones.
+- Resend para los avisos internos y nodemailer (SMTP de Gmail) para responder las consultas, Recharts para los gráficos y GSAP para las animaciones.
 - Vercel Blob (`@vercel/blob`) para las imágenes del contenido.
 - Vitest para los tests.
 - Deploy en Vercel.
