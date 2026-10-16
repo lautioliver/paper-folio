@@ -5,6 +5,7 @@ describe("enlacesPara", () => {
   it("el operador ve Consultas y no Servicios ni Proyectos", () => {
     const etiquetas = enlacesPara("operador").map((e) => e.etiqueta);
     expect(etiquetas).toContain("Consultas");
+    expect(etiquetas).not.toContain("Demos");
     expect(etiquetas).not.toContain("Servicios");
     expect(etiquetas).not.toContain("Proyectos");
   });
@@ -14,6 +15,7 @@ describe("enlacesPara", () => {
       expect.arrayContaining([
         { href: "/panel/consultas", etiqueta: "Consultas" },
         { href: "/panel/proyectos", etiqueta: "Proyectos" },
+        { href: "/panel/demos", etiqueta: "Demos" },
         { href: "/panel/servicios", etiqueta: "Servicios" },
       ]),
     );
