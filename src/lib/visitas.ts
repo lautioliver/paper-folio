@@ -1,22 +1,97 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
+import { VisitaDiaria } from "@/models/VisitaDiaria";
+import { VisitanteDiario } from "@/models/VisitanteDiario";
+import { asegurarIndicesDe, conectar } from "./db";
 
-export type DatosVisita = { ruta: string; visitanteId: string; userAgent: string; esAdmin: boolean };
+/** Zona de las fechas de las métricas (épica #53, decisión 1). */
+export const ZONA_VISITAS = "America/Argentina/Salta";
+
+export type DatosVisita = {
+  /** Ruta de la página, como la manda el navegador (se normaliza acá). */
+  ruta: string;
+  /** Id anónimo de la cookie `pf_v`. Solo se guarda `sha256(id + fecha)`. */
+  visitanteId: string;
+  userAgent: string;
+  esAdmin: boolean;
+};
 export type ResultadoVisita = "contada" | "descartada";
 
-export const esquemaVisita = z.object({ ruta: z.string() });
+const LARGO_MAXIMO = 200;
+// Segmentos en minúsculas, números y guiones (como los slugs): sin `..`, sin `//`, sin esquemas ni hosts.
+const RUTA_INTERNA = /^\/(?:[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*)?$/;
 
-export function esBot(_userAgent: string): boolean {
-  return false;
-}
-
+/** Sin query ni hash, y sin la barra final (salvo `/`). `/proyectos/<slug>` queda tal cual. */
 export function normalizarRuta(ruta: string): string {
-  return ruta;
+  const sinQuery = ruta.split(/[?#]/, 1)[0];
+  const sinBarra = sinQuery.replace(/\/+$/, "");
+  return sinBarra === "" ? "/" : sinBarra;
 }
 
-export function fechaDeVisita(_ahora: Date): string {
-  return "";
+/** Cuerpo de `POST /api/visitas`: una ruta interna del sitio, ya normalizada. */
+export const esquemaVisita = z.object({
+  ruta: z
+    .string()
+    .max(LARGO_MAXIMO)
+    .refine((r) => r.startsWith("/") && !r.startsWith("//"))
+    .transform(normalizarRuta)
+    .pipe(z.string().regex(RUTA_INTERNA)),
+});
+
+// Crawlers, previews de links (redes y mensajería), navegadores sin interfaz y clientes HTTP de consola.
+const PATRONES_BOT =
+  /bot\b|bot\/|bot-|crawl|spider|slurp|archiver|facebookexternalhit|embedly|whatsapp|telegram|discord|preview|headless|lighthouse|pagespeed|phantomjs|puppeteer|playwright|selenium|curl\/|wget\/|python-|node-fetch|axios\/|okhttp|go-http-client|java\/|libwww|httpclient|scrapy/i;
+
+/** Un user-agent vacío también es un bot: los navegadores siempre lo mandan. */
+export function esBot(userAgent: string): boolean {
+  const ua = userAgent.trim();
+  return ua === "" || PATRONES_BOT.test(ua);
 }
 
-export async function registrarVisita(_datos: DatosVisita, _ahora: Date = new Date()): Promise<ResultadoVisita> {
-  return "descartada";
+/** Rutas que no son del sitio público: el panel y la API. */
+function esRutaExcluida(ruta: string): boolean {
+  return /^\/(?:panel|api)(?:\/|$)/.test(ruta);
+}
+
+const formatoFecha = new Intl.DateTimeFormat("en-CA", {
+  timeZone: ZONA_VISITAS,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** El día de la visita en America/Argentina/Salta, como `YYYY-MM-DD`. */
+export function fechaDeVisita(ahora: Date): string {
+  return formatoFecha.format(ahora);
+}
+
+function esClaveDuplicada(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as { code?: unknown }).code === 11000;
+}
+
+/**
+ * Cuenta una carga de una página pública (épica #53, decisiones 1 y 2): `$inc` atómico con upsert en
+ * `visitas_diarias` y un insert idempotente en `visitantes_diarios`. No cuentan los bots, el panel, la API
+ * ni los admin. Si la base falla, tira: quien llama decide (la ruta responde 204 igual).
+ */
+export async function registrarVisita(datos: DatosVisita, ahora: Date = new Date()): Promise<ResultadoVisita> {
+  const ruta = normalizarRuta(datos.ruta);
+  if (datos.esAdmin || esBot(datos.userAgent) || esRutaExcluida(ruta)) return "descartada";
+
+  const fecha = fechaDeVisita(ahora);
+  const idHash = createHash("sha256")
+    .update(datos.visitanteId + fecha)
+    .digest("hex");
+
+  await conectar();
+  // Sin el índice único, el upsert podría duplicar el contador del día: si no se puede crear, no se cuenta.
+  await Promise.all([asegurarIndicesDe(VisitaDiaria), asegurarIndicesDe(VisitanteDiario)]);
+  await Promise.all([
+    VisitaDiaria.updateOne({ fecha, ruta }, { $inc: { total: 1 } }, { upsert: true }),
+    VisitanteDiario.create({ fecha, idHash }).catch((error: unknown) => {
+      // Ya vino hoy: el índice único `{ fecha, idHash }` hace que el segundo insert choque y se ignore.
+      if (!esClaveDuplicada(error)) throw error;
+    }),
+  ]);
+  return "contada";
 }
