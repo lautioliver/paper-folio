@@ -20,8 +20,9 @@ export const metadata: Metadata = {
 async function Guarda({ children }: { children: React.ReactNode }) {
   // Auth.js genera valores aleatorios: se pide el request antes, así nada se intenta prerenderizar.
   await connection();
-  await requerirRol("/panel/consultas", "operador", "admin");
-  return <PanelShell>{children}</PanelShell>;
+  const { rol } = await requerirRol("/panel/consultas", "operador", "admin");
+  // El rol solo decide qué secciones muestra el menú (`enlacesPara`); cada sección exige el suyo.
+  return <PanelShell rol={rol}>{children}</PanelShell>;
 }
 
 // `auth()` lee cookies (dato dinámico): con cacheComponents tiene que ir dentro de Suspense.
