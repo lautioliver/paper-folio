@@ -17,6 +17,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
     secret: AUTH_SECRET,
     providers: [Google({ clientId: AUTH_GOOGLE_ID, clientSecret: AUTH_GOOGLE_SECRET })],
     session: { strategy: "jwt" },
+    // Los errores de Auth.js (por ejemplo AccessDenied, cuando `signIn` da false) van a /ingresar, en español,
+    // en vez de su página genérica.
+    pages: { error: "/ingresar" },
     callbacks: {
       // Solo cuentas de Google con el email verificado y sin bloquear (#49). Si la base no responde, el
       // ingreso falla (cerrado): Auth.js muestra su error.

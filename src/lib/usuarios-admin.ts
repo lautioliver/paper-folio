@@ -2,7 +2,7 @@ import { z } from "zod";
 import { emailsDeLista, revisarCambio, type CambioUsuario, type RechazoCambio } from "./acceso";
 import { asegurarIndicesDe, conectar } from "./db";
 import { leerAdminEmails } from "./env";
-import { normalizarLegados } from "./usuarios";
+import { normalizarLegados, rolGuardado, rolVigente } from "./usuarios";
 import { ROLES, Usuario, type Rol } from "@/models/Usuario";
 
 // Administración de los usuarios registrados desde el panel (#49, enmienda de ADR-002 R-4). Solo para admin:
@@ -10,7 +10,6 @@ import { ROLES, Usuario, type Rol } from "@/models/Usuario";
 // ADMIN_EMAILS, no al último admin) están en `revisarCambio` (src/lib/acceso.ts).
 
 export const POR_PAGINA = 20;
-const LARGO_BUSQUEDA = 100;
 
 /** Un usuario como lo ve el panel: sin la imagen ni nada más de la cuenta de Google. */
 export type UsuarioAdmin = {
@@ -46,7 +45,8 @@ export async function listarUsuarios(
   filtros: { q: string; pagina: number },
   adminEmails: string = leerAdminEmails(),
 ): Promise<PaginaUsuarios> {
-  const q = filtros.q.trim().slice(0, LARGO_BUSQUEDA);
+  // La búsqueda ya viene recortada y acotada (`filtrosDe`, src/app/panel/usuarios/ruta.ts).
+  const q = filtros.q;
   await conectar();
   await asegurarIndicesDe(Usuario);
   await normalizarLegados();
@@ -67,7 +67,7 @@ export async function listarUsuarios(
       id: String(d._id),
       nombre: d.nombre ?? "",
       email: d.email,
-      rol: porEntorno ? "admin" : d.rol,
+      rol: rolVigente(d.email, rolGuardado(d), adminEmails),
       porEntorno,
       bloqueado: d.bloqueado === true,
       accesos: d.accesos ?? 0,
@@ -106,17 +106,25 @@ async function aplicar(actorId: string, id: unknown, cambio: CambioUsuario, admi
   if (!doc) return { ok: false, error: "no-encontrado" };
   const admins = emailsDeLista(adminEmails);
   const porEntorno = admins.has(doc.email);
-  const objetivo = { id: String(doc._id), rol: porEntorno ? "admin" : doc.rol, bloqueado: doc.bloqueado === true, porEntorno };
-  const rechazo = revisarCambio({ actorId, objetivo, cambio, otrosAdmins: await contarAdmins(admins, doc.email) });
+  const rol = rolVigente(doc.email, rolGuardado(doc), adminEmails);
+  const bloqueado = doc.bloqueado === true;
+  // Solo un cambio que le quita el admin a uno vigente necesita contar a los demás.
+  const quitaAdmin =
+    rol === "admin" &&
+    !bloqueado &&
+    (cambio.tipo === "rol" ? cambio.rol !== "admin" : cambio.bloqueado);
+  const otrosAdmins = quitaAdmin ? await contarAdmins(admins, doc.email) : 1;
+  const rechazo = revisarCambio({ actorId, objetivo: { id: String(doc._id), rol, bloqueado, porEntorno }, cambio, otrosAdmins });
   if (rechazo) return { ok: false, error: rechazo };
 
   const nuevo: Campos = cambio.tipo === "rol" ? { rol: cambio.rol } : { bloqueado: cambio.bloqueado };
-  const previo: Campos = cambio.tipo === "rol" ? { rol: doc.rol } : { bloqueado: doc.bloqueado === true };
+  const previo: Campos = cambio.tipo === "rol" ? { rol: doc.rol } : { bloqueado };
   await Usuario.updateOne({ _id: idOk.data }, { $set: nuevo }, { runValidators: true });
   // Dos admins que se quitan el rol entre sí a la vez pasan los dos el chequeo de arriba (no hay
-  // transacción): si después de escribir no queda ningún admin, se deshace.
-  if ((await contarAdmins(admins)) < 1) {
-    await Usuario.updateOne({ _id: idOk.data }, { $set: previo });
+  // transacción): si después de escribir no queda ningún admin, se deshace. Solo si el documento sigue con
+  // lo que escribimos: no se pisa otro cambio que haya entrado en el medio.
+  if (quitaAdmin && (await contarAdmins(admins)) < 1) {
+    await Usuario.updateOne({ _id: idOk.data, ...nuevo }, { $set: previo });
     return { ok: false, error: "ultimo-admin" };
   }
   return { ok: true };

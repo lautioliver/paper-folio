@@ -6,7 +6,7 @@ export const LARGO_BUSQUEDA = 100;
 // Los avisos viajan en la URL como un código (`?aviso=propio`) y el texto sale de acá: la página nunca
 // muestra lo que venga en la query.
 export const AVISOS = {
-  "rol-cambiado": { tipo: "ok", mensaje: "Listo: cambiamos el rol. Vale desde su próximo pedido, sin volver a ingresar." },
+  "rol-cambiado": { tipo: "ok", mensaje: "Listo: cambiamos el rol. Los permisos valen desde su próximo pedido, sin volver a ingresar (el menú de su cuenta lo muestra cuando vuelva a ingresar)." },
   bloqueado: { tipo: "ok", mensaje: "Listo: bloqueamos la cuenta. Ya no puede ingresar y sus sesiones abiertas perdieron los permisos." },
   desbloqueado: { tipo: "ok", mensaje: "Listo: desbloqueamos la cuenta." },
   propio: { tipo: "error", mensaje: "No podés cambiar tu propio rol ni bloquear tu cuenta." },

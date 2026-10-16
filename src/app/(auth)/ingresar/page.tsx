@@ -56,6 +56,23 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
     );
   }
 
+  if (decision.aviso === "denegado") {
+    return (
+      <>
+        <p role="alert" className="mt-6 text-cuerpo">
+          No pudimos dejarte ingresar: la cuenta de Google tiene que tener el email verificado y no estar bloqueada en
+          el sitio. Si creés que es un error, escribinos por el formulario de contacto.
+        </p>
+        <form action={ingresarConGoogle} className="mt-8">
+          <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
+          <button type="submit" className={BOTON}>
+            Probar con otra cuenta
+          </button>
+        </form>
+      </>
+    );
+  }
+
   if (decision.aviso === "sesion") {
     return (
       <>

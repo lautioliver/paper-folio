@@ -10,7 +10,8 @@ export type DecisionIngreso =
   | { accion: "redirigir"; destino: string }
   // aviso "sesion": el token existe pero el usuario no está en la base; se ofrece salir e ingresar de nuevo.
   // aviso "bloqueada": la cuenta está bloqueada; solo se ofrece salir.
-  | { accion: "mostrar"; aviso: "sesion" | "bloqueada" | "verificacion" | null; callbackUrl: string };
+  // aviso "denegado": Auth.js rechazó el ingreso (`signIn` dio false: cuenta bloqueada o email sin verificar).
+  | { accion: "mostrar"; aviso: "sesion" | "bloqueada" | "denegado" | "verificacion" | null; callbackUrl: string };
 
 /**
  * A dónde lleva /ingresar según la sesión, `error` y `callbackUrl` (ADR-002 R-5). El `callbackUrl` pasa
@@ -33,7 +34,8 @@ export function decidirIngreso(entrada: {
     return { accion: "mostrar", aviso: "sesion", callbackUrl };
   }
   if (entrada.sesion === "valida") return { accion: "redirigir", destino: callbackUrl };
-  return { accion: "mostrar", aviso: null, callbackUrl };
+  // Auth.js manda acá sus errores (`pages.error` en src/auth.ts); AccessDenied es el de `signIn` en false.
+  return { accion: "mostrar", aviso: entrada.error === "AccessDenied" ? "denegado" : null, callbackUrl };
 }
 
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */
