@@ -6,6 +6,7 @@ import {
   agregarNota,
   cambiarEstado,
   obtenerConsulta,
+  registrarRespuesta,
 } from "./seguimiento";
 import { LARGO_MAXIMO_NOTA } from "./estados-consulta";
 import { Consulta } from "@/models/Consulta";
@@ -281,12 +282,68 @@ describe("obtenerConsulta", () => {
     expect(d?.seguimiento[0]?.autorNombre).toBe("Usuario eliminado");
   });
 
+  it("un autor guardado que no es un id (editado a mano) no rompe el detalle", async () => {
+    const id = await insertarCruda({
+      seguimiento: [{ tipo: "nota", texto: "rara", autor: "no-es-un-id", fecha: new Date() }],
+    });
+    const d = await obtenerConsulta(id);
+    expect(d?.seguimiento[0]).toMatchObject({ texto: "rara", autorNombre: "Usuario eliminado" });
+  });
+
+  it("devuelve emailEnviado de las respuestas, también cuando es false", async () => {
+    const id = await insertarCruda({ estado: "en_curso" });
+    await registrarRespuesta(id, "no salió", autor, false);
+    const d = await obtenerConsulta(id);
+    expect(d?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
+  });
+
   it("un id inexistente o inválido devuelve null", async () => {
     expect(
       await obtenerConsulta(String(new mongoose.Types.ObjectId())),
     ).toBeNull();
     expect(await obtenerConsulta("no-es-un-id")).toBeNull();
     expect(await obtenerConsulta("")).toBeNull();
+  });
+});
+
+describe("registrarRespuesta", () => {
+  it("con el email enviado y la consulta en curso, en un solo update agrega la respuesta y el cambio a respondida", async () => {
+    const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
+    const r = await registrarRespuesta(id, "Hola", autor, true);
+    expect(r).toEqual({ ok: true, estadoCambiado: true });
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("respondida");
+    expect(doc?.seguimiento.map((e: { tipo: string; texto: string }) => [e.tipo, e.texto])).toEqual([
+      ["respuesta", "Hola"],
+      ["estado", "respondida"],
+    ]);
+    expect(doc?.seguimiento[0].emailEnviado).toBe(true);
+    expect(doc?.seguimiento[1].emailEnviado).toBeUndefined();
+  });
+
+  it("con el email enviado pero la consulta ya no en curso, registra la respuesta sin cambiar el estado", async () => {
+    const id = await insertarCruda({ estado: "archivada", seguimiento: [] });
+    const r = await registrarRespuesta(id, "Hola", autor, true);
+    expect(r).toEqual({ ok: true, estadoCambiado: false });
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("archivada");
+    expect(doc?.seguimiento).toHaveLength(1);
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: true });
+  });
+
+  it("si el email no salió, registra la respuesta con emailEnviado false y no cambia el estado", async () => {
+    const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
+    const r = await registrarRespuesta(id, "Hola", autor, false);
+    expect(r).toEqual({ ok: true, estadoCambiado: false });
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("en_curso");
+    expect(doc?.seguimiento).toHaveLength(1);
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
+  });
+
+  it("una consulta inexistente devuelve no-encontrada", async () => {
+    const r = await registrarRespuesta(String(new mongoose.Types.ObjectId()), "Hola", autor, true);
+    expect(r).toMatchObject({ ok: false, error: "no-encontrada" });
   });
 });
 

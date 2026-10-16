@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ESTADOS_CONSULTA,
+  ESTADOS_PARA_RESPONDER,
+  LARGO_MAXIMO_RESPUESTA,
   estadoLeido,
   filtroDeEstados,
   LARGO_MAXIMO_NOTA,
@@ -70,5 +72,16 @@ describe("filtroDeEstados", () => {
 describe("LARGO_MAXIMO_NOTA", () => {
   it("es 2000, compartido por el cliente y el servidor", () => {
     expect(LARGO_MAXIMO_NOTA).toBe(2000);
+  });
+});
+
+describe("ESTADOS_PARA_RESPONDER (#40)", () => {
+  it("solo se responde desde en_curso: responder no abre un camino a respondida que la tabla no tenga", () => {
+    expect([...ESTADOS_PARA_RESPONDER]).toEqual(["en_curso"]);
+    expect([...ESTADOS_PARA_RESPONDER]).toEqual(origenesDe("respondida"));
+  });
+
+  it("una respuesta tiene hasta 5000 caracteres", () => {
+    expect(LARGO_MAXIMO_RESPUESTA).toBe(5000);
   });
 });

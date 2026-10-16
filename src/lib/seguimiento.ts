@@ -47,7 +47,7 @@ export type ResultadoSeguimiento =
     };
 
 // Solo el formato hexadecimal de 24: `isValidObjectId` de Mongoose acepta cualquier cadena de 12 caracteres.
-const ID_VALIDO = /^[0-9a-f]{24}$/i;
+export const ID_VALIDO = /^[0-9a-f]{24}$/i;
 const estadoSchema = z.enum(ESTADOS_CONSULTA);
 const notaSchema = z.string().trim().min(1).max(LARGO_MAXIMO_NOTA);
 
@@ -57,7 +57,7 @@ const NO_ENCONTRADA: ResultadoSeguimiento = {
   mensaje: "La consulta no existe.",
 };
 
-function exigirAutor(autor: string, funcion: string): void {
+export function exigirAutor(autor: string, funcion: string): void {
   // El autor sale de la sesión (`requerirRol`), nunca del formulario: si no es un id, es un error del llamador.
   if (!ID_VALIDO.test(autor)) throw new Error(`${funcion}: el autor no es un id válido`);
 }
@@ -184,4 +184,16 @@ export async function agregarNota(
     { runValidators: true },
   );
   return r.matchedCount === 1 ? { ok: true } : NO_ENCONTRADA;
+}
+
+export type ResultadoRegistro = { ok: true; estadoCambiado: boolean } | { ok: false; error: "no-encontrada"; mensaje: string };
+
+/** STUB */
+export async function registrarRespuesta(
+  _id: string,
+  _texto: string,
+  _autor: string,
+  _emailEnviado: boolean,
+): Promise<ResultadoRegistro> {
+  return { ok: true, estadoCambiado: false };
 }

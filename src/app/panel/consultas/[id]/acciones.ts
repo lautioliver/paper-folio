@@ -46,3 +46,12 @@ export async function agregarNotaAccion(
   const r = responder(await agregarNota(id, texto, sesion.id));
   return { ...r, texto: r.error ? (texto ?? "") : "" };
 }
+
+/** STUB */
+export async function responderAccion(
+  _id: string,
+  _previo: EstadoAccion,
+  _formData: FormData,
+): Promise<EstadoAccion> {
+  return { error: null };
+}
