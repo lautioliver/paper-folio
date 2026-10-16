@@ -117,6 +117,8 @@ describe("detalle de una consulta: respuestas por email (#40)", () => {
   it("en curso ofrece el formulario para responder, con el destino de la consulta y el límite de 5000", async () => {
     const r = await html({ estado: "en_curso" });
     expect(r).toContain("Responder por email");
+    expect(r).toContain("ada@example.com");
+    expect(r).toMatch(/<textarea[^>]*id="respuesta"/i);
     expect(r).toMatch(/<textarea[^>]*maxLength="5000"/i);
     expect(r).toMatch(/<textarea[^>]*minLength="1"|<textarea[^>]*required/i);
     // El destino no es un campo del formulario: sale de la consulta guardada.
@@ -126,7 +128,7 @@ describe("detalle de una consulta: respuestas por email (#40)", () => {
   it("fuera de en curso no ofrece el formulario y explica cómo responder", async () => {
     for (const estado of ["nueva", "respondida", "archivada"]) {
       const r = await html({ estado });
-      expect(r).not.toMatch(/<textarea[^>]*name="respuesta"/i);
+      expect(r).not.toMatch(/<textarea[^>]*id="respuesta"/i);
       expect(r).toContain("Para responder por email, pasá la consulta a En curso.");
     }
   });

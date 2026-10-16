@@ -49,8 +49,20 @@ const esquemaBlob = z.object({
 // Gmail por SMTP (#40): responde las consultas desde la cuenta de la persona con una contraseña de aplicación.
 // Aparte para que `next build` y /api/salud no la exijan.
 const esquemaGmail = z.object({
-  GMAIL_USER: z.string({ error: "falta" }),
-  GMAIL_APP_PASSWORD: z.string({ error: "falta" }),
+  GMAIL_USER: z
+    .string({ error: "falta" })
+    .trim()
+    .min(1, { error: "falta" }) // vacía, como queda al copiar .env.example
+    .pipe(z.email({ error: "debe ser un email" })),
+  GMAIL_APP_PASSWORD: z
+    .string({ error: "falta" })
+    .transform((v) => v.replace(/\s/g, "")) // Google la muestra en cuatro grupos separados por espacios
+    .pipe(
+      z
+        .string()
+        .min(1, { error: "falta" })
+        .length(16, { error: "debe tener 16 caracteres (la contraseña de aplicación de Google)" }),
+    ),
 });
 
 export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal> & z.infer<typeof esquemaEmail>;

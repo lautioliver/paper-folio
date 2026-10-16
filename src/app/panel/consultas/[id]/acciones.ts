@@ -2,6 +2,7 @@
 
 import { refresh } from "next/cache";
 import { requerirRol } from "@/lib/permisos";
+import { responderConsulta } from "@/lib/respuestas";
 import {
   agregarNota,
   cambiarEstado,
@@ -47,11 +48,19 @@ export async function agregarNotaAccion(
   return { ...r, texto: r.error ? (texto ?? "") : "" };
 }
 
-/** STUB */
+/**
+ * Responde por email la consulta `id` con el campo `texto`. El destino no sale del formulario: lo toma
+ * `responderConsulta` de la consulta guardada. Si el envío falló, la entrada no enviada ya quedó en el
+ * seguimiento (por eso refresca) y el texto vuelve para reintentar.
+ */
 export async function responderAccion(
-  _id: string,
+  id: string,
   _previo: EstadoAccion,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<EstadoAccion> {
-  return { error: null };
+  const sesion = await requerirRol(rutaDelDetalle(id), "operador", "admin");
+  const texto = campo(formData, "texto");
+  const r = await responderConsulta(id, texto, sesion.id);
+  if (r.ok || r.error === "envio-fallido" || r.error === "estado-invalido") refresh();
+  return r.ok ? { error: null, texto: "" } : { error: r.mensaje, texto: texto ?? "" };
 }

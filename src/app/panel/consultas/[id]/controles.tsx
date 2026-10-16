@@ -2,12 +2,14 @@
 
 import { useActionState } from "react";
 import {
+  ESTADOS_PARA_RESPONDER,
   ETIQUETAS_ESTADO,
   LARGO_MAXIMO_NOTA,
+  LARGO_MAXIMO_RESPUESTA,
   TRANSICIONES,
   type EstadoConsulta,
 } from "@/lib/estados-consulta";
-import { agregarNotaAccion, cambiarEstadoAccion } from "./acciones";
+import { agregarNotaAccion, cambiarEstadoAccion, responderAccion } from "./acciones";
 import { SIN_ERROR } from "./tipos";
 
 const campo = "contorno bg-papel px-3 py-2 text-pequeno";
@@ -24,15 +26,18 @@ function MensajeError({ id, texto }: { id: string; texto: string | null }) {
 }
 
 /**
- * Controles del detalle: cambiar el estado (solo a los permitidos desde el actual) y agregar una nota.
- * Ocultar estados no protege nada: la transición la valida `cambiarEstado` en el servidor.
+ * Controles del detalle: cambiar el estado (solo a los permitidos desde el actual), responder por email (solo
+ * en curso) y agregar una nota. Ocultar controles no protege nada: lo valida el servidor (`cambiarEstado`,
+ * `responderConsulta`). `email` es solo para mostrar a quién va: el destino lo toma el servidor de la consulta.
  */
 export function ControlesConsulta({
   id,
   estado,
+  email,
 }: {
   id: string;
   estado: EstadoConsulta;
+  email: string;
 }) {
   const [estadoCambio, cambiar, cambiando] = useActionState(
     cambiarEstadoAccion.bind(null, id),
@@ -42,7 +47,12 @@ export function ControlesConsulta({
     agregarNotaAccion.bind(null, id),
     SIN_ERROR,
   );
+  const [estadoRespuesta, responder, respondiendo] = useActionState(
+    responderAccion.bind(null, id),
+    SIN_ERROR,
+  );
   const siguientes = TRANSICIONES[estado] ?? [];
+  const sePuedeResponder = ESTADOS_PARA_RESPONDER.includes(estado);
 
   return (
     <div className="grid gap-8">
@@ -74,6 +84,50 @@ export function ControlesConsulta({
         )}
         <MensajeError id="error-estado" texto={estadoCambio.error} />
       </form>
+
+      <section aria-labelledby="titulo-responder" className="grid gap-2">
+        <h2 id="titulo-responder" className="text-h3 font-bold">
+          Responder por email
+        </h2>
+        {sePuedeResponder ? (
+          <form
+            action={responder}
+            onSubmit={(e) => {
+              if (!window.confirm(`¿Enviar la respuesta por email a ${email}? No se puede deshacer.`)) {
+                e.preventDefault();
+              }
+            }}
+            className="grid gap-2"
+          >
+            <label htmlFor="respuesta" className="text-pequeno font-bold">
+              Respuesta para {email} (texto plano; debajo va citado su mensaje)
+            </label>
+            <textarea
+              id="respuesta"
+              name="texto"
+              required
+              minLength={1}
+              maxLength={LARGO_MAXIMO_RESPUESTA}
+              // Si el envío falló, la respuesta vuelve en `texto` para reintentar.
+              defaultValue={estadoRespuesta.texto ?? ""}
+              rows={8}
+              className={`${campo} w-full`}
+              aria-describedby="error-respuesta"
+            />
+            <div>
+              <button type="submit" disabled={respondiendo} className={boton}>
+                {respondiendo ? "Enviando…" : "Enviar respuesta"}
+              </button>
+            </div>
+            <MensajeError id="error-respuesta" texto={estadoRespuesta.error} />
+          </form>
+        ) : (
+          <>
+            <p className="text-pequeno">Para responder por email, pasá la consulta a En curso.</p>
+            <MensajeError id="error-respuesta" texto={estadoRespuesta.error} />
+          </>
+        )}
+      </section>
 
       <form action={anotar} className="grid gap-2">
         <h2 className="text-h3 font-bold">Agregar una nota</h2>

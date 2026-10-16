@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { Consulta } from "@/models/Consulta";
+import { Consulta, TIPOS_SEGUIMIENTO } from "@/models/Consulta";
 import { Usuario } from "@/models/Usuario";
 import type { ContactType } from "./contact";
 import { conectar } from "./db";
 import {
   ESTADOS_CONSULTA,
+  ESTADOS_PARA_RESPONDER,
   ETIQUETAS_ESTADO,
   estadoLeido,
   filtroDeEstados,
@@ -13,7 +14,7 @@ import {
   type EstadoConsulta,
 } from "./estados-consulta";
 
-export type TipoSeguimiento = "nota" | "respuesta" | "estado";
+export type TipoSeguimiento = (typeof TIPOS_SEGUIMIENTO)[number];
 
 const AUTOR_ELIMINADO = "Usuario eliminado";
 
@@ -84,7 +85,8 @@ export async function obtenerConsulta(id: string): Promise<DetalleConsulta | nul
 
   // `lean()` no aplica los defaults: un documento de antes de #39 no trae `seguimiento`.
   const entradas = d.seguimiento ?? [];
-  const ids = [...new Set(entradas.map((e) => String(e.autor)))];
+  // Un autor que no es un id (solo si se editó la base a mano) haría fallar el `$in`: se muestra como eliminado.
+  const ids = [...new Set(entradas.map((e) => String(e.autor)))].filter((a) => ID_VALIDO.test(a));
   const autores = ids.length
     ? await Usuario.find({ _id: { $in: ids } }, { nombre: 1, email: 1 }).lean()
     : [];
@@ -186,14 +188,56 @@ export async function agregarNota(
   return r.matchedCount === 1 ? { ok: true } : NO_ENCONTRADA;
 }
 
-export type ResultadoRegistro = { ok: true; estadoCambiado: boolean } | { ok: false; error: "no-encontrada"; mensaje: string };
+export type ResultadoRegistro =
+  | { ok: true; estadoCambiado: boolean }
+  | { ok: false; error: "no-encontrada"; mensaje: string };
 
-/** STUB */
+const NO_ENCONTRADA_REGISTRO: ResultadoRegistro = {
+  ok: false,
+  error: "no-encontrada",
+  mensaje: "La consulta no existe.",
+};
+
+/**
+ * Registra en el seguimiento una respuesta por email ya intentada (la envía `responderConsulta`,
+ * src/lib/respuestas.ts). Si el email salió y la consulta sigue en un estado desde el que se responde
+ * (`ESTADOS_PARA_RESPONDER`), en un solo update agrega la entrada `respuesta` (con `emailEnviado: true`), la
+ * entrada `estado` y la pasa a `respondida`. Si no salió, o si otro operador le cambió el estado mientras se
+ * enviaba, solo agrega la respuesta (con su `emailEnviado`): el email que salió queda registrado igual.
+ * `texto` ya viene validado.
+ */
 export async function registrarRespuesta(
-  _id: string,
-  _texto: string,
-  _autor: string,
-  _emailEnviado: boolean,
+  id: string,
+  texto: string,
+  autor: string,
+  emailEnviado: boolean,
 ): Promise<ResultadoRegistro> {
-  return { ok: true, estadoCambiado: false };
+  exigirAutor(autor, "registrarRespuesta");
+  if (!ID_VALIDO.test(id)) return NO_ENCONTRADA_REGISTRO;
+  await conectar();
+  const fecha = new Date();
+  const respuesta = { tipo: "respuesta", texto, autor, fecha, emailEnviado };
+
+  if (emailEnviado) {
+    const r = await Consulta.updateOne(
+      { _id: id, estado: filtroDeEstados(ESTADOS_PARA_RESPONDER) },
+      {
+        $set: { estado: "respondida" },
+        $push: {
+          seguimiento: {
+            $each: [respuesta, { tipo: "estado", texto: "respondida", autor, fecha }],
+          },
+        },
+      },
+      { runValidators: true },
+    );
+    if (r.matchedCount === 1) return { ok: true, estadoCambiado: true };
+  }
+
+  const r = await Consulta.updateOne(
+    { _id: id },
+    { $push: { seguimiento: respuesta } },
+    { runValidators: true },
+  );
+  return r.matchedCount === 1 ? { ok: true, estadoCambiado: false } : NO_ENCONTRADA_REGISTRO;
 }

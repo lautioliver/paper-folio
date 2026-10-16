@@ -42,7 +42,7 @@ export function origenesDe(hacia: EstadoConsulta): EstadoConsulta[] {
  * mano a `respondida` solo se llega desde `en_curso`: responder no abre otro camino. Desde `nueva`,
  * `respondida` (una segunda respuesta) o `archivada`, primero se la pasa a `en_curso`.
  */
-export const ESTADOS_PARA_RESPONDER: readonly EstadoConsulta[] = [];
+export const ESTADOS_PARA_RESPONDER: readonly EstadoConsulta[] = ["en_curso"];
 
 /** Largo máximo de una respuesta por email. Lo usan el `maxLength` del formulario y la validación del servidor. */
 export const LARGO_MAXIMO_RESPUESTA = 5000;

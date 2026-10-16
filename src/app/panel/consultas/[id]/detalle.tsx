@@ -79,7 +79,7 @@ export async function DetalleConsulta({ id }: { id: string }) {
         <p className="mt-2 whitespace-pre-wrap break-words">{c.mensaje}</p>
       </section>
 
-      <ControlesConsulta id={c.id} estado={c.estado} />
+      <ControlesConsulta id={c.id} estado={c.estado} email={c.email} />
 
       <section aria-labelledby="seguimiento">
         <h2 id="seguimiento" className="text-h3 font-bold">
@@ -101,6 +101,13 @@ export async function DetalleConsulta({ id }: { id: string }) {
                 <p className="mt-1 whitespace-pre-wrap break-words">
                   {textoDe(e)}
                 </p>
+                {e.tipo === "respuesta" && e.emailEnviado !== undefined && (
+                  <p className="mt-1 text-pequeno font-bold">
+                    {e.emailEnviado
+                      ? `Enviada por email a ${c.email}.`
+                      : "El email no se pudo enviar: el visitante no la recibió."}
+                  </p>
+                )}
               </li>
             ))}
           </ol>
