@@ -211,7 +211,11 @@ describe("responderConsulta: doble envío y registro (revisión del PR #62)", ()
     expect([a, b].filter((r) => r.ok)).toHaveLength(1);
     const otra = [a, b].find((r) => !r.ok);
     expect(otra).toMatchObject({ ok: false, error: "en-envio" });
-    if (otra && !otra.ok) expect(otra.mensaje).toMatch(/otra respuesta/);
+    if (otra && !otra.ok) {
+      expect(otra.mensaje).toMatch(/otra respuesta/);
+      // La pendiente puede ser un envío que salió sin registrarse: no promete que "se está enviando".
+      expect(otra.mensaje).toMatch(/Enviados/);
+    }
     const doc = await leer(id);
     expect(doc?.estado).toBe("respondida");
     expect(doc?.seguimiento.filter((e: { tipo: string }) => e.tipo === "respuesta")).toHaveLength(1);
@@ -234,6 +238,25 @@ describe("responderConsulta: doble envío y registro (revisión del PR #62)", ()
     expect(doc?.seguimiento).toHaveLength(1);
     expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", texto: "Hola" });
     expect(doc?.seguimiento[0]).not.toHaveProperty("emailEnviado");
+  });
+});
+
+describe("responderConsulta: la reserva desaparece mientras se envía (hallazgo de /code-review 62)", () => {
+  it("si la entrada reservada ya no está al completar, no dice que salió bien: devuelve registro-fallido", async () => {
+    const id = await insertar();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const t: TransporteEmail = {
+      sendMail: vi.fn(async () => {
+        await Consulta.collection.updateOne(
+          { _id: new mongoose.Types.ObjectId(id) },
+          { $set: { seguimiento: [] } },
+        );
+        return {};
+      }),
+    };
+    const r = await responderConsulta(id, "Hola", AUTOR, t);
+    expect(r).toMatchObject({ ok: false, error: "registro-fallido" });
+    if (!r.ok) expect(r.mensaje).toMatch(/se envió/);
   });
 });
 

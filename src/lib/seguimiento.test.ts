@@ -354,7 +354,7 @@ describe("reservarRespuesta y completarRespuesta (#40)", () => {
     const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
     const r = await reservarRespuesta(id, "Hola", autor);
     if (!r.ok) throw new Error("no reservó");
-    expect(await completarRespuesta(id, autor, r.fecha, true)).toEqual({ encontrada: true, estadoCambiado: true });
+    expect(await completarRespuesta(id, autor, r.fecha, true)).toEqual({ resultado: "completada", estadoCambiado: true });
     const doc = await leer(id);
     expect(doc?.estado).toBe("respondida");
     expect(doc?.seguimiento.map((e: { tipo: string; texto: string }) => [e.tipo, e.texto])).toEqual([
@@ -372,7 +372,7 @@ describe("reservarRespuesta y completarRespuesta (#40)", () => {
     const r = await reservarRespuesta(id, "Hola", autor);
     if (!r.ok) throw new Error("no reservó");
     await Consulta.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { estado: "archivada" } });
-    expect(await completarRespuesta(id, autor, r.fecha, true)).toEqual({ encontrada: true, estadoCambiado: false });
+    expect(await completarRespuesta(id, autor, r.fecha, true)).toEqual({ resultado: "completada", estadoCambiado: false });
     const doc = await leer(id);
     expect(doc?.estado).toBe("archivada");
     expect(doc?.seguimiento).toHaveLength(1);
@@ -383,16 +383,24 @@ describe("reservarRespuesta y completarRespuesta (#40)", () => {
     const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
     const r = await reservarRespuesta(id, "Hola", autor);
     if (!r.ok) throw new Error("no reservó");
-    expect(await completarRespuesta(id, autor, r.fecha, false)).toEqual({ encontrada: true, estadoCambiado: false });
+    expect(await completarRespuesta(id, autor, r.fecha, false)).toEqual({ resultado: "completada", estadoCambiado: false });
     const doc = await leer(id);
     expect(doc?.estado).toBe("en_curso");
     expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
     expect((await reservarRespuesta(id, "Otra", autor)).ok).toBe(true);
   });
 
-  it("completar sobre una consulta borrada devuelve encontrada false", async () => {
+  it("completar sobre una consulta borrada devuelve sin-consulta", async () => {
     const r = await completarRespuesta(String(new mongoose.Types.ObjectId()), autor, new Date(), true);
-    expect(r).toEqual({ encontrada: false, estadoCambiado: false });
+    expect(r).toEqual({ resultado: "sin-consulta", estadoCambiado: false });
+  });
+
+  it("completar sin la entrada reservada (ya completada o borrada) devuelve sin-entrada, no completada", async () => {
+    const id = await insertarCruda({ estado: "archivada", seguimiento: [] });
+    for (const enviado of [true, false]) {
+      const r = await completarRespuesta(id, autor, new Date(), enviado);
+      expect(r).toEqual({ resultado: "sin-entrada", estadoCambiado: false });
+    }
   });
 });
 
