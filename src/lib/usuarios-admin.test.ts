@@ -179,3 +179,13 @@ describe("cambiarBloqueoUsuario", () => {
     expect(await usuarioBloqueado("v@example.com")).toBe(false);
   });
 });
+
+describe("el chequeo del último admin solo mira los cambios que quitan un admin (code-review)", () => {
+  it("un cambio que no toca admins no se deshace aunque en ese momento no haya ninguno", async () => {
+    const actor = await crear("ex@example.com", { rol: "operador" });
+    const id = await crear("v@example.com");
+    expect(await cambiarRolUsuario(actor, id, "operador", "")).toEqual({ ok: true });
+    expect(await buscarRol(id, "")).toBe("operador");
+    expect(await cambiarBloqueoUsuario(actor, id, true, "")).toEqual({ ok: true });
+  });
+});

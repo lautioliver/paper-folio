@@ -98,3 +98,13 @@ describe("cuenta bloqueada (#49)", () => {
     });
   });
 });
+
+describe("ingreso rechazado por Auth.js (error=AccessDenied, code-review)", () => {
+  it("sin sesión avisa que no pudo ingresar (cuenta bloqueada o sin verificar), sin redirigir", () => {
+    expect(decidirIngreso({ sesion: "ninguna", error: "AccessDenied", callbackUrl: "/cuenta" })).toEqual({
+      accion: "mostrar",
+      aviso: "denegado",
+      callbackUrl: "/cuenta",
+    });
+  });
+});
