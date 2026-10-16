@@ -1,17 +1,19 @@
 import mongoose, { Schema, type InferSchemaType, type Model } from "mongoose";
+import { esUrlHttp } from "@/lib/contenido-esquemas";
 
 const demoSchema = new Schema(
   {
     proyecto: { type: Schema.Types.ObjectId, ref: "Proyecto", required: true },
     titulo: { type: String, required: true, trim: true },
-    url: { type: String, required: true, trim: true },
+    // Va en un iframe y en un enlace: solo http o https.
+    url: { type: String, required: true, trim: true, validate: { validator: esUrlHttp, message: "debe ser una URL http o https" } },
     descripcion: { type: String, default: "", trim: true },
     activa: { type: Boolean, default: true },
     orden: { type: Number, default: 0 },
   },
   // Sin autoIndex ni autoCreate (ver Proyecto).
   {
-    timestamps: { createdAt: "creadaEn", updatedAt: "actualizadaEn" },
+    timestamps: { createdAt: "creadaEn", updatedAt: "actualizadaEn" } as const,
     autoIndex: false,
     autoCreate: false,
   },

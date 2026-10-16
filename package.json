@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "seed:contenido": "node --import ./scripts/ts-hooks.mjs scripts/seed-contenido.ts"
+    "seed:contenido": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/ts-hooks.mjs scripts/seed-contenido.ts"
   },
   "dependencies": {
     "gsap": "^3.15.0",

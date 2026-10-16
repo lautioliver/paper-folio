@@ -6,7 +6,7 @@ import { CuentaBarra } from "@/components/sitio/CuentaBarra";
 import { Highlight } from "@/components/sitio/Highlight";
 import { Navbar } from "@/components/sitio/Navbar";
 import { ProjectCard } from "@/components/sitio/Sections";
-import { projects } from "@/content/profile";
+import { listarProyectos } from "@/lib/contenido";
 
 export const metadata: Metadata = {
   title: "Proyectos",
@@ -14,7 +14,8 @@ export const metadata: Metadata = {
 };
 
 // Listado público: las tarjetas enlazan al detalle, que pide sesión (`/proyectos/[slug]`).
-export default function ProyectosPage() {
+export default async function ProyectosPage() {
+  const proyectos = await listarProyectos();
   return (
     <>
       <Navbar cuenta={<CuentaBarra />} />
@@ -34,7 +35,7 @@ export default function ProyectosPage() {
             El caso de estudio y la demo de cada uno son para usuarios registrados: ingresás con Google, en un clic.
           </p>
           <ul className="mt-12 grid gap-8">
-            {projects.map((project) => (
+            {proyectos.map((project) => (
               <li key={project.slug}>
                 <ProjectCard project={project} />
               </li>

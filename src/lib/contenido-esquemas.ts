@@ -26,7 +26,7 @@ const texto = z.string().trim().min(1);
 const urlHttps = z.string().trim().refine(esUrlHttps, { error: "debe ser una URL https" });
 const urlHttp = z.string().trim().refine(esUrlHttp, { error: "debe ser una URL http o https" });
 // En la base, un campo opcional puede faltar o venir en null: los dos son "sin valor".
-const opcional = <T extends z.ZodType>(esquema: T) => esquema.nullish().transform((v) => v ?? undefined);
+const opcional = <T extends z.ZodType>(esquema: T) => z.preprocess((v) => v ?? undefined, esquema.optional());
 
 export const casoEsquema = z.object({
   problema: texto,
@@ -68,15 +68,26 @@ export type Servicio = z.output<typeof servicioEsquema>;
 
 /** Un proyecto de `profile.ts` con la forma del modelo (respaldo y seed). */
 export function proyectoDesdePerfil(project: Project): Proyecto {
-  return { slug: project.slug } as Proyecto;
+  return {
+    slug: project.slug,
+    nombre: project.name,
+    inicial: project.initial,
+    categoria: project.category,
+    descripcion: project.description,
+    stack: project.stack,
+    repoUrl: project.repoUrl,
+    acento: project.accent,
+    caso: project.caso,
+    tieneDemo: true,
+  };
 }
 
 /** La demo de un proyecto de `profile.ts` (su `demoUrl`). */
 export function demoDesdePerfil(project: Project): Demo {
-  return { titulo: project.name } as Demo;
+  return { titulo: `Demo de ${project.name}`, url: project.demoUrl, descripcion: "" };
 }
 
 /** Un servicio de `profile.ts` con la forma del modelo. */
 export function servicioDesdePerfil(service: Service): Servicio {
-  return { titulo: service.title } as Servicio;
+  return { titulo: service.title, descripcion: service.description, icono: service.icon };
 }

@@ -55,7 +55,7 @@ describe("el sitio lee el contenido de la base (src/lib/contenido.ts)", () => {
   });
 
   it("el detalle da 404 si el proyecto no está publicado y muestra las demos activas", () => {
-    expect(fuentes.detalle).toMatch(/await buscarProyecto\(slug\)[\s\S]*notFound\(\)/);
+    expect(fuentes.detalle).toMatch(/buscarProyecto\(slug\)[\s\S]*if \(!project\) notFound\(\)/);
     expect(fuentes.detalle).toMatch(/demosDe\(/);
   });
 });

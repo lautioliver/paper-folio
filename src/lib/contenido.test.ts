@@ -53,7 +53,7 @@ function proyectoDoc(slug: string, extra: Record<string, unknown> = {}) {
     descripcion: "Descripción",
     stack: ["Next.js"],
     repoUrl: `https://github.com/lautioliver/${slug}`,
-    acento: "primario",
+    acento: "primario" as const,
     caso: { problema: "Problema", solucion: "Solución", funcionalidades: ["Una"], stack: ["TS"] },
     publicado: true,
     ...extra,
