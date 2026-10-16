@@ -108,3 +108,27 @@ describe("ingreso rechazado por Auth.js (error=AccessDenied, code-review)", () =
     });
   });
 });
+
+describe("errores del ingreso en /ingresar (revisión del PR #69)", () => {
+  const mostrar = (error: string | string[] | undefined) => decidirIngreso({ sesion: "ninguna", error, callbackUrl: "/cuenta" });
+
+  it("error=bloqueado (signIn de una cuenta bloqueada) avisa el bloqueo", () => {
+    expect(mostrar("bloqueado")).toEqual({ accion: "mostrar", aviso: "bloqueada", callbackUrl: "/cuenta" });
+  });
+
+  it("error=verificacion (la base no respondió) pide reintentar, sin culpar a la cuenta", () => {
+    expect(mostrar("verificacion")).toEqual({ accion: "mostrar", aviso: "reintentar", callbackUrl: "/cuenta" });
+  });
+
+  it("cualquier otro código de Auth.js muestra un aviso genérico (nunca el texto crudo)", () => {
+    for (const codigo of ["Configuration", "OAuthCallbackError", "<script>", "toString"]) {
+      expect(mostrar(codigo)).toEqual({ accion: "mostrar", aviso: "generico", callbackUrl: "/cuenta" });
+    }
+  });
+
+  it("sin error, con error=sesion o repetido, la pantalla normal", () => {
+    expect(mostrar(undefined)).toMatchObject({ aviso: null });
+    expect(mostrar("sesion")).toMatchObject({ aviso: null });
+    expect(mostrar(["Configuration", "x"])).toMatchObject({ aviso: null });
+  });
+});

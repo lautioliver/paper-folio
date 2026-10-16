@@ -130,13 +130,13 @@ describe("permiteIngreso (callback signIn, #49)", () => {
     expect(await permiteIngreso(google, libre)).toBe(true);
   });
 
-  it("una cuenta bloqueada no ingresa (signIn devuelve false)", async () => {
+  it("una cuenta bloqueada no ingresa: signIn la manda a /ingresar?error=bloqueado (revisión del PR #69)", async () => {
     const consultados: string[] = [];
     const bloqueada = async (email: string) => {
       consultados.push(email);
       return true;
     };
-    expect(await permiteIngreso(google, bloqueada)).toBe(false);
+    expect(await permiteIngreso(google, bloqueada)).toBe("/ingresar?error=bloqueado");
     expect(consultados).toEqual(["v@example.com"]);
   });
 
@@ -152,11 +152,11 @@ describe("permiteIngreso (callback signIn, #49)", () => {
     expect(consultas).toBe(0);
   });
 
-  it("si la base falla, lanza (falla cerrado)", async () => {
+  it("si la base falla, no ingresa y va a /ingresar?error=verificacion, no al aviso de cuenta (revisión del PR #69)", async () => {
     const caida = async (): Promise<boolean> => {
       throw new Error("MongoServerSelectionError");
     };
-    await expect(permiteIngreso(google, caida)).rejects.toThrow();
+    expect(await permiteIngreso(google, caida)).toBe("/ingresar?error=verificacion");
   });
 });
 
