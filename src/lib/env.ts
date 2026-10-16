@@ -30,10 +30,10 @@ const esquemaAuth = z.object({
   AUTH_GOOGLE_SECRET: z.string({ error: "falta" }).trim().min(1, { error: "no puede estar vacía" }),
 });
 
-// Listas de emails separados por comas. Opcionales: vacías, nadie es admin ni operador.
+// Emails separados por comas que son admin siempre (#49, enmienda de ADR-002 R-4). Opcional: vacía, los
+// admins son solo los que se asignan desde el panel. OPERADOR_EMAILS ya no se usa: el operador se asigna ahí.
 const esquemaRoles = z.object({
   ADMIN_EMAILS: z.string().default(""),
-  OPERADOR_EMAILS: z.string().default(""),
 });
 
 // Vercel Blob (#47): se autentica por OIDC (VERCEL_OIDC_TOKEN, que inyecta Vercel) con el id del store.
@@ -92,13 +92,9 @@ export function leerAuthConfig(fuente: Record<string, string | undefined> = proc
   return validar(esquemaAuth, fuente);
 }
 
-/** Lee `ADMIN_EMAILS` y `OPERADOR_EMAILS` (vacías si no están) como listas de roles. */
-export function leerAuthRoles(fuente: Record<string, string | undefined> = process.env): {
-  admin: string;
-  operador: string;
-} {
-  const { ADMIN_EMAILS, OPERADOR_EMAILS } = validar(esquemaRoles, fuente);
-  return { admin: ADMIN_EMAILS, operador: OPERADOR_EMAILS };
+/** Lee `ADMIN_EMAILS` (vacía si no está): los emails que son admin siempre. */
+export function leerAdminEmails(fuente: Record<string, string | undefined> = process.env): string {
+  return validar(esquemaRoles, fuente).ADMIN_EMAILS;
 }
 
 /** Valida `BLOB_STORE_ID` (el store de Vercel Blob de las imágenes). Mismas reglas que `leerEnv`. */

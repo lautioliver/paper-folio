@@ -1,64 +1,92 @@
 import mongoose from "mongoose";
 import { z } from "zod";
+import { emailsDeLista, type EstadoRol } from "./acceso";
 import { asegurarIndicesDe, conectar } from "./db";
-import { leerAuthRoles } from "./env";
+import { leerAdminEmails } from "./env";
 import { Usuario, type Rol } from "@/models/Usuario";
 
-/** Emails separados por comas (`ADMIN_EMAILS`, `OPERADOR_EMAILS`). */
-export type ListasDeRoles = { admin: string; operador: string };
+// Usuarios registrados (ADR-002 con la enmienda de #49): el rol guardado en `usuarios` es la fuente de verdad y
+// se edita desde /panel/usuarios. Los emails de `ADMIN_EMAILS` son admin siempre, pero ese admin no se guarda:
+// se suma al leer, así sacar a alguien de la lista le quita el rol aunque su sesión siga viva.
+
 export type DatosIngreso = { email: string; nombre?: string | null; imagen?: string | null };
 export type UsuarioIngresado = { id: string; email: string; rol: Rol };
 
-const emailValido = z.string().trim().toLowerCase().pipe(z.email());
-
-function emailsDe(lista: string): Set<string> {
-  return new Set(
-    lista
-      .split(",")
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
+export class CuentaBloqueadaError extends Error {
+  name = "CuentaBloqueadaError";
 }
 
-/** Rol que le toca a un email según las listas del entorno. Si está en las dos, gana admin. */
-export function rolParaEmail(email: string, listas: ListasDeRoles): Rol {
-  const normal = email.trim().toLowerCase();
-  if (emailsDe(listas.admin).has(normal)) return "admin";
-  if (emailsDe(listas.operador).has(normal)) return "operador";
-  return "usuario";
+const emailValido = z.string().trim().toLowerCase().pipe(z.email());
+
+/** Si el email está en `ADMIN_EMAILS` (lista separada por comas). */
+export function esAdminPorEntorno(email: string, adminEmails: string): boolean {
+  return emailsDeLista(adminEmails).has(email.trim().toLowerCase());
+}
+
+/** Rol vigente: `admin` si el email está en `ADMIN_EMAILS`; si no, el guardado. */
+export function rolVigente(email: string, guardado: Rol, adminEmails: string): Rol {
+  return esAdminPorEntorno(email, adminEmails) ? "admin" : guardado;
 }
 
 /**
- * Crea o actualiza el usuario que acaba de ingresar con Google (upsert por email).
- * El rol se recalcula en cada ingreso según `ADMIN_EMAILS` y `OPERADOR_EMAILS` (épica #31, decisión 3).
+ * Antes de #49 el rol guardado no valía: se recalculaba con `ADMIN_EMAILS` y `OPERADOR_EMAILS` en cada
+ * lectura, así que un documento de entonces puede tener el rol de alguien que salió de una lista y no volvió
+ * a ingresar. Esos documentos se reconocen porque no tienen `bloqueado`, y se pasan a `usuario` (sin bloquear,
+ * con los accesos que tengan o 0). Idempotente: un documento ya normalizado no se vuelve a tocar.
+ */
+export async function normalizarLegados(filtro: { email?: string } = {}): Promise<void> {
+  await Usuario.updateMany(
+    { ...filtro, bloqueado: { $exists: false } },
+    { $set: { rol: "usuario", bloqueado: false }, $max: { accesos: 0 } },
+  );
+}
+
+/** Rol guardado de un documento leído con `lean()`: a uno de antes de #49 no se le cree (ver `normalizarLegados`). */
+export function rolGuardado(doc: { rol: Rol; bloqueado?: boolean | null }): Rol {
+  return typeof doc.bloqueado === "boolean" ? doc.rol : "usuario";
+}
+
+/**
+ * Crea o actualiza el usuario que acaba de ingresar con Google (upsert por email). No toca el rol guardado
+ * (lo asigna el panel); devuelve el vigente, con `admin` si el email está en `ADMIN_EMAILS`. Una cuenta
+ * bloqueada no llega acá (la frena el callback `signIn`), pero si llega, lanza `CuentaBloqueadaError`.
  */
 export async function registrarIngreso(
   datos: DatosIngreso,
-  listas: ListasDeRoles = leerAuthRoles(),
+  adminEmails: string = leerAdminEmails(),
 ): Promise<UsuarioIngresado> {
   const email = emailValido.parse(datos.email);
-  const rol = rolParaEmail(email, listas);
   await conectar();
   await asegurarIndicesDe(Usuario);
+  await normalizarLegados({ email });
   const doc = await Usuario.findOneAndUpdate(
     { email },
     {
-      $set: { nombre: datos.nombre ?? "", imagen: datos.imagen ?? "", rol, ultimoAcceso: new Date() },
+      $set: { nombre: datos.nombre ?? "", imagen: datos.imagen ?? "", ultimoAcceso: new Date() },
       $setOnInsert: { email },
     },
     { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true },
   ).lean();
-  return { id: String(doc._id), email: doc.email, rol: doc.rol };
+  if (doc.bloqueado === true) throw new CuentaBloqueadaError("La cuenta está bloqueada.");
+  return { id: String(doc._id), email: doc.email, rol: rolVigente(doc.email, rolGuardado(doc), adminEmails) };
 }
 
 /**
- * Rol vigente de un usuario para los permisos. `null` si no existe.
- * Hasta el hito 5 los roles salen de `ADMIN_EMAILS` y `OPERADOR_EMAILS` (ADR-002 R-4): se recalculan
- * también al leer, así sacar a alguien de la lista le quita el rol aunque su sesión siga viva.
+ * Estado de un usuario para los permisos (ADR-002 R-3): su rol vigente, `"bloqueado"` o `null` si no existe.
+ * Se lee en cada página, acción o API protegida: un cambio de rol o un bloqueo vale al instante.
  */
-export async function buscarRol(id: string, listas: ListasDeRoles = leerAuthRoles()): Promise<Rol | null> {
+export async function buscarRol(id: string, adminEmails: string = leerAdminEmails()): Promise<EstadoRol> {
   if (!mongoose.isValidObjectId(id)) return null;
   await conectar();
-  const doc = await Usuario.findById(id, { email: 1 }).lean();
-  return doc ? rolParaEmail(doc.email, listas) : null;
+  const doc = await Usuario.findById(id, { email: 1, rol: 1, bloqueado: 1 }).lean();
+  if (!doc) return null;
+  if (doc.bloqueado === true) return "bloqueado";
+  return rolVigente(doc.email, rolGuardado(doc), adminEmails);
+}
+
+/** Si la cuenta de ese email está bloqueada (para el callback `signIn`). `false` si no existe. */
+export async function usuarioBloqueado(email: string): Promise<boolean> {
+  await conectar();
+  const doc = await Usuario.exists({ email: email.trim().toLowerCase(), bloqueado: true });
+  return doc !== null;
 }

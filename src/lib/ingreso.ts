@@ -1,14 +1,48 @@
+import { z } from "zod";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, rutaInterna, type SesionMinima } from "./acceso";
+import { evaluarAcceso, rutaInterna, type EstadoRol, type SesionMinima } from "./acceso";
 
 /** Estado de la sesión visto desde /ingresar: sin token, token con usuario en la base, o token huérfano. */
 // "error": hay token pero no se pudo comprobar contra la base (no responde).
-export type EstadoSesion = "ninguna" | "valida" | "huerfana" | "error";
+// "bloqueada" (#49): el usuario existe pero un admin lo bloqueó.
+export type EstadoSesion = "ninguna" | "valida" | "huerfana" | "bloqueada" | "error";
 
 export type DecisionIngreso =
   | { accion: "redirigir"; destino: string }
   // aviso "sesion": el token existe pero el usuario no está en la base; se ofrece salir e ingresar de nuevo.
-  | { accion: "mostrar"; aviso: "sesion" | "verificacion" | null; callbackUrl: string };
+  // aviso "bloqueada": la cuenta está bloqueada; solo se ofrece salir.
+  // aviso "denegado": Auth.js rechazó el ingreso (`signIn` dio false: email sin verificar).
+  // aviso "reintentar": `signIn` no pudo comprobar la cuenta (la base no respondió; `error=reintentar`).
+  // aviso "generico": cualquier otro error de Auth.js (Configuration, OAuthCallbackError…). El detalle es #45.
+  | { accion: "mostrar"; aviso: AvisoIngreso; callbackUrl: string };
+
+// "bloqueada": la sesión actual está bloqueada (lo dice la base; solo "Salir"). "ingreso-bloqueado": sin sesión,
+// con `error=bloqueado` (lo manda `signIn`, pero cualquiera puede armar el link): avisa y deja ingresar con otra.
+export type AvisoIngreso =
+  | "sesion"
+  | "bloqueada"
+  | "ingreso-bloqueado"
+  | "denegado"
+  | "reintentar"
+  | "generico"
+  | "verificacion"
+  | null;
+
+// Los `error` que /ingresar conoce. Los manda la app (`urlDeIngreso`, `permiteIngreso`) o Auth.js (`pages.error`).
+const errorConocido = z.enum(["sesion", "bloqueado", "reintentar", "AccessDenied"]);
+const AVISO_DE_ERROR = {
+  sesion: null,
+  bloqueado: "ingreso-bloqueado",
+  reintentar: "reintentar",
+  AccessDenied: "denegado",
+} as const satisfies Record<z.infer<typeof errorConocido>, AvisoIngreso>;
+
+/** Aviso para el `error` de la URL sin sesión: uno por código conocido, "generico" para el resto. */
+function avisoDeError(error: string | string[] | undefined): AvisoIngreso {
+  if (typeof error !== "string" || error === "") return null;
+  const conocido = errorConocido.safeParse(error);
+  return conocido.success ? AVISO_DE_ERROR[conocido.data] : "generico";
+}
 
 /**
  * A dónde lleva /ingresar según la sesión, `error` y `callbackUrl` (ADR-002 R-5). El `callbackUrl` pasa
@@ -24,11 +58,15 @@ export function decidirIngreso(entrada: {
   const errorDeSesion = entrada.error === "sesion";
   // Sin poder comprobar la base no se sabe si la sesión sirve: no se redirige (podría rebotar).
   if (entrada.sesion === "error") return { accion: "mostrar", aviso: "verificacion", callbackUrl };
+  // Cuenta bloqueada (#49): no se redirige, rebotaría. El estado sale de la base, no de `error=bloqueado`:
+  // si la desbloquearon en el medio, la sesión vuelve a ser válida y se redirige como siempre.
+  if (entrada.sesion === "bloqueada") return { accion: "mostrar", aviso: "bloqueada", callbackUrl };
   if (entrada.sesion === "huerfana" || (entrada.sesion === "valida" && errorDeSesion)) {
     return { accion: "mostrar", aviso: "sesion", callbackUrl };
   }
   if (entrada.sesion === "valida") return { accion: "redirigir", destino: callbackUrl };
-  return { accion: "mostrar", aviso: null, callbackUrl };
+  // Auth.js manda acá sus errores (`pages.error` en src/auth.ts) y `signIn` sus URLs (`permiteIngreso`).
+  return { accion: "mostrar", aviso: avisoDeError(entrada.error), callbackUrl };
 }
 
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */
@@ -42,11 +80,12 @@ export function puedeVerPanel(rol: Rol | null | undefined): boolean {
  */
 export async function comprobarSesion(
   sesion: SesionMinima,
-  buscar: (id: string) => Promise<Rol | null>,
+  buscar: (id: string) => Promise<EstadoRol>,
 ): Promise<EstadoSesion> {
   try {
     const acceso = await evaluarAcceso(sesion, [], buscar);
     if (acceso.ok) return "valida";
+    if (acceso.motivo === "bloqueado") return "bloqueada";
     return acceso.motivo === "sesion-huerfana" ? "huerfana" : "ninguna";
   } catch (error) {
     console.error("ingreso: no se pudo comprobar la sesión", error instanceof Error ? error.name : "desconocido");

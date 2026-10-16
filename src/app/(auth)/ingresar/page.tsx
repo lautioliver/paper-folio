@@ -9,6 +9,14 @@ import { ingresarConGoogle, salir, salirEIngresarDeNuevo } from "@/lib/sesion-ac
 
 export const metadata: Metadata = { title: "Ingresar", robots: { index: false } };
 
+// Avisos sin sesión que dejan volver a ingresar (con la misma cuenta o con otra).
+const AVISOS_CON_REINTENTO = {
+  reintentar: "No pudimos verificar tu cuenta. Probá de nuevo en un rato.",
+  generico: "No pudimos completar el ingreso. Probá de nuevo.",
+  "ingreso-bloqueado":
+    "Esa cuenta está bloqueada: no puede ingresar al sitio. Si creés que es un error, escribinos por el formulario de contacto.",
+} as const;
+
 const BOTON = "marca apretable inline-flex min-h-11 items-center justify-center bg-tinta px-5 py-3 font-bold text-papel";
 
 async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParams"] }) {
@@ -34,6 +42,55 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
         <form action={salir} className="mt-8">
           <button type="submit" className={BOTON}>
             Salir
+          </button>
+        </form>
+      </>
+    );
+  }
+
+  if (decision.aviso === "bloqueada") {
+    return (
+      <>
+        <p role="alert" className="mt-6 text-cuerpo">
+          Tu cuenta está bloqueada: no podés ingresar al sitio. Si creés que es un error, escribinos por el formulario
+          de contacto.
+        </p>
+        <form action={salir} className="mt-8">
+          <button type="submit" className={BOTON}>
+            Salir
+          </button>
+        </form>
+      </>
+    );
+  }
+
+  if (decision.aviso === "denegado") {
+    return (
+      <>
+        <p role="alert" className="mt-6 text-cuerpo">
+          No pudimos dejarte ingresar: la cuenta de Google tiene que tener el email verificado. Si creés que es un
+          error, escribinos por el formulario de contacto.
+        </p>
+        <form action={ingresarConGoogle} className="mt-8">
+          <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
+          <button type="submit" className={BOTON}>
+            Probar con otra cuenta
+          </button>
+        </form>
+      </>
+    );
+  }
+
+  if (decision.aviso === "reintentar" || decision.aviso === "generico" || decision.aviso === "ingreso-bloqueado") {
+    return (
+      <>
+        <p role="alert" className="mt-6 text-cuerpo">
+          {AVISOS_CON_REINTENTO[decision.aviso]}
+        </p>
+        <form action={ingresarConGoogle} className="mt-8">
+          <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
+          <button type="submit" className={BOTON}>
+            Continuar con Google
           </button>
         </form>
       </>
