@@ -1,4 +1,4 @@
-import type { CampoServicio } from "@/lib/servicios-admin";
+import type { CampoServicio } from "@/lib/servicios-campos";
 
 /** Lo que el formulario mandó, para volver a mostrarlo si falló (React resetea el formulario). */
 export type ValoresFormulario = {
