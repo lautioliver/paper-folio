@@ -171,3 +171,17 @@ describe("acciones de la lista con la pantalla vieja", () => {
     expect(updateTag).not.toHaveBeenCalled();
   });
 });
+
+describe("borrarProyectoAccion con un borrado a medias", () => {
+  it("si el proyecto se borró pero quedaron demos, invalida el sitio igual, refresca y muestra el error", async () => {
+    servicio.borrarProyecto.mockResolvedValue({
+      ok: false,
+      error: "parcial",
+      mensaje: "Se borró el proyecto, pero quedaron demos sin borrar.",
+    });
+    const r = await borrarProyectoAccion(ID, SIN_ERROR);
+    expect(r).toEqual({ error: "Se borró el proyecto, pero quedaron demos sin borrar." });
+    expect(updateTag).toHaveBeenCalledWith(TAG_CONTENIDO);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+});
