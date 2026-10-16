@@ -2,10 +2,10 @@ import Link from "next/link";
 import { Container } from "@/components/Container";
 import { milestones, profile } from "@/content/profile";
 import { cn } from "@/lib/cn";
-import { listarProyectos, listarServicios, type Proyecto, type Servicio } from "@/lib/contenido";
+import { listarProyectos, listarServicios, type Proyecto } from "@/lib/contenido";
 import { RUTA_PROYECTOS, rutaDemo, rutaDetalle } from "@/lib/proyectos";
 import { Highlight, SectionTitle } from "./Highlight";
-import { BrowserMock, HeroCharacter, Portrait, ServiceIcon } from "./Illustrations";
+import { BrowserMock, HeroCharacter, IlustracionServicio, Portrait } from "./Illustrations";
 import { HeroMotion } from "./HeroMotion";
 import { Reveal } from "./Reveal";
 import { ShareButton } from "./ShareButton";
@@ -57,7 +57,7 @@ export async function Services() {
               <Reveal className="h-full">
                 <article className="contorno h-full overflow-hidden bg-papel">
                   <div className="grid place-items-center border-b-(length:--borde-marca) border-tinta bg-superficie py-6">
-                    <IlustracionServicio servicio={servicio} />
+                    <IlustracionServicio icono={servicio.icono} imagen={servicio.imagen} />
                   </div>
                   <div className="p-6">
                     <h3 className="text-h3 font-bold">{servicio.titulo}</h3>
@@ -86,14 +86,6 @@ export async function Services() {
   );
 }
 
-/** El ícono del servicio o, si el panel le puso una imagen en lugar de ícono, la imagen. */
-function IlustracionServicio({ servicio }: { servicio: Servicio }) {
-  if (servicio.icono) return <ServiceIcon icon={servicio.icono} />;
-  if (!servicio.imagen) return null;
-  // URL https validada (ADR-003). next/image necesita `remotePatterns`, que llega con las imágenes (#47).
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={servicio.imagen} alt="" className="h-24 w-auto object-contain" />;
-}
 
 export async function About() {
   const proyectos = await listarProyectos();

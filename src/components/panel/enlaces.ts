@@ -1,20 +1,21 @@
 import type { Rol } from "@/models/Usuario";
 
-/** Clase común de los enlaces del menú del panel. Acá y no en `EnlaceActual` (cliente), que la importa. */
-export const CLASE_ENLACE =
-  "apretable contorno flex items-center justify-center px-4 py-2 text-pequeno font-bold lg:justify-start";
+export type EnlacePanel = { href: string; etiqueta: string };
 
-export type EnlacePanel = { href: string; etiqueta: string; roles: readonly Rol[] };
-
-/**
- * Secciones del menú del panel y quién las ve. Una entrada por sección. Solo es UI: cada página y cada acción
- * exige su rol en el servidor (`requerirRol`), esconder el enlace no protege nada.
- */
-export const ENLACES_PANEL: readonly EnlacePanel[] = [
+// Una entrada por sección, con los roles que la ven. Mostrar u ocultar una entrada es solo UI: cada página
+// y cada acción de la sección exige su rol en el servidor.
+const SECCIONES: (EnlacePanel & { roles: readonly Rol[] })[] = [
   { href: "/panel/consultas", etiqueta: "Consultas", roles: ["operador", "admin"] },
   { href: "/panel/proyectos", etiqueta: "Proyectos", roles: ["admin"] },
+  { href: "/panel/servicios", etiqueta: "Servicios", roles: ["admin"] },
 ];
 
+/** Las secciones del panel que ve un rol, en orden. */
 export function enlacesPara(rol: Rol): EnlacePanel[] {
-  return ENLACES_PANEL.filter((e) => e.roles.includes(rol));
+  return SECCIONES.filter((s) => s.roles.includes(rol)).map(({ href, etiqueta }) => ({ href, etiqueta }));
+}
+
+/** Si `pathname` es la sección `href` o una de sus subrutas. */
+export function esActual(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
