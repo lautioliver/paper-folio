@@ -144,7 +144,7 @@ export async function actualizarProyecto(id: string, datos: unknown): Promise<Re
 }
 
 /**
- * Borra el proyecto y todas sus demos (activas o no): una demo sin proyecto no se puede mostrar ni editar.
+ * Borra el proyecto y todas sus demos (activas o no): una demo sin proyecto no se muestra en el sitio.
  * Primero el proyecto: si borrar las demos falla, quedan huérfanas pero invisibles (el sitio las busca por
  * proyecto), nunca un proyecto sin las demos que tenía; devuelve `ok` (se escribió: quien llama invalida el
  * sitio) con un `aviso`. La imagen de Blob no se borra.
