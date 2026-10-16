@@ -72,7 +72,7 @@ const ACCIONES = [
   {
     nombre: "borrarProyectoAccion",
     volverA: "/panel/proyectos",
-    correr: () => borrarProyectoAccion(ID, SIN_ERROR),
+    correr: () => borrarProyectoAccion(SIN_ERROR, form({ id: ID })),
     llamado: servicio.borrarProyecto,
   },
   {
@@ -145,7 +145,7 @@ describe("crearProyectoAccion y actualizarProyectoAccion", () => {
 
 describe("acciones de la lista", () => {
   it("refrescan la lista cuando salen bien", async () => {
-    await borrarProyectoAccion(ID, SIN_ERROR);
+    await borrarProyectoAccion(SIN_ERROR, form({ id: ID }));
     await publicarProyectoAccion(ID, false, SIN_ERROR);
     await reordenarProyectosAccion(SIN_ERROR, form({ orden: [OTRO, ID] }));
     expect(refresh).toHaveBeenCalledTimes(3);
@@ -164,7 +164,7 @@ describe("acciones de la lista con la pantalla vieja", () => {
     servicio.borrarProyecto.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "El proyecto no existe." });
     servicio.publicarProyecto.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "El proyecto no existe." });
     servicio.reordenar.mockResolvedValue({ ok: false, error: "desactualizada", mensaje: "La lista cambió." });
-    expect(await borrarProyectoAccion(ID, SIN_ERROR)).toEqual({ error: "El proyecto no existe." });
+    expect(await borrarProyectoAccion(SIN_ERROR, form({ id: ID }))).toEqual({ error: "El proyecto no existe." });
     expect(await publicarProyectoAccion(ID, true, SIN_ERROR)).toEqual({ error: "El proyecto no existe." });
     expect(await reordenarProyectosAccion(SIN_ERROR, form({ orden: [ID] }))).toEqual({ error: "La lista cambió." });
     expect(refresh).toHaveBeenCalledTimes(3);
@@ -172,16 +172,23 @@ describe("acciones de la lista con la pantalla vieja", () => {
   });
 });
 
-describe("borrarProyectoAccion con un borrado a medias", () => {
-  it("si el proyecto se borró pero quedaron demos, invalida el sitio igual, refresca y muestra el error", async () => {
-    servicio.borrarProyecto.mockResolvedValue({
-      ok: false,
-      error: "parcial",
-      mensaje: "Se borró el proyecto, pero quedaron demos sin borrar.",
-    });
-    const r = await borrarProyectoAccion(ID, SIN_ERROR);
+describe("borrarProyectoAccion", () => {
+  it("toma el id del formulario (la lista entera comparte la acción, así el aviso no se va con la fila)", async () => {
+    await borrarProyectoAccion(SIN_ERROR, form({ id: ID }));
+    expect(servicio.borrarProyecto).toHaveBeenCalledWith(ID);
+  });
+
+  it("si el proyecto se borró pero quedaron demos, invalida el sitio, refresca y devuelve el aviso", async () => {
+    servicio.borrarProyecto.mockResolvedValue({ ok: true, aviso: "Se borró el proyecto, pero quedaron demos sin borrar." });
+    const r = await borrarProyectoAccion(SIN_ERROR, form({ id: ID }));
     expect(r).toEqual({ error: "Se borró el proyecto, pero quedaron demos sin borrar." });
     expect(updateTag).toHaveBeenCalledWith(TAG_CONTENIDO);
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("si el servicio lanza (no se sabe si borró), invalida el sitio igual y deja pasar el error", async () => {
+    servicio.borrarProyecto.mockRejectedValue(new Error("MongoNetworkError"));
+    await expect(borrarProyectoAccion(SIN_ERROR, form({ id: ID }))).rejects.toThrow("MongoNetworkError");
+    expect(updateTag).toHaveBeenCalledWith(TAG_CONTENIDO);
   });
 });

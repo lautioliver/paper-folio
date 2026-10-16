@@ -200,19 +200,28 @@ describe("borrarProyecto", () => {
     expect(await Demo.countDocuments({ proyecto: otro })).toBe(1);
   });
 
-  it("si borrar las demos falla, el proyecto queda borrado y devuelve `parcial` con un mensaje claro", async () => {
+  it("si borrar las demos falla, el proyecto queda borrado y devuelve ok con un aviso claro", async () => {
     const id = await crear("demos-trabadas");
     await Demo.create({ proyecto: id, titulo: "Demo", url: "https://demo.example.com" });
     const espia = vi.spyOn(Demo, "deleteMany").mockRejectedValueOnce(new Error("se cortó la conexión"));
-    const aviso = vi.spyOn(console, "error").mockImplementation(() => {});
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const r = await borrarProyecto(id);
+      expect(r.ok).toBe(true);
+      expect(r.ok && r.aviso).toMatch(/demos/);
+      expect(await Proyecto.exists({ _id: id })).toBeNull();
+      // Del error se loguea solo el nombre.
+      expect(JSON.stringify(log.mock.calls)).not.toContain("se cortó la conexión");
+    } finally {
+      espia.mockRestore();
+      log.mockRestore();
+    }
+  });
+
+  it("un borrado completo no trae aviso", async () => {
+    const id = await crear("sin-aviso");
     const r = await borrarProyecto(id);
-    expect(r).toMatchObject({ ok: false, error: "parcial" });
-    expect(!r.ok && r.mensaje).toMatch(/demos/);
-    expect(await Proyecto.exists({ _id: id })).toBeNull();
-    // Del error se loguea solo el nombre.
-    expect(JSON.stringify(aviso.mock.calls)).not.toContain("se cortó la conexión");
-    espia.mockRestore();
-    aviso.mockRestore();
+    expect(r).toEqual({ ok: true });
   });
 
   it("un id inválido o inexistente da no-encontrado", async () => {
