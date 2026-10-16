@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Rol } from "@/models/Usuario";
 import { evaluarAcceso, rutaInterna, type EstadoRol, type SesionMinima } from "./acceso";
 
@@ -10,8 +11,23 @@ export type DecisionIngreso =
   | { accion: "redirigir"; destino: string }
   // aviso "sesion": el token existe pero el usuario no está en la base; se ofrece salir e ingresar de nuevo.
   // aviso "bloqueada": la cuenta está bloqueada; solo se ofrece salir.
-  // aviso "denegado": Auth.js rechazó el ingreso (`signIn` dio false: cuenta bloqueada o email sin verificar).
-  | { accion: "mostrar"; aviso: "sesion" | "bloqueada" | "denegado" | "verificacion" | null; callbackUrl: string };
+  // aviso "denegado": Auth.js rechazó el ingreso (`signIn` dio false: email sin verificar).
+  // aviso "reintentar": `signIn` no pudo comprobar la cuenta (la base no respondió).
+  // aviso "generico": cualquier otro error de Auth.js (Configuration, OAuthCallbackError…). El detalle es #45.
+  | { accion: "mostrar"; aviso: AvisoIngreso; callbackUrl: string };
+
+export type AvisoIngreso = "sesion" | "bloqueada" | "denegado" | "reintentar" | "generico" | "verificacion" | null;
+
+// Los `error` que /ingresar conoce. Los manda la app (`urlDeIngreso`, `permiteIngreso`) o Auth.js (`pages.error`).
+const errorConocido = z.enum(["sesion", "bloqueado", "verificacion", "AccessDenied"]);
+const AVISO_DE_ERROR = { sesion: null, bloqueado: "bloqueada", verificacion: "reintentar", AccessDenied: "denegado" } as const;
+
+/** Aviso para el `error` de la URL sin sesión: uno por código conocido, "generico" para el resto. */
+function avisoDeError(error: string | string[] | undefined): AvisoIngreso {
+  if (typeof error !== "string" || error === "") return null;
+  const conocido = errorConocido.safeParse(error);
+  return conocido.success ? AVISO_DE_ERROR[conocido.data] : "generico";
+}
 
 /**
  * A dónde lleva /ingresar según la sesión, `error` y `callbackUrl` (ADR-002 R-5). El `callbackUrl` pasa
@@ -34,8 +50,8 @@ export function decidirIngreso(entrada: {
     return { accion: "mostrar", aviso: "sesion", callbackUrl };
   }
   if (entrada.sesion === "valida") return { accion: "redirigir", destino: callbackUrl };
-  // Auth.js manda acá sus errores (`pages.error` en src/auth.ts); AccessDenied es el de `signIn` en false.
-  return { accion: "mostrar", aviso: entrada.error === "AccessDenied" ? "denegado" : null, callbackUrl };
+  // Auth.js manda acá sus errores (`pages.error` en src/auth.ts) y `signIn` sus URLs (`permiteIngreso`).
+  return { accion: "mostrar", aviso: avisoDeError(entrada.error), callbackUrl };
 }
 
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */

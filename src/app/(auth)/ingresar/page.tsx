@@ -60,13 +60,31 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
     return (
       <>
         <p role="alert" className="mt-6 text-cuerpo">
-          No pudimos dejarte ingresar: la cuenta de Google tiene que tener el email verificado y no estar bloqueada en
-          el sitio. Si creés que es un error, escribinos por el formulario de contacto.
+          No pudimos dejarte ingresar: la cuenta de Google tiene que tener el email verificado. Si creés que es un
+          error, escribinos por el formulario de contacto.
         </p>
         <form action={ingresarConGoogle} className="mt-8">
           <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
           <button type="submit" className={BOTON}>
             Probar con otra cuenta
+          </button>
+        </form>
+      </>
+    );
+  }
+
+  if (decision.aviso === "reintentar" || decision.aviso === "generico") {
+    return (
+      <>
+        <p role="alert" className="mt-6 text-cuerpo">
+          {decision.aviso === "reintentar"
+            ? "No pudimos verificar tu cuenta. Probá de nuevo en un rato."
+            : "No pudimos completar el ingreso. Probá de nuevo."}
+        </p>
+        <form action={ingresarConGoogle} className="mt-8">
+          <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
+          <button type="submit" className={BOTON}>
+            Continuar con Google
           </button>
         </form>
       </>

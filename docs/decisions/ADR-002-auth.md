@@ -36,14 +36,14 @@ La consigna pide registro obligatorio para ver el detalle de proyectos y demos (
 
 ## Enmienda 2026-10-15 — roles desde el panel (#49)
 
-Origen: épica #46, decisión 4. Aprobada por @lautioliver en el chat y en el issue: https://github.com/lautioliver/paper-folio/issues/49#issuecomment-6223816750.
+Origen: épica #46, decisión 4. Aprobada por @lautioliver en el chat y en el issue: https://github.com/lautioliver/paper-folio/issues/49#issuecomment-6223816750. El plan de migración de abajo (`normalizarLegados()` y `ADMIN_EMAILS` sumado al leer sin guardarse) lo aprobó aparte: https://github.com/lautioliver/paper-folio/issues/49#issuecomment-6224450832.
 
 **R-4 (nueva). El rol vive en `usuarios` y lo asigna el admin en `/panel/usuarios`:**
 
 - Todo usuario nuevo es `usuario`. El ingreso no toca el rol guardado.
 - Los emails de `ADMIN_EMAILS` son `admin` siempre: el panel no los degrada ni los bloquea. Ese admin **no se guarda**: `buscarRol` lo suma al leer, así sacar un email de la lista le quita el admin aunque su sesión siga viva (vuelve a su rol guardado).
 - `OPERADOR_EMAILS` deja de usarse: el operador se asigna desde el panel.
-- **Bloquear** una cuenta (`bloqueado: true`) impide el ingreso (el callback `signIn` devuelve `false`) y, como R-3 relee la base en cada permiso, corta sus sesiones abiertas: `evaluarAcceso` da el motivo `bloqueado` (las páginas redirigen a `/ingresar?…&error=bloqueado`, las APIs responden `403 CUENTA_BLOQUEADA`).
+- **Bloquear** una cuenta (`bloqueado: true`) impide el ingreso (el callback `signIn` la niega y la manda a `/ingresar?error=bloqueado`; si la base no responde, también niega, con `error=verificacion`) y, como R-3 relee la base en cada permiso, corta sus sesiones abiertas: `evaluarAcceso` da el motivo `bloqueado` (las páginas redirigen a `/ingresar?…&error=bloqueado`, las APIs responden `403 CUENTA_BLOQUEADA`).
 - Un admin no se cambia el rol ni se bloquea a sí mismo, y el sitio nunca se queda sin ningún admin vigente: no se le quita el rol ni se bloquea al último (contando los de `ADMIN_EMAILS`). Las reglas están en `revisarCambio` (`src/lib/acceso.ts`).
 
 **Datos de antes.** Hasta esta enmienda el `rol` guardado se recalculaba con las dos listas en cada ingreso, y no valía al leer: un documento viejo puede tener el rol de alguien que salió de una lista y no volvió a ingresar. Esos documentos no tienen `bloqueado`, y no se les cree el rol: valen `usuario` (más `ADMIN_EMAILS`) y se normalizan a `usuario` al ingresar o al abrir el panel. Quien era `operador` por `OPERADOR_EMAILS` lo tiene que volver a recibir desde el panel.
