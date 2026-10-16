@@ -67,7 +67,13 @@ export async function crearConsulta(
   const ahora = opciones.ahora?.() ?? new Date();
 
   await conectar();
-  await asegurarIndicesDe(Consulta);
+  try {
+    await asegurarIndicesDe(Consulta);
+  } catch (error) {
+    // Sin los índices la consulta se guarda igual (el conteo por IP es más lento); se reintenta en la próxima.
+    // El formulario público no puede fallar por esto. Solo el nombre: el mensaje puede traer la URI.
+    console.error("crearConsulta: no se pudo crear el índice de consultas:", nombreDe(error));
+  }
 
   const recientes = await Consulta.countDocuments({
     ipHash,

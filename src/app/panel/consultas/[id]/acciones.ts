@@ -19,9 +19,10 @@ function campo(formData: FormData, nombre: string): string | null {
 }
 
 function responder(r: ResultadoSeguimiento): EstadoAccion {
-  if (!r.ok) return { error: r.mensaje };
-  refresh();
-  return { error: null };
+  // Una transición inválida suele ser una pantalla vieja (otro operador la cambió en el medio): se refresca
+  // igual, así se ve el estado real junto con el mensaje.
+  if (r.ok || r.error === "transicion-invalida") refresh();
+  return { error: r.ok ? null : r.mensaje };
 }
 
 /** Cambia el estado de la consulta `id` al del campo `estado`. */

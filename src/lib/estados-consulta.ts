@@ -17,13 +17,14 @@ export const ETIQUETAS_ESTADO: Record<EstadoConsulta, string> = {
 };
 
 /**
- * A qué estados se puede pasar a mano desde cada uno: `nueva → en_curso → respondida → archivada`, y desde
- * `archivada` se vuelve a `en_curso`. A `nueva` no se vuelve nunca. Responder por email (#40) es otro camino.
+ * A qué estados se puede pasar a mano desde cada uno: `nueva → en_curso → respondida → archivada`; desde
+ * `archivada` y desde `respondida` se vuelve a `en_curso`, y una `nueva` se puede archivar directo (spam).
+ * A `nueva` no se vuelve nunca. Responder por email (#40) es otro camino.
  */
 export const TRANSICIONES: Record<EstadoConsulta, readonly EstadoConsulta[]> = {
-  nueva: ["en_curso"],
+  nueva: ["en_curso", "archivada"],
   en_curso: ["respondida"],
-  respondida: ["archivada"],
+  respondida: ["archivada", "en_curso"],
   archivada: ["en_curso"],
 };
 

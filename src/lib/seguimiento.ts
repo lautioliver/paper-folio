@@ -143,11 +143,14 @@ export async function cambiarEstado(
 
   const actual = await Consulta.findById(id, { estado: 1 }).lean();
   if (!actual) return NO_ENCONTRADA;
-  const desde = ETIQUETAS_ESTADO[estadoLeido(actual.estado)];
+  const desde = estadoLeido(actual.estado);
   return {
     ok: false,
     error: "transicion-invalida",
-    mensaje: `No se puede pasar de ${desde} a ${ETIQUETAS_ESTADO[hacia.data]}.`,
+    mensaje:
+      desde === hacia.data
+        ? `La consulta ya está ${ETIQUETAS_ESTADO[desde]}.`
+        : `No se puede pasar de ${ETIQUETAS_ESTADO[desde]} a ${ETIQUETAS_ESTADO[hacia.data]}.`,
   };
 }
 
