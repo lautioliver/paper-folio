@@ -8,7 +8,7 @@ function Aviso() {
   const ruta = usePathname();
   // Una vez por cambio de ruta y por vuelta desde /ingresar o /panel (Activity), pero no dos veces por el
   // doble efecto de StrictMode: ver `crearDeduplicador`.
-  const [deduplicador] = useState(crearDeduplicador);
+  const [deduplicador] = useState(() => crearDeduplicador({ produccion: process.env.NODE_ENV === "production" }));
 
   useEffect(() => {
     if (!deduplicador.montar(ruta)) return () => deduplicador.desmontar();

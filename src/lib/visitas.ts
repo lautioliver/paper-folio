@@ -21,7 +21,8 @@ export type ResultadoVisita = "contada" | "descartada";
 /** Clave de las visitas a rutas que no son del sitio (un slug que no existe, un 404). */
 export const RUTA_OTRA = "otra";
 
-// Las páginas fijas del grupo `(sitio)`. Una página pública nueva se suma acá para contarse con su ruta.
+// Las páginas fijas del grupo `(sitio)`. Una página pública nueva se suma acá para contarse con su ruta (un test
+// compara esta lista con los `page.tsx` de `src/app/(sitio)`).
 export const RUTAS_FIJAS: ReadonlySet<string> = new Set(["/", "/proyectos", "/cuenta"]);
 const DETALLE = /^\/proyectos\/([a-z0-9-]+)$/;
 
@@ -106,7 +107,6 @@ export async function registrarVisita(datos: DatosVisita, ahora: Date = new Date
   const ruta = normalizarRuta(datos.ruta);
   if (datos.esAdmin || seDescartaSinSesion(ruta, datos.userAgent)) return "descartada";
 
-  const clave = await claveDeRuta(ruta);
   const fecha = fechaDeVisita(ahora);
   const idHash = createHash("sha256")
     .update(datos.visitanteId + fecha)
@@ -114,7 +114,11 @@ export async function registrarVisita(datos: DatosVisita, ahora: Date = new Date
 
   await conectar();
   // Sin el índice único, el upsert podría duplicar el contador del día: si no se puede crear, no se cuenta.
-  await Promise.all([asegurarIndicesDe(VisitaDiaria), asegurarIndicesDe(VisitanteDiario)]);
+  const [clave] = await Promise.all([
+    claveDeRuta(ruta),
+    asegurarIndicesDe(VisitaDiaria),
+    asegurarIndicesDe(VisitanteDiario),
+  ]);
   await Promise.all([
     VisitaDiaria.updateOne({ fecha, ruta: clave }, { $inc: { total: 1 } }, { upsert: true }),
     VisitanteDiario.create({ fecha, idHash }).catch((error: unknown) => {
