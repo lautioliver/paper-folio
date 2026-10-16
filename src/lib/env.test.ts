@@ -175,6 +175,8 @@ describe("leerGmailConfig (respuestas por SMTP de Gmail, #40)", () => {
     expect(() => leerGmailConfig({})).toThrow(/GMAIL_USER: falta/);
     expect(() => leerGmailConfig({ GMAIL_USER: "", GMAIL_APP_PASSWORD: "" })).toThrow(/GMAIL_USER: falta/);
     expect(() => leerGmailConfig({ GMAIL_USER: "", GMAIL_APP_PASSWORD: "" })).toThrow(/GMAIL_APP_PASSWORD: falta/);
+    // Vacía es un solo problema: no suma "debe tener 16 caracteres" (hallazgo de la autorevisión).
+    expect(() => leerGmailConfig({ GMAIL_USER: "a@b.com", GMAIL_APP_PASSWORD: "" })).not.toThrow(/16 caracteres/);
     expect(() =>
       leerGmailConfig({ GMAIL_USER: "no-es-email", GMAIL_APP_PASSWORD: "abcdabcdabcdabcd" }),
     ).toThrow(/GMAIL_USER: debe ser un email/);

@@ -78,7 +78,8 @@ describe("responderConsulta: envío correcto", () => {
     const m = enviados[0];
     expect(m.to).toEqual({ name: "Ada Lovelace", address: "ada@example.com" });
     expect(m.from).toBe(GMAIL_USER);
-    expect(m.subject).toBe("Re: tu consulta en Paperfolio (cotizacion)");
+    // El tipo va con su etiqueta en español, no con el identificador interno (hallazgo de la autorevisión).
+    expect(m.subject).toBe("Re: tu consulta en Paperfolio (Cotización de proyecto)");
     expect(m.html).toBeUndefined();
     expect(m.cc).toBeUndefined();
     expect(m.bcc).toBeUndefined();
@@ -148,20 +149,20 @@ describe("responderConsulta: envío fallido", () => {
     expect(logueado).not.toContain("ada@example.com");
   });
 
-  it("si el transporte se cuelga, corta por timeout, no cambia el estado y deja emailEnviado false", async () => {
+  it("si el transporte se cuelga, corta por timeout, no cambia el estado, deja emailEnviado false y avisa que puede llegar", async () => {
     const id = await insertar();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const close = vi.fn();
-    const t: TransporteEmail = { sendMail: () => new Promise(() => {}), close };
+    const t: TransporteEmail = { sendMail: () => new Promise(() => {}) };
     const r = await responderConsulta(id, "Hola", AUTOR, t, { timeoutMs: 50 });
     expect(r).toMatchObject({ ok: false, error: "envio-fallido" });
+    // nodemailer no se puede cancelar: el envío colgado puede terminar después (hallazgo de la autorevisión).
+    if (!r.ok) expect(r.mensaje).toMatch(/puede llegar igual/);
     const doc = await leer(id);
     expect(doc?.estado).toBe("en_curso");
     expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
-    expect(close).toHaveBeenCalled();
   });
 
-  it("sin las credenciales de Gmail no intenta enviar y queda como no enviada", async () => {
+  it("sin las credenciales de Gmail no intenta enviar ni ensucia el seguimiento", async () => {
     vi.stubEnv("GMAIL_USER", "");
     vi.stubEnv("GMAIL_APP_PASSWORD", "");
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -169,10 +170,25 @@ describe("responderConsulta: envío fallido", () => {
     const { t, enviados } = transporteOk();
     const r = await responderConsulta(id, "Hola", AUTOR, t);
     expect(r).toMatchObject({ ok: false, error: "envio-fallido" });
+    if (!r.ok) expect(r.mensaje).toContain("configuracion");
     expect(enviados).toHaveLength(0);
+    // No se intentó nada: reintentar no sirve hasta arreglar el entorno, y cada clic no suma una entrada.
     const doc = await leer(id);
     expect(doc?.estado).toBe("en_curso");
-    expect(doc?.seguimiento[0]).toMatchObject({ emailEnviado: false });
+    expect(doc?.seguimiento).toEqual([]);
+  });
+
+  it("si el email salió pero la consulta se borró mientras se enviaba, lo dice en vez de 'no existe'", async () => {
+    const id = await insertar();
+    const t: TransporteEmail = {
+      sendMail: vi.fn(async () => {
+        await Consulta.collection.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+        return {};
+      }),
+    };
+    const r = await responderConsulta(id, "Hola", AUTOR, t);
+    expect(r).toMatchObject({ ok: false, error: "no-encontrada" });
+    if (!r.ok) expect(r.mensaje).toMatch(/se envió/);
   });
 });
 
@@ -244,7 +260,9 @@ describe("responderConsulta: validaciones", () => {
     const r = await responderConsulta(id, "Hola", AUTOR, t);
     expect(r).toMatchObject({ ok: false, error: "envio-fallido" });
     expect(enviados).toHaveLength(0);
-    expect((await leer(id))?.estado).toBe("en_curso");
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("en_curso");
+    expect(doc?.seguimiento).toEqual([]);
   });
 
   it("un autor que no es un id es un error del llamador", async () => {
