@@ -38,7 +38,14 @@ function MensajeCampo({ id, texto }: { id: string; texto?: string }) {
  * Si el servidor rechaza el guardado, la acción devuelve lo que se mandó y un envío más: los campos se
  * vuelven a montar (`key`) con esos valores por defecto, así el reset de React no borra nada.
  */
-export function FormularioServicio({ id, inicial }: { id: string | null; inicial: ValoresFormulario }) {
+// La `key` es la versión del documento (`versionDe`, src/lib/version-formulario.ts): Next guarda en
+// <Activity> el DOM y el estado de las rutas visitadas, y sin esto, al volver a editar se veía lo de antes
+// del último guardado (y "Guardar" lo revertía). Si el documento no cambió, lo escrito se conserva.
+export function FormularioServicio(props: { id: string | null; inicial: ValoresFormulario; version: string }) {
+  return <FormularioConEstado key={props.version} id={props.id} inicial={props.inicial} />;
+}
+
+function FormularioConEstado({ id, inicial }: { id: string | null; inicial: ValoresFormulario }) {
   const [estado, guardar, guardando] = useActionState(guardarServicioAccion.bind(null, id), FORMULARIO_INICIAL);
   return (
     <form action={guardar} className="mt-6 grid max-w-2xl gap-4">

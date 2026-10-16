@@ -4,6 +4,7 @@ import { Demo } from "@/models/Demo";
 import { Proyecto } from "@/models/Proyecto";
 import { asegurarIndicesDe, conectar } from "./db";
 import { erroresPorCampo, proyectoEntradaEsquema, type ProyectoEntrada } from "./proyecto-entrada";
+import { versionDe } from "./version-formulario";
 
 // Escritura de los proyectos desde el panel (#51). Solo `admin`: el rol lo exigen las server actions
 // (`requerirRol`), no este módulo. Toda entrada se valida con `proyectoEntradaEsquema` antes de tocar la base.
@@ -103,7 +104,7 @@ export async function obtenerProyectoAdmin(id: string): Promise<ProyectoEditable
     },
     imagen: d.imagen ?? undefined,
     publicado: d.publicado ?? false,
-    version: "",
+    version: versionDe(d.actualizadoEn),
   };
 }
 

@@ -4,6 +4,7 @@ import { Servicio } from "@/models/Servicio";
 import { esUrlHttps } from "./contenido-esquemas";
 import { asegurarIndicesDe, conectar } from "./db";
 import { LARGO_DESCRIPCION, LARGO_TITULO, type CampoServicio } from "./servicios-campos";
+import { versionDe } from "./version-formulario";
 
 export { LARGO_DESCRIPCION, LARGO_TITULO, type CampoServicio } from "./servicios-campos";
 
@@ -130,6 +131,7 @@ type DocLeido = {
   imagen?: string | null;
   orden?: number | null;
   publicado?: boolean | null;
+  actualizadoEn?: Date | null;
 };
 
 function aAdmin(d: DocLeido): ServicioAdmin {
@@ -141,7 +143,7 @@ function aAdmin(d: DocLeido): ServicioAdmin {
     imagen: d.imagen ?? undefined,
     orden: d.orden ?? 0,
     publicado: d.publicado ?? false,
-    version: "",
+    version: versionDe(d.actualizadoEn),
   };
 }
 

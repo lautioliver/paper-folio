@@ -20,6 +20,7 @@ export default async function EditarDemoPage({ params }: PageProps<"/panel/demos
       <h1 className="text-h2 font-bold">Editar demo</h1>
       <FormularioDemo
         id={demo.id}
+        version={demo.version}
         proyectos={proyectos}
         inicial={{
           // Una demo huérfana arranca sin proyecto elegido: hay que elegir uno que exista.

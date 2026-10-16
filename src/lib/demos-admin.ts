@@ -2,8 +2,9 @@ import { z } from "zod";
 import { Demo } from "@/models/Demo";
 import { Proyecto } from "@/models/Proyecto";
 import { esUrlHttp, esUrlHttps } from "./contenido-esquemas";
-import { conectar } from "./db";
+import { asegurarIndicesDe, conectar } from "./db";
 import { LARGO_DESCRIPCION, LARGO_TITULO, type CampoDemo } from "./demos-campos";
+import { versionDe } from "./version-formulario";
 
 export { LARGO_DESCRIPCION, LARGO_TITULO, type CampoDemo } from "./demos-campos";
 
@@ -117,6 +118,7 @@ type DocLeido = {
   descripcion?: string | null;
   activa?: boolean | null;
   orden?: number | null;
+  actualizadaEn?: Date | null;
 };
 
 function aAdmin(d: DocLeido): DemoAdmin {
@@ -128,7 +130,7 @@ function aAdmin(d: DocLeido): DemoAdmin {
     descripcion: d.descripcion ?? "",
     activa: d.activa ?? true,
     orden: d.orden ?? 0,
-    version: "",
+    version: versionDe(d.actualizadaEn),
   };
 }
 
@@ -185,6 +187,8 @@ export async function crearDemo(entrada: EntradaDemo): Promise<ResultadoDemo> {
   const v = validarEntrada(entrada);
   if (!v.ok) return v;
   await conectar();
+  // `Demo` no crea sus índices solo (autoIndex: false): el del detalle tiene que existir (ADR-003).
+  await asegurarIndicesDe(Demo);
   const [existe, orden] = await Promise.all([Proyecto.exists({ _id: v.datos.proyecto }), siguienteOrden(v.datos.proyecto)]);
   if (!existe) return PROYECTO_INEXISTENTE;
   const doc = await new Demo({ ...v.datos, orden }).save();
@@ -251,7 +255,10 @@ export async function moverDemo(id: string, direccion: unknown): Promise<Resulta
   if (j < 0 || j >= docs.length) return { ok: true, id };
   [docs[i], docs[j]] = [docs[j], docs[i]];
   const cambios = docs.flatMap((d, orden) =>
-    d.orden === orden ? [] : [{ updateOne: { filter: { _id: d._id }, update: { $set: { orden } } } }],
+    // Con el proyecto en el filtro: si otro admin la pasó a otro proyecto en el medio, no se le pisa el orden.
+    d.orden === orden
+      ? []
+      : [{ updateOne: { filter: { _id: d._id, proyecto: demo.proyecto }, update: { $set: { orden } } } }],
   );
   if (cambios.length > 0) await Demo.bulkWrite(cambios);
   return { ok: true, id };

@@ -315,7 +315,14 @@ function Campos({
  * Formulario de un proyecto: crear (sin `id`) o editar. La validación que vale es la del servidor (Zod en el
  * servicio); los `required` y `maxLength` de acá solo ahorran un viaje. Si falla, vuelve lo que se mandó.
  */
-export function FormularioProyecto({ id, valores }: { id?: string; valores: ValoresFormulario }) {
+// La `key` es la versión del documento (`versionDe`, src/lib/version-formulario.ts): Next guarda en
+// <Activity> el DOM y el estado de las rutas visitadas, y sin esto, al volver a editar se veía lo de antes
+// del último guardado (y "Guardar" lo revertía). Si el documento no cambió, lo escrito se conserva.
+export function FormularioProyecto(props: { id?: string; valores: ValoresFormulario; version: string }) {
+  return <FormularioConEstado key={props.version} id={props.id} valores={props.valores} />;
+}
+
+function FormularioConEstado({ id, valores }: { id?: string; valores: ValoresFormulario }) {
   const accion = id ? actualizarProyectoAccion.bind(null, id) : crearProyectoAccion;
   const [estado, enviar, enviando] = useActionState(accion, FORMULARIO_INICIAL);
   const [subiendo, setSubiendo] = useState(false);

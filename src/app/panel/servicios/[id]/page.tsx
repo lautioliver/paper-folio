@@ -16,6 +16,7 @@ export default async function EditarServicioPage({ params }: PageProps<"/panel/s
       <h1 className="text-h2 font-bold">Editar servicio</h1>
       <FormularioServicio
         id={servicio.id}
+        version={servicio.version}
         inicial={{
           titulo: servicio.titulo,
           descripcion: servicio.descripcion,

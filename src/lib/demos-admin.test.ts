@@ -212,6 +212,9 @@ describe("listar y obtener", () => {
 describe("índices (ADR-003)", () => {
   it("crear una demo en una base sin seed crea el índice del detalle", async () => {
     await Demo.collection.drop().catch(() => {});
+    // Los índices se aseguran una vez por conexión: reconectar simula un proceso nuevo contra esta base.
+    await desconectar();
+    await conectar();
     await crear();
     const nombres = (await Demo.collection.indexes()).map((i) => i.name);
     expect(nombres).toContain("proyecto_1_activa_1_orden_1");

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { proyectosParaDemos } from "@/lib/demos-admin";
 import { requerirRol } from "@/lib/permisos";
+import { VERSION_NUEVO } from "@/lib/version-formulario";
 import { RUTA_NUEVO_PROYECTO } from "../../proyectos/ruta";
 import { FormularioDemo } from "../formulario";
 import { RUTA_NUEVA_DEMO } from "../rutas";
@@ -27,6 +28,7 @@ export default async function NuevaDemoPage() {
       ) : (
         <FormularioDemo
           id={null}
+          version={VERSION_NUEVO}
           proyectos={proyectos}
           inicial={{ proyecto: "", titulo: "", url: "", descripcion: "", activa: true }}
         />
