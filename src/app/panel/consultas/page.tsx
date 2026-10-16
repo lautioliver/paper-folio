@@ -2,12 +2,11 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ChipEstado } from "@/components/panel/ChipEstado";
 import {
-  ESTADOS_CONSULTA,
-  ETIQUETAS_ESTADO,
   listarConsultas,
   parsearFiltros,
   type FiltrosValidos,
 } from "@/lib/bandeja";
+import { ESTADOS_CONSULTA, ETIQUETAS_ESTADO } from "@/lib/estados-consulta";
 import { CONTACT_TYPE_LABELS, CONTACT_TYPES } from "@/lib/contact";
 import { requerirRol } from "@/lib/permisos";
 

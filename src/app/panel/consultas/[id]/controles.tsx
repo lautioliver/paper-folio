@@ -3,13 +3,13 @@
 import { useActionState } from "react";
 import {
   ETIQUETAS_ESTADO,
+  LARGO_MAXIMO_NOTA,
   TRANSICIONES,
   type EstadoConsulta,
 } from "@/lib/estados-consulta";
 import { agregarNotaAccion, cambiarEstadoAccion } from "./acciones";
 import { SIN_ERROR } from "./tipos";
 
-const LARGO_MAXIMO_NOTA = 2000; // el mismo de src/lib/seguimiento.ts (el servidor es el que valida)
 const campo = "contorno bg-papel px-3 py-2 text-pequeno";
 const boton =
   "marca apretable bg-tinta px-5 py-2 text-pequeno font-bold text-papel disabled:opacity-60";
@@ -85,6 +85,8 @@ export function ControlesConsulta({
           name="texto"
           required
           maxLength={LARGO_MAXIMO_NOTA}
+          // React resetea el formulario al terminar la acción: si falló, la nota vuelve en `texto`.
+          defaultValue={estadoNota.texto ?? ""}
           rows={4}
           className={`${campo} w-full`}
           aria-describedby="error-nota"

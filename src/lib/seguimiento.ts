@@ -6,12 +6,12 @@ import { conectar } from "./db";
 import {
   ESTADOS_CONSULTA,
   ETIQUETAS_ESTADO,
-  esEstadoConsulta,
+  estadoLeido,
+  filtroDeEstados,
+  LARGO_MAXIMO_NOTA,
   origenesDe,
   type EstadoConsulta,
 } from "./estados-consulta";
-
-export const LARGO_MAXIMO_NOTA = 2000;
 
 export type TipoSeguimiento = "nota" | "respuesta" | "estado";
 
@@ -96,7 +96,7 @@ export async function obtenerConsulta(id: string): Promise<DetalleConsulta | nul
     email: d.email,
     tipo: d.tipo,
     mensaje: d.mensaje,
-    estado: d.estado,
+    estado: estadoLeido(d.estado),
     emailEnviado: d.emailEnviado,
     creadaEn: d.creadaEn,
     seguimiento: entradas.map((e) => {
@@ -131,7 +131,8 @@ export async function cambiarEstado(
 
   await conectar();
   const r = await Consulta.updateOne(
-    { _id: id, estado: { $in: origenesDe(hacia.data) } },
+    // `filtroDeEstados` incluye un estado desconocido o ausente entre los orígenes de `nueva` (`estadoLeido`).
+    { _id: id, estado: filtroDeEstados(origenesDe(hacia.data)) },
     {
       $set: { estado: hacia.data },
       $push: { seguimiento: { tipo: "estado", texto: hacia.data, autor, fecha: new Date() } },
@@ -142,7 +143,7 @@ export async function cambiarEstado(
 
   const actual = await Consulta.findById(id, { estado: 1 }).lean();
   if (!actual) return NO_ENCONTRADA;
-  const desde = esEstadoConsulta(actual.estado) ? ETIQUETAS_ESTADO[actual.estado] : "su estado actual";
+  const desde = ETIQUETAS_ESTADO[estadoLeido(actual.estado)];
   return {
     ok: false,
     error: "transicion-invalida",
@@ -150,14 +151,20 @@ export async function cambiarEstado(
   };
 }
 
-/** Agrega una nota (1 a `LARGO_MAXIMO_NOTA` caracteres, sin los espacios de los bordes) al seguimiento. */
+/**
+ * Agrega una nota (1 a `LARGO_MAXIMO_NOTA` caracteres, sin los espacios de los bordes y con los saltos de
+ * línea normalizados a LF) al seguimiento.
+ */
 export async function agregarNota(
   id: string,
   texto: unknown,
   autor: string,
 ): Promise<ResultadoSeguimiento> {
   exigirAutor(autor, "agregarNota");
-  const nota = notaSchema.safeParse(texto);
+  // El navegador manda los saltos de línea como CRLF, pero el `maxLength` del textarea los cuenta como uno.
+  const nota = notaSchema.safeParse(
+    typeof texto === "string" ? texto.replace(/\r\n?/g, "\n") : texto,
+  );
   if (!nota.success) {
     return {
       ok: false,

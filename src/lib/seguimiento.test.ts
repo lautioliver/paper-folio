@@ -5,9 +5,9 @@ import { desconectar } from "./db";
 import {
   agregarNota,
   cambiarEstado,
-  LARGO_MAXIMO_NOTA,
   obtenerConsulta,
 } from "./seguimiento";
+import { LARGO_MAXIMO_NOTA } from "./estados-consulta";
 import { Consulta } from "@/models/Consulta";
 import { Usuario } from "@/models/Usuario";
 

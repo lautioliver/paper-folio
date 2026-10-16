@@ -2,15 +2,14 @@ import { z } from "zod";
 import { Consulta } from "@/models/Consulta";
 import { CONTACT_TYPES, type ContactType } from "./contact";
 import { asegurarIndicesDe, conectar } from "./db";
-import { ESTADOS_CONSULTA, type EstadoConsulta } from "./estados-consulta";
-
-export const POR_PAGINA = 20;
-// Los estados viven en un módulo puro (los usa también el modelo); se reexportan por compatibilidad.
-export {
+import {
   ESTADOS_CONSULTA,
-  ETIQUETAS_ESTADO,
+  estadoLeido,
+  filtroDeEstados,
   type EstadoConsulta,
 } from "./estados-consulta";
+
+export const POR_PAGINA = 20;
 
 const LARGO_EXTRACTO = 140;
 
@@ -95,12 +94,21 @@ export async function listarConsultas(
   filtros: FiltrosValidos,
 ): Promise<Bandeja> {
   const { tipo, estado, pagina: pedida } = filtros;
-  const filtro: { tipo?: ContactType; estado?: EstadoConsulta } = {};
+  const filtro: { tipo?: ContactType; estado?: ReturnType<typeof filtroDeEstados> } = {};
   if (tipo) filtro.tipo = tipo;
-  if (estado) filtro.estado = estado;
+  if (estado) filtro.estado = filtroDeEstados([estado]);
 
   await conectar();
-  await asegurarIndicesDe(Consulta);
+  try {
+    await asegurarIndicesDe(Consulta);
+  } catch (error) {
+    // Sin el índice la bandeja anda igual (más lenta); se reintenta en la próxima. Solo el nombre del error:
+    // el mensaje puede traer la URI de la base.
+    console.error(
+      "listarConsultas: no se pudo crear el índice de consultas:",
+      error instanceof Error ? error.name : "error",
+    );
+  }
   const total = await Consulta.countDocuments(filtro);
   const paginas = Math.ceil(total / POR_PAGINA);
   const pagina = Math.min(pedida, Math.max(paginas, 1));
@@ -120,7 +128,7 @@ export async function listarConsultas(
     id: String(d._id),
     nombre: d.nombre,
     tipo: d.tipo,
-    estado: d.estado,
+    estado: estadoLeido(d.estado),
     extracto: extractoDe(d.mensaje),
     creadaEn: d.creadaEn,
   }));

@@ -41,5 +41,7 @@ export async function agregarNotaAccion(
   formData: FormData,
 ): Promise<EstadoAccion> {
   const sesion = await requerirRol(rutaDelDetalle(id), "operador", "admin");
-  return responder(await agregarNota(id, campo(formData, "texto"), sesion.id));
+  const texto = campo(formData, "texto");
+  const r = responder(await agregarNota(id, texto, sesion.id));
+  return { ...r, texto: r.error ? (texto ?? "") : "" };
 }

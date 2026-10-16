@@ -130,7 +130,12 @@ describe("hallazgos de la autorevisión", () => {
 
 describe("estado guardado desconocido o ausente (#39)", () => {
   it("se muestra como nueva y entra en el filtro de nueva, no en los demás", async () => {
-    await sembrar(3, (i) => ({ estado: ["raro", "nueva", "archivada"][i] }));
+    // Por el driver: el schema de #39 ya no deja guardar "raro", pero un documento viejo lo puede tener.
+    await sembrar(3, (i) => ({ estado: ["nueva", "nueva", "archivada"][i] }));
+    await Consulta.collection.updateOne(
+      { nombre: "Persona 0" },
+      { $set: { estado: "raro" } },
+    );
     await Consulta.collection.insertOne({
       nombre: "Sin estado",
       email: "s@example.com",
