@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leerEmailConfig, leerEnv, leerIpHashSal, leerAuthConfig, leerAuthRoles } from "./env";
+import { leerEmailConfig, leerEnv, leerIpHashSal, leerAuthConfig, leerAdminEmails } from "./env";
 import { leerBlobConfig, leerGmailConfig } from "./env";
 
 const valida = { MONGODB_URI: "mongodb://localhost:27017", MONGODB_DB: "paperfolio-dev" };
@@ -128,13 +128,10 @@ describe("leerAuthConfig", () => {
   });
 });
 
-describe("leerAuthRoles", () => {
-  it("devuelve las listas tal cual y vacías si no están", () => {
-    expect(leerAuthRoles({ ADMIN_EMAILS: "a@example.com", OPERADOR_EMAILS: "o@example.com" })).toEqual({
-      admin: "a@example.com",
-      operador: "o@example.com",
-    });
-    expect(leerAuthRoles({})).toEqual({ admin: "", operador: "" });
+describe("leerAdminEmails", () => {
+  it("devuelve ADMIN_EMAILS tal cual, vacía si no está (OPERADOR_EMAILS ya no se lee, #49)", () => {
+    expect(leerAdminEmails({ ADMIN_EMAILS: "a@example.com", OPERADOR_EMAILS: "o@example.com" })).toBe("a@example.com");
+    expect(leerAdminEmails({})).toBe("");
   });
 });
 

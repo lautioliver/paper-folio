@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("./usuarios", () => ({ buscarRol: (id: string) => buscarRol(id) }));
 
-import { requerirRolApi } from "./permisos";
+import { requerirRol, requerirRolApi, requerirSesion } from "./permisos";
 
 beforeEach(() => {
   auth.mockReset();
@@ -63,5 +63,30 @@ describe("requerirRolApi (#47)", () => {
     auth.mockResolvedValue({ user: { id: "o1", rol: "operador" } });
     buscarRol.mockResolvedValue("operador");
     expect(await requerirRolApi("operador", "admin")).toMatchObject({ ok: true, rol: "operador" });
+  });
+});
+
+describe("cuenta bloqueada (#49)", () => {
+  it("requerirRol redirige a /ingresar con error=bloqueado, aunque el token diga admin", async () => {
+    auth.mockResolvedValue({ user: { id: "b1", rol: "admin" } });
+    buscarRol.mockResolvedValue("bloqueado");
+    redirect.mockImplementation((u: string) => {
+      throw new Error(`NEXT_REDIRECT;${u}`);
+    });
+    await expect(requerirRol("/panel/usuarios", "admin")).rejects.toThrow(
+      "NEXT_REDIRECT;/ingresar?callbackUrl=%2Fpanel%2Fusuarios&error=bloqueado",
+    );
+    await expect(requerirSesion("/cuenta")).rejects.toThrow("error=bloqueado");
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it("requerirRolApi: 403 CUENTA_BLOQUEADA", async () => {
+    auth.mockResolvedValue({ user: { id: "b1", rol: "admin" } });
+    buscarRol.mockResolvedValue("bloqueado");
+    const r = await requerirRolApi("admin");
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.respuesta.status).toBe(403);
+    expect(await r.respuesta.json()).toMatchObject({ error: { codigo: "CUENTA_BLOQUEADA" } });
   });
 });

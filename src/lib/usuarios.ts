@@ -1,43 +1,37 @@
 import mongoose from "mongoose";
 import { z } from "zod";
+import { emailsDeLista, type EstadoRol } from "./acceso";
 import { asegurarIndicesDe, conectar } from "./db";
-import { leerAuthRoles } from "./env";
+import { leerAdminEmails } from "./env";
 import { Usuario, type Rol } from "@/models/Usuario";
 
-/** Emails separados por comas (`ADMIN_EMAILS`, `OPERADOR_EMAILS`). */
-export type ListasDeRoles = { admin: string; operador: string };
 export type DatosIngreso = { email: string; nombre?: string | null; imagen?: string | null };
 export type UsuarioIngresado = { id: string; email: string; rol: Rol };
 
 const emailValido = z.string().trim().toLowerCase().pipe(z.email());
 
-function emailsDe(lista: string): Set<string> {
-  return new Set(
-    lista
-      .split(",")
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
+/** Si el email está en `ADMIN_EMAILS` (lista separada por comas). */
+export function esAdminPorEntorno(email: string, adminEmails: string): boolean {
+  return emailsDeLista(adminEmails).has(email.trim().toLowerCase());
 }
 
-/** Rol que le toca a un email según las listas del entorno. Si está en las dos, gana admin. */
-export function rolParaEmail(email: string, listas: ListasDeRoles): Rol {
-  const normal = email.trim().toLowerCase();
-  if (emailsDe(listas.admin).has(normal)) return "admin";
-  if (emailsDe(listas.operador).has(normal)) return "operador";
-  return "usuario";
+/** Rol vigente: `admin` si el email está en `ADMIN_EMAILS`; si no, el guardado. STUB */
+export function rolVigente(email: string, guardado: Rol, adminEmails: string): Rol {
+  void email;
+  void adminEmails;
+  return guardado;
 }
 
-/**
- * Crea o actualiza el usuario que acaba de ingresar con Google (upsert por email).
- * El rol se recalcula en cada ingreso según `ADMIN_EMAILS` y `OPERADOR_EMAILS` (épica #31, decisión 3).
- */
+/** STUB */
+export async function normalizarLegados(): Promise<void> {}
+
+/** STUB: todavía recalcula con las listas. */
 export async function registrarIngreso(
   datos: DatosIngreso,
-  listas: ListasDeRoles = leerAuthRoles(),
+  adminEmails: string = leerAdminEmails(),
 ): Promise<UsuarioIngresado> {
   const email = emailValido.parse(datos.email);
-  const rol = rolParaEmail(email, listas);
+  const rol: Rol = esAdminPorEntorno(email, adminEmails) ? "admin" : "usuario";
   await conectar();
   await asegurarIndicesDe(Usuario);
   const doc = await Usuario.findOneAndUpdate(
@@ -51,14 +45,16 @@ export async function registrarIngreso(
   return { id: String(doc._id), email: doc.email, rol: doc.rol };
 }
 
-/**
- * Rol vigente de un usuario para los permisos. `null` si no existe.
- * Hasta el hito 5 los roles salen de `ADMIN_EMAILS` y `OPERADOR_EMAILS` (ADR-002 R-4): se recalculan
- * también al leer, así sacar a alguien de la lista le quita el rol aunque su sesión siga viva.
- */
-export async function buscarRol(id: string, listas: ListasDeRoles = leerAuthRoles()): Promise<Rol | null> {
+/** STUB */
+export async function buscarRol(id: string, adminEmails: string = leerAdminEmails()): Promise<EstadoRol> {
   if (!mongoose.isValidObjectId(id)) return null;
   await conectar();
   const doc = await Usuario.findById(id, { email: 1 }).lean();
-  return doc ? rolParaEmail(doc.email, listas) : null;
+  return doc ? (esAdminPorEntorno(doc.email, adminEmails) ? "admin" : "usuario") : null;
+}
+
+/** STUB */
+export async function usuarioBloqueado(email: string): Promise<boolean> {
+  void email;
+  return false;
 }

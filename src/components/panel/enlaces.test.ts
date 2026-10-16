@@ -7,6 +7,7 @@ describe("enlacesPara", () => {
     expect(etiquetas).toContain("Consultas");
     expect(etiquetas).not.toContain("Servicios");
     expect(etiquetas).not.toContain("Proyectos");
+    expect(etiquetas).not.toContain("Usuarios");
   });
 
   it("el admin ve Consultas, Proyectos y Servicios", () => {
@@ -15,6 +16,7 @@ describe("enlacesPara", () => {
         { href: "/panel/consultas", etiqueta: "Consultas" },
         { href: "/panel/proyectos", etiqueta: "Proyectos" },
         { href: "/panel/servicios", etiqueta: "Servicios" },
+        { href: "/panel/usuarios", etiqueta: "Usuarios" },
       ]),
     );
   });

@@ -1,14 +1,16 @@
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, rutaInterna, type SesionMinima } from "./acceso";
+import { evaluarAcceso, rutaInterna, type EstadoRol, type SesionMinima } from "./acceso";
 
 /** Estado de la sesión visto desde /ingresar: sin token, token con usuario en la base, o token huérfano. */
 // "error": hay token pero no se pudo comprobar contra la base (no responde).
-export type EstadoSesion = "ninguna" | "valida" | "huerfana" | "error";
+// "bloqueada" (#49): el usuario existe pero un admin lo bloqueó.
+export type EstadoSesion = "ninguna" | "valida" | "huerfana" | "bloqueada" | "error";
 
 export type DecisionIngreso =
   | { accion: "redirigir"; destino: string }
   // aviso "sesion": el token existe pero el usuario no está en la base; se ofrece salir e ingresar de nuevo.
-  | { accion: "mostrar"; aviso: "sesion" | "verificacion" | null; callbackUrl: string };
+  // aviso "bloqueada": la cuenta está bloqueada; solo se ofrece salir.
+  | { accion: "mostrar"; aviso: "sesion" | "bloqueada" | "verificacion" | null; callbackUrl: string };
 
 /**
  * A dónde lleva /ingresar según la sesión, `error` y `callbackUrl` (ADR-002 R-5). El `callbackUrl` pasa
@@ -42,7 +44,7 @@ export function puedeVerPanel(rol: Rol | null | undefined): boolean {
  */
 export async function comprobarSesion(
   sesion: SesionMinima,
-  buscar: (id: string) => Promise<Rol | null>,
+  buscar: (id: string) => Promise<EstadoRol>,
 ): Promise<EstadoSesion> {
   try {
     const acceso = await evaluarAcceso(sesion, [], buscar);

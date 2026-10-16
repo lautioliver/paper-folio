@@ -78,3 +78,23 @@ describe("comprobarSesion", () => {
     expect(await comprobarSesion(sesion, caida)).toBe("error");
   });
 });
+
+describe("cuenta bloqueada (#49)", () => {
+  const sesion = { user: { id: "b1", rol: "admin" as const } };
+  it("comprobarSesion → bloqueada", async () => {
+    expect(await comprobarSesion(sesion, async () => "bloqueado")).toBe("bloqueada");
+  });
+  it("decidirIngreso no redirige: avisa que está bloqueada", () => {
+    expect(decidirIngreso({ sesion: "bloqueada", callbackUrl: "/panel" })).toEqual({
+      accion: "mostrar",
+      aviso: "bloqueada",
+      callbackUrl: "/panel",
+    });
+  });
+  it("con error=bloqueado tampoco redirige una sesión que parece válida", () => {
+    expect(decidirIngreso({ sesion: "valida", error: "bloqueado", callbackUrl: "/panel" })).toMatchObject({
+      accion: "mostrar",
+      aviso: "bloqueada",
+    });
+  });
+});
