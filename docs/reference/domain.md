@@ -78,6 +78,8 @@ Modelo: `src/models/Demo.ts`. Un proyecto puede tener varias; el detalle muestra
 
 Índice `{ proyecto: 1, activa: 1, orden: 1 }`.
 
+**Desde el panel (#50):** la demo va con un proyecto que exista (publicado o no); título de 1 a 80 caracteres, descripción de hasta 300 y URL `https` (el modelo acepta también `http`, ADR-003 R-8, pero el panel no la deja guardar: así se puede embeber). El `orden` es por proyecto: una demo nueva, o una que cambia de proyecto, va al final de las de ese proyecto.
+
 ### Servicio (`servicios`)
 
 Modelo: `src/models/Servicio.ts`.
