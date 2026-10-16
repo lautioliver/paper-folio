@@ -78,3 +78,58 @@ describe("comprobarSesion", () => {
     expect(await comprobarSesion(sesion, caida)).toBe("error");
   });
 });
+
+describe("cuenta bloqueada (#49)", () => {
+  const sesion = { user: { id: "b1", rol: "admin" as const } };
+  it("comprobarSesion → bloqueada", async () => {
+    expect(await comprobarSesion(sesion, async () => "bloqueado")).toBe("bloqueada");
+  });
+  it("decidirIngreso no redirige: avisa que está bloqueada", () => {
+    expect(decidirIngreso({ sesion: "bloqueada", callbackUrl: "/panel" })).toEqual({
+      accion: "mostrar",
+      aviso: "bloqueada",
+      callbackUrl: "/panel",
+    });
+  });
+  it("si la desbloquearon (la base dice válida), error=bloqueado no la frena", () => {
+    expect(decidirIngreso({ sesion: "valida", error: "bloqueado", callbackUrl: "/panel" })).toEqual({
+      accion: "redirigir",
+      destino: "/panel",
+    });
+  });
+});
+
+describe("ingreso rechazado por Auth.js (error=AccessDenied, code-review)", () => {
+  it("sin sesión avisa que no pudo ingresar (cuenta bloqueada o sin verificar), sin redirigir", () => {
+    expect(decidirIngreso({ sesion: "ninguna", error: "AccessDenied", callbackUrl: "/cuenta" })).toEqual({
+      accion: "mostrar",
+      aviso: "denegado",
+      callbackUrl: "/cuenta",
+    });
+  });
+});
+
+describe("errores del ingreso en /ingresar (revisión del PR #69)", () => {
+  const mostrar = (error: string | string[] | undefined) => decidirIngreso({ sesion: "ninguna", error, callbackUrl: "/cuenta" });
+
+  it("error=bloqueado sin sesión (signIn de una cuenta bloqueada, o un link armado) avisa, pero deja ingresar con otra cuenta", () => {
+    // "bloqueada" (solo "Salir") queda para cuando la base dice que la sesión actual está bloqueada.
+    expect(mostrar("bloqueado")).toEqual({ accion: "mostrar", aviso: "ingreso-bloqueado", callbackUrl: "/cuenta" });
+  });
+
+  it("error=reintentar (la base no respondió en signIn) pide reintentar, sin culpar a la cuenta", () => {
+    expect(mostrar("reintentar")).toEqual({ accion: "mostrar", aviso: "reintentar", callbackUrl: "/cuenta" });
+  });
+
+  it("cualquier otro código de Auth.js muestra un aviso genérico (nunca el texto crudo)", () => {
+    for (const codigo of ["Configuration", "OAuthCallbackError", "<script>", "toString"]) {
+      expect(mostrar(codigo)).toEqual({ accion: "mostrar", aviso: "generico", callbackUrl: "/cuenta" });
+    }
+  });
+
+  it("sin error, con error=sesion o repetido, la pantalla normal", () => {
+    expect(mostrar(undefined)).toMatchObject({ aviso: null });
+    expect(mostrar("sesion")).toMatchObject({ aviso: null });
+    expect(mostrar(["Configuration", "x"])).toMatchObject({ aviso: null });
+  });
+});

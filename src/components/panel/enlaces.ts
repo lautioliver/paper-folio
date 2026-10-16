@@ -9,6 +9,7 @@ const SECCIONES: (EnlacePanel & { roles: readonly Rol[] })[] = [
   { href: "/panel/proyectos", etiqueta: "Proyectos", roles: ["admin"] },
   { href: "/panel/demos", etiqueta: "Demos", roles: ["admin"] },
   { href: "/panel/servicios", etiqueta: "Servicios", roles: ["admin"] },
+  { href: "/panel/usuarios", etiqueta: "Usuarios", roles: ["admin"] },
 ];
 
 /** Las secciones del panel que ve un rol, en orden. */

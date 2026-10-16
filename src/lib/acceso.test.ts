@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, respuestaSinAcceso, rutaInterna, urlDeIngreso } from "./acceso";
+import {
+  emailsDeLista,
+  evaluarAcceso,
+  permiteIngreso,
+  respuestaSinAcceso,
+  revisarCambio,
+  rutaInterna,
+  urlDeIngreso,
+} from "./acceso";
 
 const base: Record<string, Rol> = { u1: "usuario", o1: "operador", a1: "admin" };
 const buscarRol = async (id: string) => base[id] ?? null;
@@ -93,5 +101,104 @@ describe("respuestaSinAcceso (APIs, #47)", () => {
     const res = respuestaSinAcceso("sin-permiso");
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: { codigo: "SIN_PERMISO", mensaje: expect.any(String) } });
+  });
+});
+
+describe("usuario bloqueado (#49)", () => {
+  it("evaluarAcceso lo trata como sin permiso, aunque el token diga admin y no se pidan roles", async () => {
+    const bloqueado = async () => "bloqueado" as const;
+    expect(await evaluarAcceso(sesion("b1", "admin"), ["admin"], bloqueado)).toEqual({ ok: false, motivo: "bloqueado" });
+    expect(await evaluarAcceso(sesion("b1", "usuario"), [], bloqueado)).toEqual({ ok: false, motivo: "bloqueado" });
+  });
+
+  it("urlDeIngreso suma error=bloqueado (así /ingresar no lo devuelve a la página)", () => {
+    expect(urlDeIngreso("/panel", "bloqueado")).toBe("/ingresar?callbackUrl=%2Fpanel&error=bloqueado");
+  });
+
+  it("respuestaSinAcceso: 403 JSON CUENTA_BLOQUEADA", async () => {
+    const res = respuestaSinAcceso("bloqueado");
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: { codigo: "CUENTA_BLOQUEADA", mensaje: expect.any(String) } });
+  });
+});
+
+describe("permiteIngreso (callback signIn, #49)", () => {
+  const google = { proveedor: "google", emailVerificado: true, email: "v@example.com" };
+  const libre = async () => false;
+
+  it("una cuenta de Google verificada y no bloqueada ingresa", async () => {
+    expect(await permiteIngreso(google, libre)).toBe(true);
+  });
+
+  it("una cuenta bloqueada no ingresa: signIn la manda a /ingresar?error=bloqueado (revisión del PR #69)", async () => {
+    const consultados: string[] = [];
+    const bloqueada = async (email: string) => {
+      consultados.push(email);
+      return true;
+    };
+    expect(await permiteIngreso(google, bloqueada)).toBe("/ingresar?error=bloqueado");
+    expect(consultados).toEqual(["v@example.com"]);
+  });
+
+  it("sin email verificado, de otro proveedor o sin email no ingresa (y no consulta la base)", async () => {
+    let consultas = 0;
+    const contar = async () => {
+      consultas++;
+      return false;
+    };
+    expect(await permiteIngreso({ ...google, emailVerificado: false }, contar)).toBe(false);
+    expect(await permiteIngreso({ ...google, proveedor: "github" }, contar)).toBe(false);
+    expect(await permiteIngreso({ ...google, email: null }, contar)).toBe(false);
+    expect(consultas).toBe(0);
+  });
+
+  it("si la base falla, no ingresa y va a /ingresar?error=reintentar, no al aviso de cuenta (revisión del PR #69)", async () => {
+    const caida = async (): Promise<boolean> => {
+      throw new Error("MongoServerSelectionError");
+    };
+    expect(await permiteIngreso(google, caida)).toBe("/ingresar?error=reintentar");
+  });
+});
+
+describe("emailsDeLista", () => {
+  it("normaliza espacios y mayúsculas y descarta vacíos", () => {
+    expect([...emailsDeLista(" A@x.com ,, b@x.com ")]).toEqual(["a@x.com", "b@x.com"]);
+    expect(emailsDeLista("").size).toBe(0);
+  });
+});
+
+describe("revisarCambio (reglas del panel de usuarios, #49)", () => {
+  const usuario = { id: "u1", rol: "usuario" as Rol, bloqueado: false, porEntorno: false };
+  const admin = { id: "a2", rol: "admin" as Rol, bloqueado: false, porEntorno: false };
+  const deEntorno = { id: "e1", rol: "admin" as Rol, bloqueado: false, porEntorno: true };
+  const revisar = (objetivo: typeof usuario, cambio: Parameters<typeof revisarCambio>[0]["cambio"], otrosAdmins = 1) =>
+    revisarCambio({ actorId: "a1", objetivo, cambio, otrosAdmins });
+
+  it("un admin no se degrada ni se bloquea a sí mismo", () => {
+    const yo = { ...admin, id: "a1" };
+    expect(revisar(yo, { tipo: "rol", rol: "usuario" })).toBe("propio");
+    expect(revisar(yo, { tipo: "rol", rol: "operador" })).toBe("propio");
+    expect(revisar(yo, { tipo: "bloqueo", bloqueado: true })).toBe("propio");
+  });
+
+  it("un email de ADMIN_EMAILS no se degrada ni se bloquea", () => {
+    expect(revisar(deEntorno, { tipo: "rol", rol: "usuario" })).toBe("entorno");
+    expect(revisar(deEntorno, { tipo: "rol", rol: "operador" })).toBe("entorno");
+    expect(revisar(deEntorno, { tipo: "bloqueo", bloqueado: true })).toBe("entorno");
+  });
+
+  it("no se le quita el admin al único que queda", () => {
+    expect(revisar(admin, { tipo: "rol", rol: "operador" }, 0)).toBe("ultimo-admin");
+    expect(revisar(admin, { tipo: "bloqueo", bloqueado: true }, 0)).toBe("ultimo-admin");
+    expect(revisar(admin, { tipo: "rol", rol: "operador" }, 1)).toBeNull();
+  });
+
+  it("los cambios comunes pasan", () => {
+    expect(revisar(usuario, { tipo: "rol", rol: "operador" }, 0)).toBeNull();
+    expect(revisar(usuario, { tipo: "rol", rol: "admin" }, 0)).toBeNull();
+    expect(revisar(usuario, { tipo: "bloqueo", bloqueado: true }, 0)).toBeNull();
+    expect(revisar({ ...usuario, bloqueado: true }, { tipo: "bloqueo", bloqueado: false }, 0)).toBeNull();
+    // Desbloquear a uno de ADMIN_EMAILS (bloqueado a mano en la base) devuelve acceso: se permite.
+    expect(revisar({ ...deEntorno, bloqueado: true }, { tipo: "bloqueo", bloqueado: false })).toBeNull();
   });
 });

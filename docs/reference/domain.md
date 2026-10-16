@@ -37,16 +37,20 @@ No se guarda la IP ni el id de la cookie: solo su hash por día, así no se pued
 
 ## Usuario (`usuarios`)
 
-Modelo: `src/models/Usuario.ts`. Se crea o actualiza en cada ingreso con Google (`registrarIngreso`, `src/lib/usuarios.ts`). Ver [ADR-002](../decisions/ADR-002-auth.md).
+Modelo: `src/models/Usuario.ts`. Se crea o actualiza en cada ingreso con Google (`registrarIngreso`, `src/lib/usuarios.ts`) y lo administra el admin en `/panel/usuarios` (#49). Ver [ADR-002](../decisions/ADR-002-auth.md) y su enmienda.
 
 | Campo | Tipo | Detalle |
 |---|---|---|
 | `email` | string | Único, en minúsculas. Es la clave del upsert |
 | `nombre` | string | Nombre de la cuenta de Google |
 | `imagen` | string | URL del avatar de Google |
-| `rol` | `usuario` \| `operador` \| `admin` | Se recalcula en cada ingreso con `ADMIN_EMAILS` y `OPERADOR_EMAILS`. Es la fuente de verdad de los permisos |
+| `rol` | `usuario` \| `operador` \| `admin` | El guardado, `usuario` al crearse. Lo cambia el admin desde el panel; el ingreso no lo toca. Es la fuente de verdad de los permisos, más `ADMIN_EMAILS`: esos emails son `admin` siempre, pero ese admin no se guarda (se suma al leer, así sacarlos de la lista lo revoca) |
+| `bloqueado` | boolean | `false` por defecto (#49). Bloqueado, no ingresa (callback `signIn`) y sus sesiones abiertas pierden los permisos en el próximo pedido |
+| `accesos` | número | `0` por defecto (#49). Lo incrementa con `$inc` el hito 6; el panel solo lo muestra |
 | `creadoEn` | fecha | Primer ingreso |
 | `ultimoAcceso` | fecha | Último ingreso |
+
+Un documento de antes de #49 no tiene `bloqueado`: su `rol` se había calculado con `ADMIN_EMAILS` y `OPERADOR_EMAILS` en el último ingreso, y puede ser viejo. No se le cree: vale `usuario` (más `ADMIN_EMAILS`) y `normalizarLegados()` lo pasa a `usuario`, sin bloquear y con `accesos` en 0 al ingresar o al abrir el panel de usuarios. Idempotente, sin script ni migración aparte.
 
 ## Contenido administrable: `proyectos`, `demos` y `servicios`
 
