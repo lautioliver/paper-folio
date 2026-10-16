@@ -26,11 +26,11 @@ TODO: completar el resto de las entidades.
 
 ## Visitas del sitio: `visitas_diarias` y `visitantes_diarios` (#55, épica #53)
 
-Las cargas de las páginas del grupo `(sitio)` (`/`, `/proyectos`, `/proyectos/<slug>` y `/cuenta`, también un slug que da 404), contadas desde el navegador (`ContadorVisitas` → `POST /api/visitas` → `registrarVisita()` en `src/lib/visitas.ts`). No cuentan los bots (por user-agent; un user-agent vacío también), el panel (`/panel/**`), la API (`/api/**`) ni las cargas de un `admin` (rol releído de la base). `fecha` es el día en America/Argentina/Salta, como `YYYY-MM-DD`.
+Las cargas de las páginas del grupo `(sitio)` (`/`, `/proyectos`, `/proyectos/<slug>` y `/cuenta`), contadas desde el navegador (`ContadorVisitas` → `POST /api/visitas` → `registrarVisita()` en `src/lib/visitas.ts`). No cuentan los bots (por user-agent; un user-agent vacío también), el panel (`/panel/**`), la API (`/api/**`) ni las cargas de un `admin` (rol releído de la base). `fecha` es el día en America/Argentina/Salta, como `YYYY-MM-DD`.
 
 | Colección | Modelo | Campos | Índice |
 |---|---|---|---|
-| `visitas_diarias` | `src/models/VisitaDiaria.ts` | `fecha`, `ruta` (sin query ni hash ni barra final; `/proyectos/<slug>` tal cual), `total` | Único `{ fecha, ruta }`. `total` se suma con `$inc` y upsert: nunca se lee y escribe |
+| `visitas_diarias` | `src/models/VisitaDiaria.ts` | `fecha`, `ruta`, `total`. La ruta va sin query, hash ni barra final, y solo puede ser una de las fijas (`/`, `/proyectos`, `/cuenta`) o `/proyectos/<slug>` de un proyecto publicado (`listarProyectos`, cacheado). Cualquier otra, incluido un slug inexistente o un 404, va a la clave `otra` (`RUTA_OTRA`): a lo sumo una ruta por página real por día. Una página pública nueva se suma a `RUTAS_FIJAS` en `src/lib/visitas.ts` | Único `{ fecha, ruta }`. `total` se suma con `$inc` y upsert: nunca se lee y escribe |
 | `visitantes_diarios` | `src/models/VisitanteDiario.ts` | `fecha`, `idHash` = `sha256(id + fecha)` del id de la cookie `pf_v` | Único `{ fecha, idHash }`. El insert de un visitante que ya vino ese día choca con la clave y se ignora |
 
 No se guarda la IP ni el id de la cookie: solo su hash por día, así no se puede seguir a un visitante entre días. Los índices los crea `asegurarIndicesDe` en `registrarVisita()`; si no se pueden crear, la visita no se cuenta (sin el índice único el upsert podría duplicar el contador).

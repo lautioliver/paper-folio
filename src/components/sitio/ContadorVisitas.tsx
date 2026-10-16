@@ -1,16 +1,17 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { crearDeduplicador } from "@/lib/contador-visitas";
 
 function Aviso() {
   const ruta = usePathname();
-  // StrictMode (dev) corre el efecto dos veces en el montaje: la ref evita contar dos veces la misma carga.
-  const ultima = useRef<string | null>(null);
+  // Una vez por cambio de ruta y por vuelta desde /ingresar o /panel (Activity), pero no dos veces por el
+  // doble efecto de StrictMode: ver `crearDeduplicador`.
+  const [deduplicador] = useState(crearDeduplicador);
 
   useEffect(() => {
-    if (ultima.current === ruta) return;
-    ultima.current = ruta;
+    if (!deduplicador.montar(ruta)) return () => deduplicador.desmontar();
     // keepalive: el aviso llega aunque la persona cierre o cambie de página enseguida. Si falla, no pasa nada.
     fetch("/api/visitas", {
       method: "POST",
@@ -19,14 +20,15 @@ function Aviso() {
       keepalive: true,
       credentials: "same-origin",
     }).catch(() => {});
-  }, [ruta]);
+    return () => deduplicador.desmontar();
+  }, [deduplicador, ruta]);
 
   return null;
 }
 
 /**
- * Cuenta la visita desde el navegador (épica #53, decisión 1): un POST a `/api/visitas` por carga y por cambio
- * de ruta. Como corre en un efecto, el prerender y los prefetch no cuentan. Va en Suspense porque `usePathname`
+ * Cuenta la visita desde el navegador (épica #53, decisión 1): un POST a `/api/visitas` por carga, por cambio
+ * de ruta y por vuelta al sitio desde una ruta de afuera de `(sitio)`. Como corre en un efecto, el prerender y los prefetch no cuentan. Va en Suspense porque `usePathname`
  * suspende en las rutas con parámetros que no se conocen al compilar (`/proyectos/[slug]`): así el resto del
  * layout se sigue prerenderizando.
  */

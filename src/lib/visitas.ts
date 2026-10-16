@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { VisitaDiaria } from "@/models/VisitaDiaria";
 import { VisitanteDiario } from "@/models/VisitanteDiario";
+import { listarProyectos } from "./contenido";
 import { asegurarIndicesDe, conectar } from "./db";
 
 /** Zona de las fechas de las métricas (épica #53, decisión 1). */
@@ -19,6 +20,22 @@ export type ResultadoVisita = "contada" | "descartada";
 
 /** Clave de las visitas a rutas que no son del sitio (un slug que no existe, un 404). */
 export const RUTA_OTRA = "otra";
+
+// Las páginas fijas del grupo `(sitio)`. Una página pública nueva se suma acá para contarse con su ruta.
+const RUTAS_FIJAS = new Set(["/", "/proyectos", "/cuenta"]);
+const DETALLE = /^\/proyectos\/([a-z0-9-]+)$/;
+
+/**
+ * La clave con que se cuenta una ruta ya normalizada: las fijas y `/proyectos/<slug>` de un proyecto publicado
+ * van tal cual, y cualquier otra a `RUTA_OTRA`. Así `visitas_diarias` tiene a lo sumo una ruta por página real
+ * por día. Los slugs salen de `listarProyectos` (cacheado con `use cache`; si la base falla, del respaldo).
+ */
+async function claveDeRuta(ruta: string): Promise<string> {
+  if (RUTAS_FIJAS.has(ruta)) return ruta;
+  const slug = DETALLE.exec(ruta)?.[1];
+  if (slug && (await listarProyectos()).some((p) => p.slug === slug)) return ruta;
+  return RUTA_OTRA;
+}
 
 const LARGO_MAXIMO = 200;
 // Segmentos en minúsculas, números y guiones (como los slugs): sin `..`, sin `//`, sin esquemas ni hosts.
@@ -82,13 +99,14 @@ function esClaveDuplicada(error: unknown): boolean {
 
 /**
  * Cuenta una carga de una página pública (épica #53, decisiones 1 y 2): `$inc` atómico con upsert en
- * `visitas_diarias` y un insert idempotente en `visitantes_diarios`. No cuentan los bots, el panel, la API
+ * `visitas_diarias` (con la clave de `claveDeRuta`) y un insert idempotente en `visitantes_diarios`. No cuentan los bots, el panel, la API
  * ni los admin. Si la base falla, tira: quien llama decide (la ruta responde 204 igual).
  */
 export async function registrarVisita(datos: DatosVisita, ahora: Date = new Date()): Promise<ResultadoVisita> {
   const ruta = normalizarRuta(datos.ruta);
   if (datos.esAdmin || seDescartaSinSesion(ruta, datos.userAgent)) return "descartada";
 
+  const clave = await claveDeRuta(ruta);
   const fecha = fechaDeVisita(ahora);
   const idHash = createHash("sha256")
     .update(datos.visitanteId + fecha)
@@ -98,7 +116,7 @@ export async function registrarVisita(datos: DatosVisita, ahora: Date = new Date
   // Sin el índice único, el upsert podría duplicar el contador del día: si no se puede crear, no se cuenta.
   await Promise.all([asegurarIndicesDe(VisitaDiaria), asegurarIndicesDe(VisitanteDiario)]);
   await Promise.all([
-    VisitaDiaria.updateOne({ fecha, ruta }, { $inc: { total: 1 } }, { upsert: true }),
+    VisitaDiaria.updateOne({ fecha, ruta: clave }, { $inc: { total: 1 } }, { upsert: true }),
     VisitanteDiario.create({ fecha, idHash }).catch((error: unknown) => {
       // Ya vino hoy: el índice único `{ fecha, idHash }` hace que el segundo insert choque y se ignore.
       if (!esClaveDuplicada(error)) throw error;
