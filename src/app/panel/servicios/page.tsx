@@ -1,21 +1,13 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { ServiceIcon } from "@/components/sitio/Illustrations";
+import { IlustracionServicio } from "@/components/sitio/Illustrations";
 import { requerirRol } from "@/lib/permisos";
-import { listarServiciosAdmin, type ServicioAdmin } from "@/lib/servicios-admin";
+import { listarServiciosAdmin } from "@/lib/servicios-admin";
 import { borrarServicioAccion, moverServicioAccion, publicarServicioAccion } from "./acciones";
 import { BotonBorrar } from "./boton-borrar";
 import { RUTA_NUEVO_SERVICIO, RUTA_SERVICIOS, rutaEdicion } from "./rutas";
 
 const boton = "apretable contorno bg-papel px-3 py-1 text-pequeno font-bold disabled:opacity-40";
-
-function Ilustracion({ servicio }: { servicio: ServicioAdmin }) {
-  if (servicio.icono) return <ServiceIcon icon={servicio.icono} />;
-  if (!servicio.imagen) return null;
-  // URL https validada al guardar (la sube /api/imagenes a Vercel Blob).
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={servicio.imagen} alt="" className="h-24 w-auto object-contain" />;
-}
 
 export default async function ServiciosPage() {
   await connection(); // Auth.js usa valores aleatorios: nada de esto se prerenderiza.
@@ -47,7 +39,7 @@ export default async function ServiciosPage() {
           {servicios.map((s, i) => (
             <li key={s.id} className="contorno flex flex-wrap items-center gap-4 bg-papel p-4">
               <div className="grid w-28 shrink-0 place-items-center bg-superficie py-2 [&_svg]:h-14 [&_img]:h-14">
-                <Ilustracion servicio={s} />
+                <IlustracionServicio icono={s.icono} imagen={s.imagen} />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2">

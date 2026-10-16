@@ -40,6 +40,8 @@ export function FormularioServicio({ id, inicial }: { id: string | null; inicial
   // React resetea el formulario después de la acción: si falló, vuelve lo que se mandó.
   const valores = estado.valores ?? inicial;
   const [ilustracion, setIlustracion] = useState(inicial.ilustracion);
+  // Controlados: cambiar entre ícono e imagen desmonta los controles del otro y no se pierde la elección.
+  const [icono, setIcono] = useState(inicial.icono);
   const [imagen, setImagen] = useState(inicial.imagen);
   const [subiendo, setSubiendo] = useState(false);
   const [errorSubida, setErrorSubida] = useState<string | null>(null);
@@ -113,20 +115,21 @@ export function FormularioServicio({ id, inicial }: { id: string | null; inicial
 
         {ilustracion === "icono" ? (
           <div role="radiogroup" aria-label="Ícono" aria-describedby="error-icono" className="flex flex-wrap gap-3">
-            {SERVICE_ICONS.map((icono) => (
+            {SERVICE_ICONS.map((nombre) => (
               <label
-                key={icono}
+                key={nombre}
                 className="contorno flex cursor-pointer flex-col items-center gap-1 bg-superficie p-2 text-pequeno has-checked:bg-primario [&_svg]:h-12"
               >
                 <input
                   type="radio"
                   name="icono"
-                  value={icono}
-                  defaultChecked={valores.icono === icono}
+                  value={nombre}
+                  checked={icono === nombre}
+                  onChange={() => setIcono(nombre)}
                   className="sr-only"
                 />
-                <ServiceIcon icon={icono} />
-                {ETIQUETAS_ICONO[icono]}
+                <ServiceIcon icon={nombre} />
+                {ETIQUETAS_ICONO[nombre]}
               </label>
             ))}
           </div>

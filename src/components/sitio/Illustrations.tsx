@@ -119,3 +119,15 @@ export function ServiceIcon({ icon }: ServiceIconProps) {
     </svg>
   );
 }
+
+/**
+ * La ilustración de un servicio: su ícono o, si el panel le puso una imagen en lugar de ícono, la imagen.
+ * La usan la landing y el panel, así la vista previa coincide con lo publicado.
+ */
+export function IlustracionServicio({ icono, imagen }: { icono?: ServiceIconName; imagen?: string }) {
+  if (icono) return <ServiceIcon icon={icono} />;
+  if (!imagen) return null;
+  // URL https validada al guardar (ADR-003). next/image necesitaría `remotePatterns` para el host de las imágenes.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={imagen} alt="" className="h-24 w-auto object-contain" />;
+}
