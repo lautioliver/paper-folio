@@ -52,11 +52,11 @@ export const ID_VALIDO = /^[0-9a-f]{24}$/i;
 const estadoSchema = z.enum(ESTADOS_CONSULTA);
 const notaSchema = z.string().trim().min(1).max(LARGO_MAXIMO_NOTA);
 
-const NO_ENCONTRADA: ResultadoSeguimiento = {
+export const NO_ENCONTRADA = {
   ok: false,
   error: "no-encontrada",
   mensaje: "La consulta no existe.",
-};
+} as const;
 
 export function exigirAutor(autor: string, funcion: string): void {
   // El autor sale de la sesión (`requerirRol`), nunca del formulario: si no es un id, es un error del llamador.
@@ -192,12 +192,6 @@ export type ResultadoRegistro =
   | { ok: true; estadoCambiado: boolean }
   | { ok: false; error: "no-encontrada"; mensaje: string };
 
-const NO_ENCONTRADA_REGISTRO: ResultadoRegistro = {
-  ok: false,
-  error: "no-encontrada",
-  mensaje: "La consulta no existe.",
-};
-
 /**
  * Registra en el seguimiento una respuesta por email ya intentada (la envía `responderConsulta`,
  * src/lib/respuestas.ts). Si el email salió y la consulta sigue en un estado desde el que se responde
@@ -213,7 +207,7 @@ export async function registrarRespuesta(
   emailEnviado: boolean,
 ): Promise<ResultadoRegistro> {
   exigirAutor(autor, "registrarRespuesta");
-  if (!ID_VALIDO.test(id)) return NO_ENCONTRADA_REGISTRO;
+  if (!ID_VALIDO.test(id)) return NO_ENCONTRADA;
   await conectar();
   const fecha = new Date();
   const respuesta = { tipo: "respuesta", texto, autor, fecha, emailEnviado };
@@ -239,5 +233,5 @@ export async function registrarRespuesta(
     { $push: { seguimiento: respuesta } },
     { runValidators: true },
   );
-  return r.matchedCount === 1 ? { ok: true, estadoCambiado: false } : NO_ENCONTRADA_REGISTRO;
+  return r.matchedCount === 1 ? { ok: true, estadoCambiado: false } : NO_ENCONTRADA;
 }

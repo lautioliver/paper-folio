@@ -60,7 +60,7 @@ const esquemaGmail = z.object({
     .pipe(
       z
         .string()
-        .min(1, { error: "falta" })
+        .min(1, { error: "falta", abort: true })
         .length(16, { error: "debe tener 16 caracteres (la contraseña de aplicación de Google)" }),
     ),
 });

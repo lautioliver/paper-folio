@@ -1,6 +1,7 @@
 import nodemailer, { type SendMailOptions } from "nodemailer";
 import { z } from "zod";
 import { Consulta } from "@/models/Consulta";
+import { CONTACT_TYPE_LABELS, type ContactType } from "./contact";
 import { conectar } from "./db";
 import { leerGmailConfig } from "./env";
 import {
@@ -9,12 +10,11 @@ import {
   estadoLeido,
   LARGO_MAXIMO_RESPUESTA,
 } from "./estados-consulta";
-import { exigirAutor, ID_VALIDO, registrarRespuesta } from "./seguimiento";
+import { exigirAutor, ID_VALIDO, NO_ENCONTRADA, registrarRespuesta } from "./seguimiento";
 
 /** Lo mínimo de un transporte de nodemailer que usamos: se inyecta para testear sin Gmail. */
 export type TransporteEmail = {
   sendMail(mensaje: SendMailOptions): Promise<unknown>;
-  close?(): void;
 };
 
 export type ResultadoRespuesta =
@@ -25,6 +25,9 @@ export type ResultadoRespuesta =
       mensaje: string;
     };
 
+// Tiempo máximo que espera el operador. nodemailer no se puede cancelar: sus propios timeouts (más cortos, y
+// el de socket es de inactividad) cortan la mayoría de los cuelgues antes; si igual gana este, el envío
+// sigue en curso y puede llegar, así que el mensaje lo avisa.
 const TIMEOUT_MS = 10_000;
 
 // Caracteres de control y separadores de línea/párrafo: el nombre es texto libre del visitante y no puede
@@ -34,19 +37,13 @@ const CONTROL = /[\p{Cc}\p{Zl}\p{Zp}]+/gu;
 const respuestaSchema = z.string().trim().min(1).max(LARGO_MAXIMO_RESPUESTA);
 const destinoSchema = z.email();
 
-const NO_ENCONTRADA: ResultadoRespuesta = {
-  ok: false,
-  error: "no-encontrada",
-  mensaje: "La consulta no existe.",
-};
-
 const fechaCita = new Intl.DateTimeFormat("es-AR", {
   dateStyle: "long",
   timeStyle: "short",
   timeZone: "America/Argentina/Buenos_Aires",
 });
 
-/** Falla propia del envío (timeout, destino inválido): su código es seguro de mostrar y de loguear. */
+/** Falla propia (timeout, destino inválido): su código es seguro de mostrar y de loguear. */
 class EnvioError extends Error {
   name = "EnvioError";
   constructor(readonly codigo: string) {
@@ -71,9 +68,9 @@ function transporteGmail(user: string, pass: string): TransporteEmail {
   return nodemailer.createTransport({
     service: "gmail",
     auth: { user, pass },
-    connectionTimeout: TIMEOUT_MS,
-    greetingTimeout: TIMEOUT_MS,
-    socketTimeout: TIMEOUT_MS,
+    connectionTimeout: 4_000,
+    greetingTimeout: 3_000,
+    socketTimeout: 5_000,
   });
 }
 
@@ -86,10 +83,6 @@ async function enviarConTimeout(t: TransporteEmail, mensaje: SendMailOptions, ti
   envio.catch(() => {}); // si gana el timeout, que el rechazo tardío no quede sin atender
   try {
     await Promise.race([envio, vencido]);
-  } catch (e) {
-    // Corta la conexión colgada, así el email no sale después de haberlo dado por fallido.
-    if (e instanceof EnvioError) t.close?.();
-    throw e;
   } finally {
     clearTimeout(reloj);
   }
@@ -152,18 +145,35 @@ export async function responderConsulta(
     };
   }
 
+  // Sin configuración o sin un destino válido no se intenta nada: no se registra (reintentar no sirve hasta
+  // arreglarlo, y cada clic sumaría una entrada).
+  let config: ReturnType<typeof leerGmailConfig>;
+  let destino: string;
+  try {
+    config = leerGmailConfig();
+    const d = destinoSchema.safeParse(c.email);
+    if (!d.success) throw new EnvioError("destino-invalido");
+    destino = d.data;
+  } catch (e) {
+    const codigo = codigoDe(e);
+    console.error(`responderConsulta: no se intentó enviar el email (${codigo})`);
+    return {
+      ok: false,
+      error: "envio-fallido",
+      mensaje: `No se pudo enviar el email (${codigo}). No se intentó: revisá la configuración o el email de la consulta.`,
+    };
+  }
+
   const nombre = String(c.nombre).replace(CONTROL, " ").trim();
+  const tipo = CONTACT_TYPE_LABELS[c.tipo as ContactType] ?? String(c.tipo).replace(CONTROL, " ");
   let codigo: string | null = null;
   try {
-    const config = leerGmailConfig();
-    const destino = destinoSchema.safeParse(c.email);
-    if (!destino.success) throw new EnvioError("destino-invalido");
     await enviarConTimeout(
       transporte ?? transporteGmail(config.GMAIL_USER, config.GMAIL_APP_PASSWORD),
       {
         from: config.GMAIL_USER,
-        to: { name: nombre, address: destino.data },
-        subject: `Re: tu consulta en Paperfolio (${String(c.tipo).replace(CONTROL, " ")})`,
+        to: { name: nombre, address: destino },
+        subject: `Re: tu consulta en Paperfolio (${tipo})`,
         text: cuerpo(respuesta.data, { nombre, mensaje: c.mensaje, creadaEn: c.creadaEn }),
       },
       opciones.timeoutMs ?? TIMEOUT_MS,
@@ -174,11 +184,19 @@ export async function responderConsulta(
   }
 
   const r = await registrarRespuesta(id, respuesta.data, autor, codigo === null);
-  if (!r.ok) return NO_ENCONTRADA;
+  if (!r.ok) {
+    return codigo === null
+      ? { ...NO_ENCONTRADA, mensaje: "El email se envió, pero la consulta ya no existe: no quedó registrado." }
+      : NO_ENCONTRADA;
+  }
   if (codigo === null) return { ok: true, estadoCambiado: r.estadoCambiado };
+  const sigue = `La respuesta quedó en el seguimiento como no enviada y la consulta sigue ${ETIQUETAS_ESTADO[estado]}.`;
   return {
     ok: false,
     error: "envio-fallido",
-    mensaje: `No se pudo enviar el email (${codigo}). La respuesta quedó en el seguimiento como no enviada y la consulta sigue ${ETIQUETAS_ESTADO[estado]}.`,
+    mensaje:
+      codigo === "timeout"
+        ? `Gmail no confirmó el envío en ${Math.round((opciones.timeoutMs ?? TIMEOUT_MS) / 1000)} s: el email puede llegar igual. Revisá Enviados en Gmail antes de reintentar. ${sigue}`
+        : `No se pudo enviar el email (${codigo}). ${sigue}`,
   };
 }

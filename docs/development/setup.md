@@ -42,7 +42,7 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 | `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET` | Cliente OAuth de Google (ver "Ingreso con Google"). Obligatorias para iniciar sesión; sin ellas la landing funciona y `/api/auth/*` responde 500 con las variables que faltan en el log |
 | `ADMIN_EMAILS` y `OPERADOR_EMAILS` | Emails separados por comas que reciben el rol `admin` u `operador` en cada ingreso (ADR-002). Opcionales: vacías, todos son `usuario`. Nunca en el repo |
 | `CONTACTO_EMAIL_DESTINO` | Email que recibe el aviso de cada consulta nueva. Con el remitente de pruebas `onboarding@resend.dev`, Resend solo entrega al email con el que se creó la cuenta. Va solo en `.env.local` y en las variables de Vercel, nunca en el repo |
-| `GMAIL_USER` y `GMAIL_APP_PASSWORD` | Cuenta de Gmail que responde las consultas desde el panel y una contraseña de aplicación de esa cuenta (16 caracteres; ver "Respuestas por Gmail"). Obligatorias para responder; sin ellas el panel funciona y cada intento queda en el seguimiento como no enviado. Nunca en el repo |
+| `GMAIL_USER` y `GMAIL_APP_PASSWORD` | Cuenta de Gmail que responde las consultas desde el panel y una contraseña de aplicación de esa cuenta (16 caracteres; ver "Respuestas por Gmail"). Obligatorias para responder; sin ellas el panel funciona y responder muestra el error `configuracion`, sin enviar ni registrar nada. Nunca en el repo |
 | `BLOB_STORE_ID` | Id del store de Vercel Blob de las imágenes (empieza con `store_`; ver "Imágenes en Vercel Blob"). Obligatoria para subir imágenes; la base y `/api/salud` no la piden |
 
 `src/lib/env.ts` las valida con Zod cada vez que se leen (`IP_HASH_SAL`, `RESEND_API_KEY` y `CONTACTO_EMAIL_DESTINO`, `GMAIL_USER` y `GMAIL_APP_PASSWORD` aparte, así la base y `/api/salud` no las exigen). Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
@@ -70,7 +70,7 @@ El operador responde las consultas por SMTP de Gmail, desde la cuenta de la pers
 1. En la cuenta de Google que va a enviar, activar la **verificación en dos pasos** (sin ella Google no ofrece contraseñas de aplicación).
 2. Ir a [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), crear una contraseña de aplicación ("Paperfolio") y copiarla. Google la muestra en cuatro grupos: los espacios no cuentan.
 3. Cargar `GMAIL_USER` (el email de esa cuenta) y `GMAIL_APP_PASSWORD` en `.env.local` y en las variables de Vercel. Nunca la contraseña normal de la cuenta.
-4. Gmail permite unos 500 envíos por día. Si un envío falla, el panel muestra el código del error (por ejemplo `EAUTH` si la contraseña es incorrecta, `configuracion` si falta una variable, `timeout` si tarda más de 10 s) y la respuesta queda en el seguimiento como no enviada.
+4. Gmail permite unos 500 envíos por día. Si un envío falla, el panel muestra el código del error (por ejemplo `EAUTH` si la contraseña es incorrecta) y la respuesta queda en el seguimiento como no enviada. Si falta una variable, el código es `configuracion` y no se registra nada. Si Gmail no confirma en 10 s (`timeout`), el email puede llegar igual: revisá Enviados en Gmail antes de reintentar.
 5. Los tests no las necesitan: el transporte se inyecta y `vitest.config.ts` las vacía.
 
 ### Crear el cluster de Atlas
