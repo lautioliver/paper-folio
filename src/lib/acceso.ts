@@ -76,26 +76,25 @@ export function emailsDeLista(lista: string): Set<string> {
 }
 
 /** A dónde manda `signIn` una cuenta bloqueada y un ingreso que no se pudo comprobar (la base no respondió). */
-export const INGRESO_BLOQUEADO = `${RUTA_INGRESO}?error=bloqueado`;
-export const INGRESO_SIN_VERIFICAR = `${RUTA_INGRESO}?error=verificacion`;
+export const INGRESO_BLOQUEADO = "/ingresar?error=bloqueado" as const;
+export const INGRESO_REINTENTAR = "/ingresar?error=reintentar" as const;
 
 /**
  * Callback `signIn` de Auth.js (#49): `true` solo para cuentas de Google con el email verificado y sin bloquear.
  * Sin email verificado, `false` (Auth.js lo manda a `/ingresar?error=AccessDenied`). Bloqueada o con la base
  * caída, una URL propia: Auth.js convierte cualquier excepción de `signIn` en AccessDenied, y la persona
  * tiene que saber si es su cuenta o una falla para reintentar. Las dos niegan el ingreso (falla cerrado).
+ * Pura: el que llama loguea la falla (src/auth.ts envuelve `estaBloqueado`).
  */
 export async function permiteIngreso(
   datos: { proveedor?: string | null; emailVerificado?: boolean | null; email?: string | null },
   estaBloqueado: (email: string) => Promise<boolean>,
-): Promise<boolean | string> {
+): Promise<boolean | typeof INGRESO_BLOQUEADO | typeof INGRESO_REINTENTAR> {
   if (datos.proveedor !== "google" || datos.emailVerificado !== true || !datos.email) return false;
   try {
     return (await estaBloqueado(datos.email)) ? INGRESO_BLOQUEADO : true;
-  } catch (error) {
-    // Solo el nombre: el mensaje puede traer la URI de la base.
-    console.error("auth: no se pudo comprobar el bloqueo", error instanceof Error ? error.name : "desconocido");
-    return INGRESO_SIN_VERIFICAR;
+  } catch {
+    return INGRESO_REINTENTAR;
   }
 }
 

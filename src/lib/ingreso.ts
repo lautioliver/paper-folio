@@ -12,15 +12,30 @@ export type DecisionIngreso =
   // aviso "sesion": el token existe pero el usuario no está en la base; se ofrece salir e ingresar de nuevo.
   // aviso "bloqueada": la cuenta está bloqueada; solo se ofrece salir.
   // aviso "denegado": Auth.js rechazó el ingreso (`signIn` dio false: email sin verificar).
-  // aviso "reintentar": `signIn` no pudo comprobar la cuenta (la base no respondió).
+  // aviso "reintentar": `signIn` no pudo comprobar la cuenta (la base no respondió; `error=reintentar`).
   // aviso "generico": cualquier otro error de Auth.js (Configuration, OAuthCallbackError…). El detalle es #45.
   | { accion: "mostrar"; aviso: AvisoIngreso; callbackUrl: string };
 
-export type AvisoIngreso = "sesion" | "bloqueada" | "denegado" | "reintentar" | "generico" | "verificacion" | null;
+// "bloqueada": la sesión actual está bloqueada (lo dice la base; solo "Salir"). "ingreso-bloqueado": sin sesión,
+// con `error=bloqueado` (lo manda `signIn`, pero cualquiera puede armar el link): avisa y deja ingresar con otra.
+export type AvisoIngreso =
+  | "sesion"
+  | "bloqueada"
+  | "ingreso-bloqueado"
+  | "denegado"
+  | "reintentar"
+  | "generico"
+  | "verificacion"
+  | null;
 
 // Los `error` que /ingresar conoce. Los manda la app (`urlDeIngreso`, `permiteIngreso`) o Auth.js (`pages.error`).
-const errorConocido = z.enum(["sesion", "bloqueado", "verificacion", "AccessDenied"]);
-const AVISO_DE_ERROR = { sesion: null, bloqueado: "bloqueada", verificacion: "reintentar", AccessDenied: "denegado" } as const;
+const errorConocido = z.enum(["sesion", "bloqueado", "reintentar", "AccessDenied"]);
+const AVISO_DE_ERROR = {
+  sesion: null,
+  bloqueado: "ingreso-bloqueado",
+  reintentar: "reintentar",
+  AccessDenied: "denegado",
+} as const satisfies Record<z.infer<typeof errorConocido>, AvisoIngreso>;
 
 /** Aviso para el `error` de la URL sin sesión: uno por código conocido, "generico" para el resto. */
 function avisoDeError(error: string | string[] | undefined): AvisoIngreso {

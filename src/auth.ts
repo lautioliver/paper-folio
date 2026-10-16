@@ -22,11 +22,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
     pages: { error: "/ingresar" },
     callbacks: {
       // Solo cuentas de Google con el email verificado y sin bloquear (#49). Una bloqueada va a
-      // /ingresar?error=bloqueado y, si la base no responde, a /ingresar?error=verificacion (ver `permiteIngreso`).
+      // /ingresar?error=bloqueado y, si la base no responde, a /ingresar?error=reintentar (ver `permiteIngreso`).
       signIn({ account, profile }) {
         return permiteIngreso(
           { proveedor: account?.provider, emailVerificado: profile?.email_verified, email: profile?.email },
-          usuarioBloqueado,
+          async (email) => {
+            try {
+              return await usuarioBloqueado(email);
+            } catch (error) {
+              // Solo el nombre: el mensaje puede traer la URI de la base.
+              console.error("auth: no se pudo comprobar el bloqueo", error instanceof Error ? error.name : "desconocido");
+              throw error;
+            }
+          },
         );
       },
       async jwt({ token, user, account }) {

@@ -9,6 +9,14 @@ import { ingresarConGoogle, salir, salirEIngresarDeNuevo } from "@/lib/sesion-ac
 
 export const metadata: Metadata = { title: "Ingresar", robots: { index: false } };
 
+// Avisos sin sesión que dejan volver a ingresar (con la misma cuenta o con otra).
+const AVISOS_CON_REINTENTO = {
+  reintentar: "No pudimos verificar tu cuenta. Probá de nuevo en un rato.",
+  generico: "No pudimos completar el ingreso. Probá de nuevo.",
+  "ingreso-bloqueado":
+    "Esa cuenta está bloqueada: no puede ingresar al sitio. Si creés que es un error, escribinos por el formulario de contacto.",
+} as const;
+
 const BOTON = "marca apretable inline-flex min-h-11 items-center justify-center bg-tinta px-5 py-3 font-bold text-papel";
 
 async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParams"] }) {
@@ -73,13 +81,11 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
     );
   }
 
-  if (decision.aviso === "reintentar" || decision.aviso === "generico") {
+  if (decision.aviso === "reintentar" || decision.aviso === "generico" || decision.aviso === "ingreso-bloqueado") {
     return (
       <>
         <p role="alert" className="mt-6 text-cuerpo">
-          {decision.aviso === "reintentar"
-            ? "No pudimos verificar tu cuenta. Probá de nuevo en un rato."
-            : "No pudimos completar el ingreso. Probá de nuevo."}
+          {AVISOS_CON_REINTENTO[decision.aviso]}
         </p>
         <form action={ingresarConGoogle} className="mt-8">
           <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
