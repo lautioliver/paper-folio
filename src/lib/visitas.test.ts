@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { desconectar } from "./db";
-import { esBot, esquemaVisita, fechaDeVisita, normalizarRuta, registrarVisita } from "./visitas";
+import { esBot, esquemaVisita, fechaDeVisita, normalizarRuta, registrarVisita, RUTA_OTRA } from "./visitas";
 import { VisitaDiaria } from "@/models/VisitaDiaria";
 import { VisitanteDiario } from "@/models/VisitanteDiario";
+
+// Los proyectos publicados salen de `listarProyectos` (con `use cache`): acá, uno solo.
+vi.mock("./contenido", () => ({ listarProyectos: vi.fn(async () => [{ slug: "paperfolio" }]) }));
 
 const CHROME =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
@@ -95,6 +98,21 @@ describe("registrarVisita", () => {
     for (const d of descartadas) expect(await registrarVisita(d, HOY)).toBe("descartada");
     expect(await VisitaDiaria.countDocuments()).toBe(0);
     expect(await VisitanteDiario.countDocuments()).toBe(0);
+  });
+
+  it("cuenta las rutas fijas y los proyectos publicados con su ruta, y lo demás bajo una sola clave", async () => {
+    for (const ruta of ["/", "/proyectos", "/cuenta", "/proyectos/paperfolio"]) await registrarVisita(visita({ ruta }), HOY);
+    for (const ruta of ["/a1", "/a2", "/proyectos/no-existe", "/proyectos/paperfolio/demo", "/cuenta/x"]) {
+      expect(await registrarVisita(visita({ ruta }), HOY)).toBe("contada");
+    }
+    const docs = await VisitaDiaria.find({}, { _id: 0, fecha: 0 }).sort({ ruta: 1 }).lean();
+    expect(docs).toEqual([
+      { ruta: "/", total: 1 },
+      { ruta: "/cuenta", total: 1 },
+      { ruta: "/proyectos", total: 1 },
+      { ruta: "/proyectos/paperfolio", total: 1 },
+      { ruta: RUTA_OTRA, total: 5 },
+    ]);
   });
 
   it("guarda la ruta normalizada", async () => {

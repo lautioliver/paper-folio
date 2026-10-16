@@ -17,6 +17,9 @@ export type DatosVisita = {
 };
 export type ResultadoVisita = "contada" | "descartada";
 
+/** Clave de las visitas a rutas que no son del sitio (un slug que no existe, un 404). */
+export const RUTA_OTRA = "otra";
+
 const LARGO_MAXIMO = 200;
 // Segmentos en minúsculas, números y guiones (como los slugs): sin `..`, sin `//`, sin esquemas ni hosts.
 const RUTA_INTERNA = /^\/(?:[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*)?$/;

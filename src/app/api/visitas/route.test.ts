@@ -12,6 +12,9 @@ vi.mock("@/lib/sesion", () => ({
   rolDeLaSesion: (...args: unknown[]) => rolDeLaSesion(...args),
 }));
 
+// `listarProyectos` usa `use cache` (next/cache no corre en Vitest): los proyectos publicados, fijos.
+vi.mock("@/lib/contenido", () => ({ listarProyectos: vi.fn(async () => [{ slug: "paperfolio" }]) }));
+
 import { POST } from "./route";
 
 const CHROME =
