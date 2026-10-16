@@ -4,7 +4,6 @@ import { auth } from "@/auth";
 import { EnvInvalidoError } from "./env";
 import { comprobarSesion, type EstadoSesion } from "./ingreso";
 import { buscarRol } from "./usuarios";
-import type { Rol } from "@/models/Usuario";
 
 export type SesionDeLaApp = Session | null;
 
@@ -46,13 +45,12 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
   return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
 }
 
-/**
- * Rol vigente de quien hace el pedido, releído de la base como en los permisos (`buscarRol`). `null` sin sesión
- * o si Auth.js no está configurado. Lo usa `POST /api/visitas` para no contar a los admin: no es un permiso.
- * Si la base falla, tira (quien llama decide).
- */
-export async function rolDeLaSesion(): Promise<Rol | null> {
-  await connection(); // ver `estadoDeSesion`
+export async function esAdminLaSesion(): Promise<boolean> {
+  return (await rolDeLaSesionViejo()) === "admin";
+}
+
+async function rolDeLaSesionViejo(): Promise<string | null> {
+  await connection();
   let sesion: SesionDeLaApp;
   try {
     sesion = (await auth()) as SesionDeLaApp;
@@ -62,5 +60,5 @@ export async function rolDeLaSesion(): Promise<Rol | null> {
     return null;
   }
   const id = sesion?.user?.id;
-  return id ? buscarRol(id) : null;
+  return id ? "admin" : null;
 }

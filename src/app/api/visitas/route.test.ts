@@ -6,10 +6,10 @@ import { fechaDeVisita } from "@/lib/visitas";
 import { VisitaDiaria } from "@/models/VisitaDiaria";
 import { VisitanteDiario } from "@/models/VisitanteDiario";
 
-// La ruta no puede importar `@/auth` en Vitest (next-auth no resuelve next/server): se mockea el rol de la sesión.
-const rolDeLaSesion = vi.fn();
+// La ruta no puede importar `@/auth` en Vitest (next-auth no resuelve next/server): se mockea si la sesión es de un admin.
+const esAdminLaSesion = vi.fn();
 vi.mock("@/lib/sesion", () => ({
-  rolDeLaSesion: (...args: unknown[]) => rolDeLaSesion(...args),
+  esAdminLaSesion: (...args: unknown[]) => esAdminLaSesion(...args),
 }));
 
 // `listarProyectos` usa `use cache` (next/cache no corre en Vitest): los proyectos publicados, fijos.
@@ -50,7 +50,7 @@ beforeAll(async () => {
 }, 120_000);
 
 beforeEach(async () => {
-  rolDeLaSesion.mockResolvedValue(null);
+  esAdminLaSesion.mockResolvedValue(false);
   const { conectar } = await import("@/lib/db");
   await conectar();
   await VisitaDiaria.deleteMany({});
@@ -107,7 +107,7 @@ describe("POST /api/visitas", () => {
   it("no cuenta un bot, una ruta del panel ni a un admin, y responde 204", async () => {
     expect((await pedir({ ruta: "/" }, { "user-agent": "Googlebot/2.1" })).status).toBe(204);
     expect((await pedir({ ruta: "/panel/consultas" })).status).toBe(204);
-    rolDeLaSesion.mockResolvedValue("admin");
+    esAdminLaSesion.mockResolvedValue(true);
     expect((await pedir({ ruta: "/" })).status).toBe(204);
     expect(await VisitaDiaria.countDocuments()).toBe(0);
     expect(await VisitanteDiario.countDocuments()).toBe(0);
@@ -116,13 +116,12 @@ describe("POST /api/visitas", () => {
   it("no lee la sesión para un bot ni para una ruta excluida (se descartan antes)", async () => {
     await pedir({ ruta: "/" }, { "user-agent": "Googlebot/2.1" });
     await pedir({ ruta: "/panel" });
-    expect(rolDeLaSesion).not.toHaveBeenCalled();
+    expect(esAdminLaSesion).not.toHaveBeenCalled();
   });
 
-  it("cuenta a un operador o a un usuario con sesión", async () => {
-    rolDeLaSesion.mockResolvedValue("operador");
+  it("cuenta a quien no es admin (operador, usuario o bloqueado: lo decide esAdminLaSesion)", async () => {
+    esAdminLaSesion.mockResolvedValue(false);
     await pedir({ ruta: "/" });
-    rolDeLaSesion.mockResolvedValue("usuario");
     await pedir({ ruta: "/" });
     expect((await VisitaDiaria.findOne().lean())?.total).toBe(2);
   });
@@ -160,7 +159,7 @@ describe("POST /api/visitas", () => {
 
   it("si falla leer el rol de la sesión responde 204 igual", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    rolDeLaSesion.mockRejectedValue(new Error("MongoServerSelectionError"));
+    esAdminLaSesion.mockRejectedValue(new Error("MongoServerSelectionError"));
     expect((await pedir({ ruta: "/" })).status).toBe(204);
   });
 });

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { respuestaError } from "@/lib/api-error";
-import { rolDeLaSesion } from "@/lib/sesion";
+import { esAdminLaSesion } from "@/lib/sesion";
 import { esquemaVisita, registrarVisita, seDescartaSinSesion } from "@/lib/visitas";
 
 /** Cookie anónima del visitante (épica #53, decisión 2): un id al azar, sin datos de la persona. */
@@ -44,7 +44,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     // Un bot o el panel no cuentan nunca: no hace falta leer la sesión ni el rol de la base.
     if (!seDescartaSinSesion(ruta, userAgent)) {
-      await registrarVisita({ ruta, visitanteId, userAgent, esAdmin: (await rolDeLaSesion()) === "admin" });
+      await registrarVisita({ ruta, visitanteId, userAgent, esAdmin: await esAdminLaSesion() });
     }
   } catch (error) {
     // Solo el nombre del error: el mensaje puede traer la URI de la base o credenciales.
