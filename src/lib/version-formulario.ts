@@ -4,7 +4,7 @@
 // editar, los campos no controlados (y el estado de `useActionState`) seguían con lo de la visita anterior,
 // aunque el servidor mandara los datos nuevos, y "Guardar" revertía el último guardado. Atar la `key` del
 // formulario a la versión del documento lo vuelve a montar cuando el documento cambió, y conserva lo escrito
-// si no cambió (ver node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md).
+// si no se escribió (ver node_modules/next/dist/docs/01-app/02-guides/preserving-ui-state.md).
 
 const SIN_FECHA = "sin-fecha";
 

@@ -29,7 +29,7 @@ function MensajeCampo({ id, texto }: { id: string; texto?: string }) {
  */
 // La `key` es la versión del documento (`versionDe`, src/lib/version-formulario.ts): Next guarda en
 // <Activity> el DOM y el estado de las rutas visitadas, y sin esto, al volver a editar se veía lo de antes
-// del último guardado (y "Guardar" lo revertía). Si el documento no cambió, lo escrito se conserva.
+// del último guardado (y "Guardar" lo revertía). Si no se escribió, lo escrito se conserva.
 export function FormularioDemo(props: {
   id: string | null;
   inicial: ValoresFormulario;
