@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { respuestaError } from "@/lib/api-error";
 import { rolDeLaSesion } from "@/lib/sesion";
-import { esquemaVisita, registrarVisita } from "@/lib/visitas";
+import { esquemaVisita, registrarVisita, seDescartaSinSesion } from "@/lib/visitas";
 
 /** Cookie anónima del visitante (épica #53, decisión 2): un id al azar, sin datos de la persona. */
 const COOKIE = "pf_v";
@@ -39,13 +39,13 @@ export async function POST(request: Request): Promise<Response> {
   const actual = leerCookie(request.headers.get("cookie"), COOKIE);
   const visitanteId = actual && idValido.safeParse(actual).success ? actual : randomUUID();
 
+  const { ruta } = visita.data;
+  const userAgent = request.headers.get("user-agent") ?? "";
   try {
-    await registrarVisita({
-      ruta: visita.data.ruta,
-      visitanteId,
-      userAgent: request.headers.get("user-agent") ?? "",
-      esAdmin: (await rolDeLaSesion()) === "admin",
-    });
+    // Un bot o el panel no cuentan nunca: no hace falta leer la sesión ni el rol de la base.
+    if (!seDescartaSinSesion(ruta, userAgent)) {
+      await registrarVisita({ ruta, visitanteId, userAgent, esAdmin: (await rolDeLaSesion()) === "admin" });
+    }
   } catch (error) {
     // Solo el nombre del error: el mensaje puede traer la URI de la base o credenciales.
     console.error("visitas: no se pudo registrar", error instanceof Error ? error.name : "desconocido");

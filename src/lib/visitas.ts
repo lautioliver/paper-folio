@@ -40,7 +40,7 @@ export const esquemaVisita = z.object({
 
 // Crawlers, previews de links (redes y mensajería), navegadores sin interfaz y clientes HTTP de consola.
 const PATRONES_BOT =
-  /bot\b|bot\/|bot-|crawl|spider|slurp|archiver|facebookexternalhit|embedly|whatsapp|telegram|discord|preview|headless|lighthouse|pagespeed|phantomjs|puppeteer|playwright|selenium|curl\/|wget\/|python-|node-fetch|axios\/|okhttp|go-http-client|java\/|libwww|httpclient|scrapy/i;
+  /bot\b|bot\/|bot-|crawl|spider|slurp|archiver|facebookexternalhit|embedly|^whatsapp\/|preview|headless|lighthouse|pagespeed|phantomjs|puppeteer|playwright|selenium|curl\/|wget\/|python-|node-fetch|axios\/|okhttp|go-http-client|java\/|libwww|httpclient|scrapy/i;
 
 /** Un user-agent vacío también es un bot: los navegadores siempre lo mandan. */
 export function esBot(userAgent: string): boolean {
@@ -51,6 +51,14 @@ export function esBot(userAgent: string): boolean {
 /** Rutas que no son del sitio público: el panel y la API. */
 function esRutaExcluida(ruta: string): boolean {
   return /^\/(?:panel|api)(?:\/|$)/.test(ruta);
+}
+
+/**
+ * Si la visita se descarta sin mirar quién es: un bot o una ruta del panel o de la API. La ruta lo usa para
+ * no leer la sesión (ni la base) en esos pedidos.
+ */
+export function seDescartaSinSesion(ruta: string, userAgent: string): boolean {
+  return esBot(userAgent) || esRutaExcluida(normalizarRuta(ruta));
 }
 
 const formatoFecha = new Intl.DateTimeFormat("en-CA", {
@@ -76,7 +84,7 @@ function esClaveDuplicada(error: unknown): boolean {
  */
 export async function registrarVisita(datos: DatosVisita, ahora: Date = new Date()): Promise<ResultadoVisita> {
   const ruta = normalizarRuta(datos.ruta);
-  if (datos.esAdmin || esBot(datos.userAgent) || esRutaExcluida(ruta)) return "descartada";
+  if (datos.esAdmin || seDescartaSinSesion(ruta, datos.userAgent)) return "descartada";
 
   const fecha = fechaDeVisita(ahora);
   const idHash = createHash("sha256")

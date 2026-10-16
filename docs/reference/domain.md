@@ -26,7 +26,7 @@ TODO: completar el resto de las entidades.
 
 ## Visitas del sitio: `visitas_diarias` y `visitantes_diarios` (#55, épica #53)
 
-Las cargas de las páginas públicas, contadas desde el navegador (`ContadorVisitas` → `POST /api/visitas` → `registrarVisita()` en `src/lib/visitas.ts`). No cuentan los bots (por user-agent; un user-agent vacío también), el panel (`/panel/**`), la API (`/api/**`) ni las cargas de un `admin` (rol releído de la base). `fecha` es el día en America/Argentina/Salta, como `YYYY-MM-DD`.
+Las cargas de las páginas del grupo `(sitio)` (`/`, `/proyectos`, `/proyectos/<slug>` y `/cuenta`, también un slug que da 404), contadas desde el navegador (`ContadorVisitas` → `POST /api/visitas` → `registrarVisita()` en `src/lib/visitas.ts`). No cuentan los bots (por user-agent; un user-agent vacío también), el panel (`/panel/**`), la API (`/api/**`) ni las cargas de un `admin` (rol releído de la base). `fecha` es el día en America/Argentina/Salta, como `YYYY-MM-DD`.
 
 | Colección | Modelo | Campos | Índice |
 |---|---|---|---|
