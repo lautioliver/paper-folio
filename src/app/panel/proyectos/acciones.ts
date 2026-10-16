@@ -30,13 +30,11 @@ function formulario(previo: EstadoFormulario, formData: FormData, r: ResultadoPr
 }
 
 function lista(r: ResultadoProyecto): EstadoAccion {
-  // `parcial`: algo se escribió (el proyecto se borró, sus demos no): el sitio se invalida igual.
-  const escribio = r.ok || r.error === "parcial";
-  if (escribio) updateTag(TAG_CONTENIDO);
+  if (r.ok) updateTag(TAG_CONTENIDO);
   // Un proyecto que ya no existe o una lista que cambió es una pantalla vieja (otro admin la tocó en el medio):
   // se refresca igual, así se ve la lista real junto con el mensaje.
-  if (escribio || r.error === "no-encontrado" || r.error === "desactualizada") refresh();
-  return { error: r.ok ? null : r.mensaje };
+  if (r.ok || r.error === "no-encontrado" || r.error === "desactualizada") refresh();
+  return { error: r.ok ? (r.aviso ?? null) : r.mensaje };
 }
 
 export async function crearProyectoAccion(previo: EstadoFormulario, formData: FormData): Promise<EstadoFormulario> {
@@ -53,14 +51,26 @@ export async function actualizarProyectoAccion(
   return formulario(previo, formData, await actualizarProyecto(id, datosDeFormulario(formData)));
 }
 
-// `previo` es el estado anterior de `useActionState`; estas acciones no lo usan.
-
-export async function borrarProyectoAccion(id: string, previo: EstadoAccion): Promise<EstadoAccion> {
-  void previo;
+/**
+ * `id`: el proyecto a borrar (campo oculto). La acción es una sola para toda la lista, no una por fila: si
+ * no, el mensaje (por ejemplo, el aviso de un borrado a medias) se iría con la fila borrada al refrescar.
+ */
+export async function borrarProyectoAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   await requerirRol(RUTA_PROYECTOS_PANEL, "admin");
-  return lista(await borrarProyecto(id));
+  const id = formData.get("id");
+  let r: ResultadoProyecto;
+  try {
+    r = await borrarProyecto(typeof id === "string" ? id : "");
+  } catch (error) {
+    // No se sabe si el proyecto llegó a borrarse (la respuesta de la base se pudo perder): se invalida igual,
+    // así el sitio nunca sigue mostrando un proyecto borrado. Invalidar de más solo cuesta una lectura.
+    updateTag(TAG_CONTENIDO);
+    throw error;
+  }
+  return lista(r);
 }
 
+// `previo` es el estado anterior de `useActionState`; esta acción no lo usa.
 export async function publicarProyectoAccion(
   id: string,
   publicado: boolean,

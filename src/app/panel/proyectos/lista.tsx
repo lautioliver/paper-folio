@@ -57,11 +57,14 @@ function Mover({
  */
 export function ListaProyectos({ proyectos }: { proyectos: ProyectoEnLista[] }) {
   const [estadoOrden, ordenar, ordenando] = useActionState(reordenarProyectosAccion, SIN_ERROR);
+  // El borrado vive en la lista y no en la fila: su mensaje sobrevive a que la fila desaparezca.
+  const [estadoBorrar, borrar, borrando] = useActionState(borrarProyectoAccion, SIN_ERROR);
   const ids = proyectos.map((p) => p.id);
 
   return (
     <>
       <Mensaje texto={estadoOrden.error} />
+      <Mensaje texto={estadoBorrar.error} />
       <ol className="mt-2 flex flex-col gap-3">
         {proyectos.map((p, i) => (
           <li key={p.id} className="contorno bg-papel p-4">
@@ -84,7 +87,12 @@ export function ListaProyectos({ proyectos }: { proyectos: ProyectoEnLista[] }) 
                 )}
               </div>
             </div>
-            <ControlesFila proyecto={p} ultimo={proyectos.length === 1} />
+            <ControlesFila
+              proyecto={p}
+              ultimo={proyectos.length === 1}
+              borrar={borrar}
+              borrando={borrando}
+            />
           </li>
         ))}
       </ol>
@@ -92,12 +100,21 @@ export function ListaProyectos({ proyectos }: { proyectos: ProyectoEnLista[] }) 
   );
 }
 
-function ControlesFila({ proyecto, ultimo }: { proyecto: ProyectoEnLista; ultimo: boolean }) {
+function ControlesFila({
+  proyecto,
+  ultimo,
+  borrar,
+  borrando,
+}: {
+  proyecto: ProyectoEnLista;
+  ultimo: boolean;
+  borrar: (formData: FormData) => void;
+  borrando: boolean;
+}) {
   const [estadoPublicar, publicar, publicando] = useActionState(
     publicarProyectoAccion.bind(null, proyecto.id, !proyecto.publicado),
     SIN_ERROR,
   );
-  const [estadoBorrar, borrar, borrando] = useActionState(borrarProyectoAccion.bind(null, proyecto.id), SIN_ERROR);
   const [confirmando, setConfirmando] = useState(false);
   const demos =
     proyecto.demos === 0 ? "" : proyecto.demos === 1 ? " y su demo" : ` y sus ${proyecto.demos} demos`;
@@ -119,6 +136,7 @@ function ControlesFila({ proyecto, ultimo }: { proyecto: ProyectoEnLista; ultimo
           </button>
         ) : (
           <form action={borrar} className="flex flex-wrap items-center gap-2">
+            <input type="hidden" name="id" value={proyecto.id} />
             <span className="text-pequeno font-bold">
               ¿Borrar «{proyecto.nombre}»{demos}? No se puede deshacer.
               {/* ADR-003: con la colección vacía, el sitio vuelve al contenido estático. */}
@@ -133,7 +151,7 @@ function ControlesFila({ proyecto, ultimo }: { proyecto: ProyectoEnLista; ultimo
           </form>
         )}
       </div>
-      <Mensaje texto={estadoPublicar.error ?? estadoBorrar.error} />
+      <Mensaje texto={estadoPublicar.error} />
     </div>
   );
 }

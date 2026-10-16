@@ -10,11 +10,11 @@ import { erroresPorCampo, proyectoEntradaEsquema, type ProyectoEntrada } from ".
 // Quien llama invalida la caché del sitio (`updateTag(TAG_CONTENIDO)`): este módulo no importa next/cache.
 
 export type ResultadoProyecto =
-  | { ok: true; id?: string }
+  /** `aviso`: se escribió, pero quedó algo para contarle al admin (un borrado a medias). */
+  | { ok: true; id?: string; aviso?: string }
   | {
       ok: false;
-      /** `parcial`: se escribió algo (el proyecto se borró) pero no todo; igual hay que invalidar el sitio. */
-      error: "invalida" | "no-encontrado" | "desactualizada" | "parcial";
+      error: "invalida" | "no-encontrado" | "desactualizada";
       mensaje: string;
       campos?: Record<string, string>;
     };
@@ -143,8 +143,8 @@ export async function actualizarProyecto(id: string, datos: unknown): Promise<Re
 /**
  * Borra el proyecto y todas sus demos (activas o no): una demo sin proyecto no se puede mostrar ni editar.
  * Primero el proyecto: si borrar las demos falla, quedan huérfanas pero invisibles (el sitio las busca por
- * proyecto), nunca un proyecto sin las demos que tenía; devuelve `parcial`, así quien llama invalida el sitio
- * igual y avisa. La imagen de Blob no se borra.
+ * proyecto), nunca un proyecto sin las demos que tenía; devuelve `ok` (se escribió: quien llama invalida el
+ * sitio) con un `aviso`. La imagen de Blob no se borra.
  */
 export async function borrarProyecto(id: string): Promise<ResultadoProyecto> {
   if (!ID_VALIDO.test(id)) return NO_ENCONTRADO;
@@ -157,9 +157,8 @@ export async function borrarProyecto(id: string): Promise<ResultadoProyecto> {
     // Solo el nombre: el mensaje del driver puede traer la URI.
     console.error("proyectos: se borró el proyecto pero no sus demos", error instanceof Error ? error.name : "error");
     return {
-      ok: false,
-      error: "parcial",
-      mensaje: "Se borró el proyecto, pero quedaron demos sin borrar (no se ven en el sitio). Avisale a quien mantiene la base.",
+      ok: true,
+      aviso: "Se borró el proyecto, pero quedaron demos sin borrar (no se ven en el sitio). Avisale a quien mantiene la base.",
     };
   }
   return { ok: true };
