@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import type { Session } from "next-auth";
 import { auth } from "@/auth";
+import { evaluarAcceso } from "./acceso";
 import { EnvInvalidoError } from "./env";
 import { comprobarSesion, type EstadoSesion } from "./ingreso";
 import { buscarRol } from "./usuarios";
@@ -45,20 +46,21 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
   return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
 }
 
+/**
+ * Si quien hace el pedido es `admin`, con la misma decisión que los permisos (`evaluarAcceso` con el rol releído
+ * de la base por `buscarRol`, más `ADMIN_EMAILS`). Lo usa `POST /api/visitas` para no contar a los admin: no es
+ * un permiso. Sin sesión, sin `AUTH_*`, con la cuenta bloqueada o borrada, `false`: una cuenta bloqueada no tiene
+ * permisos (domain.md), así que su visita cuenta como la de cualquiera. Si la base falla, tira (quien llama decide).
+ */
 export async function esAdminLaSesion(): Promise<boolean> {
-  return (await rolDeLaSesionViejo()) === "admin";
-}
-
-async function rolDeLaSesionViejo(): Promise<string | null> {
-  await connection();
+  await connection(); // ver `estadoDeSesion`
   let sesion: SesionDeLaApp;
   try {
     sesion = (await auth()) as SesionDeLaApp;
   } catch (error) {
-    if (error instanceof EnvInvalidoError) return null;
+    if (error instanceof EnvInvalidoError) return false;
     console.error("sesion: no se pudo leer la sesión", error instanceof Error ? error.name : "desconocido");
-    return null;
+    return false;
   }
-  const id = sesion?.user?.id;
-  return id ? "admin" : null;
+  return (await evaluarAcceso(sesion, ["admin"], (id) => buscarRol(id))).ok;
 }
