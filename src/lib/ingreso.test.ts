@@ -91,10 +91,10 @@ describe("cuenta bloqueada (#49)", () => {
       callbackUrl: "/panel",
     });
   });
-  it("con error=bloqueado tampoco redirige una sesión que parece válida", () => {
-    expect(decidirIngreso({ sesion: "valida", error: "bloqueado", callbackUrl: "/panel" })).toMatchObject({
-      accion: "mostrar",
-      aviso: "bloqueada",
+  it("si la desbloquearon (la base dice válida), error=bloqueado no la frena", () => {
+    expect(decidirIngreso({ sesion: "valida", error: "bloqueado", callbackUrl: "/panel" })).toEqual({
+      accion: "redirigir",
+      destino: "/panel",
     });
   });
 });

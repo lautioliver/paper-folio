@@ -1,7 +1,7 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { conectar, desconectar } from "./db";
-import { buscarRol, normalizarLegados, registrarIngreso, usuarioBloqueado } from "./usuarios";
+import { buscarRol, CuentaBloqueadaError, normalizarLegados, registrarIngreso, usuarioBloqueado } from "./usuarios";
 import { Usuario } from "@/models/Usuario";
 
 const ADMINS = " Admin@Example.com , otra@example.com";
@@ -151,5 +151,13 @@ describe("usuarioBloqueado", () => {
     await Usuario.updateOne({ _id: r.id }, { $set: { bloqueado: true } });
     expect(await usuarioBloqueado(" B@Example.com ")).toBe(true);
     expect(await usuarioBloqueado("nadie@example.com")).toBe(false);
+  });
+});
+
+describe("registrarIngreso de una cuenta bloqueada", () => {
+  it("lanza CuentaBloqueadaError (defensa por si el callback signIn no la frenó)", async () => {
+    const r = await registrarIngreso({ email: "b@example.com" }, ADMINS);
+    await Usuario.updateOne({ _id: r.id }, { $set: { bloqueado: true } });
+    await expect(registrarIngreso({ email: "b@example.com" }, ADMINS)).rejects.toThrow(CuentaBloqueadaError);
   });
 });

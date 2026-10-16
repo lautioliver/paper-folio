@@ -26,6 +26,9 @@ export function decidirIngreso(entrada: {
   const errorDeSesion = entrada.error === "sesion";
   // Sin poder comprobar la base no se sabe si la sesión sirve: no se redirige (podría rebotar).
   if (entrada.sesion === "error") return { accion: "mostrar", aviso: "verificacion", callbackUrl };
+  // Cuenta bloqueada (#49): no se redirige, rebotaría. El estado sale de la base, no de `error=bloqueado`:
+  // si la desbloquearon en el medio, la sesión vuelve a ser válida y se redirige como siempre.
+  if (entrada.sesion === "bloqueada") return { accion: "mostrar", aviso: "bloqueada", callbackUrl };
   if (entrada.sesion === "huerfana" || (entrada.sesion === "valida" && errorDeSesion)) {
     return { accion: "mostrar", aviso: "sesion", callbackUrl };
   }
@@ -49,6 +52,7 @@ export async function comprobarSesion(
   try {
     const acceso = await evaluarAcceso(sesion, [], buscar);
     if (acceso.ok) return "valida";
+    if (acceso.motivo === "bloqueado") return "bloqueada";
     return acceso.motivo === "sesion-huerfana" ? "huerfana" : "ninguna";
   } catch (error) {
     console.error("ingreso: no se pudo comprobar la sesión", error instanceof Error ? error.name : "desconocido");

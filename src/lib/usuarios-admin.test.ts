@@ -27,8 +27,17 @@ afterAll(async () => {
 });
 
 async function crear(email: string, extra: { nombre?: string; rol?: Rol; bloqueado?: boolean } = {}): Promise<string> {
-  const doc = await Usuario.create({ email, nombre: extra.nombre ?? "", rol: extra.rol ?? "usuario", bloqueado: extra.bloqueado ?? false, ultimoAcceso: new Date() });
-  return String(doc._id);
+  const { insertedId } = await Usuario.collection.insertOne({
+    email,
+    nombre: extra.nombre ?? "",
+    imagen: "",
+    rol: extra.rol ?? "usuario",
+    bloqueado: extra.bloqueado ?? false,
+    accesos: 0,
+    creadoEn: new Date(),
+    ultimoAcceso: new Date(),
+  });
+  return String(insertedId);
 }
 
 describe("patronDeBusqueda", () => {

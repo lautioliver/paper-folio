@@ -40,6 +40,22 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
     );
   }
 
+  if (decision.aviso === "bloqueada") {
+    return (
+      <>
+        <p role="alert" className="mt-6 text-cuerpo">
+          Tu cuenta está bloqueada: no podés ingresar al sitio. Si creés que es un error, escribinos por el formulario
+          de contacto.
+        </p>
+        <form action={salir} className="mt-8">
+          <button type="submit" className={BOTON}>
+            Salir
+          </button>
+        </form>
+      </>
+    );
+  }
+
   if (decision.aviso === "sesion") {
     return (
       <>

@@ -24,7 +24,7 @@ export async function evaluarAcceso(
   if (!id) return { ok: false, motivo: "sin-sesion" };
   const rol = await buscar(id);
   if (!rol) return { ok: false, motivo: "sesion-huerfana" };
-  if (rol === "bloqueado") return { ok: false, motivo: "sesion-huerfana" }; // STUB
+  if (rol === "bloqueado") return { ok: false, motivo: "bloqueado" };
   if (roles.length > 0 && !roles.includes(rol)) return { ok: false, motivo: "sin-permiso" };
   return { ok: true, id, rol };
 }
@@ -47,14 +47,19 @@ export const RUTA_INGRESO = "/ingresar";
  */
 export function urlDeIngreso(volverA: string, motivo: Exclude<Acceso, { ok: true }>["motivo"]): string {
   const url = `${RUTA_INGRESO}?callbackUrl=${encodeURIComponent(rutaInterna(volverA))}`;
-  return motivo === "sesion-huerfana" ? `${url}&error=sesion` : url; // STUB bloqueado
+  if (motivo === "sesion-huerfana") return `${url}&error=sesion`;
+  // #49: /ingresar avisa que la cuenta está bloqueada y no lo devuelve a la página.
+  if (motivo === "bloqueado") return `${url}&error=bloqueado`;
+  return url;
 }
 
 /**
  * Respuesta de una API cuando la sesión no alcanza, con el formato único de error y sin redirect:
- * 401 `SIN_SESION` (sin sesión o con sesión huérfana) o 403 `SIN_PERMISO` (sin el rol).
+ * 401 `SIN_SESION` (sin sesión o con sesión huérfana), 403 `SIN_PERMISO` (sin el rol) o
+ * 403 `CUENTA_BLOQUEADA` (#49).
  */
 export function respuestaSinAcceso(motivo: Exclude<Acceso, { ok: true }>["motivo"]): Response {
+  if (motivo === "bloqueado") return respuestaError(403, "CUENTA_BLOQUEADA", "Tu cuenta está bloqueada.");
   return motivo === "sin-permiso"
     ? respuestaError(403, "SIN_PERMISO", "No tenés permiso para hacer esto.")
     : respuestaError(401, "SIN_SESION", "Tu sesión venció. Ingresá de nuevo.");
@@ -78,8 +83,8 @@ export async function permiteIngreso(
   datos: { proveedor?: string | null; emailVerificado?: boolean | null; email?: string | null },
   estaBloqueado: (email: string) => Promise<boolean>,
 ): Promise<boolean> {
-  void estaBloqueado; // STUB
-  return datos.proveedor === "google" && datos.emailVerificado === true;
+  if (datos.proveedor !== "google" || datos.emailVerificado !== true || !datos.email) return false;
+  return !(await estaBloqueado(datos.email));
 }
 
 export type CambioUsuario = { tipo: "rol"; rol: Rol } | { tipo: "bloqueo"; bloqueado: boolean };
@@ -97,6 +102,12 @@ export function revisarCambio(entrada: {
   cambio: CambioUsuario;
   otrosAdmins: number;
 }): RechazoCambio | null {
-  void entrada; // STUB
+  const { actorId, objetivo, cambio, otrosAdmins } = entrada;
+  if (objetivo.id === actorId) return "propio";
+  const bloquea = cambio.tipo === "bloqueo" && cambio.bloqueado;
+  if (objetivo.porEntorno && (cambio.tipo === "rol" || bloquea)) return "entorno";
+  const esAdminVigente = objetivo.rol === "admin" && !objetivo.bloqueado;
+  const quitaAdmin = esAdminVigente && (bloquea || (cambio.tipo === "rol" && cambio.rol !== "admin"));
+  if (quitaAdmin && otrosAdmins < 1) return "ultimo-admin";
   return null;
 }
