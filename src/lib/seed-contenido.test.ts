@@ -31,7 +31,8 @@ afterAll(async () => {
 });
 
 async function foto() {
-  const sin = { _id: 0, __v: 0, creadoEn: 0, actualizadoEn: 0, creadaEn: 0, actualizadaEn: 0 };
+  // Con las fechas: una segunda corrida no puede tocar ni `actualizadoEn`.
+  const sin = { _id: 0, __v: 0 };
   return {
     proyectos: await Proyecto.find({}, sin).sort({ slug: 1 }).lean(),
     demos: await Demo.find({}, { ...sin, proyecto: 0 }).sort({ url: 1 }).lean(),

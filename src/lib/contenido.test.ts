@@ -9,7 +9,7 @@ import { projects, services } from "@/content/profile";
 import { Demo } from "@/models/Demo";
 import { Proyecto } from "@/models/Proyecto";
 import { Servicio } from "@/models/Servicio";
-import { buscarProyecto, demosDe, listarProyectos, listarServicios, TAG_CONTENIDO } from "./contenido";
+import { buscarProyecto, demosDe, detalleProyecto, listarProyectos, listarServicios, TAG_CONTENIDO } from "./contenido";
 import { demoDesdePerfil, proyectoDesdePerfil, servicioDesdePerfil } from "./contenido-esquemas";
 import { conectar, desconectar } from "./db";
 import { sembrarContenido } from "./seed-contenido";
@@ -159,6 +159,7 @@ describe("lo publicado y lo activo", () => {
     await Demo.collection.insertOne({ proyecto: proyecto._id, titulo: "Mala", url: "javascript:alert(1)", activa: true, orden: 0 });
     await Servicio.collection.insertOne({ titulo: "Malo", descripcion: "x", imagen: "http://inseguro.example.com/a.png", publicado: true, orden: 0 });
     await Servicio.create({ titulo: "Bueno", descripcion: "y", icono: "deploy", publicado: true });
+    await Servicio.collection.insertOne({ titulo: "Sin ilustración", descripcion: "z", publicado: true, orden: 0 });
     vi.spyOn(console, "warn").mockImplementation(() => {});
     expect((await listarProyectos()).map((p) => p.slug)).toEqual(["ok"]);
     expect(await buscarProyecto("malo")).toBeNull();
@@ -196,3 +197,25 @@ describe("si la base cae", () => {
     await desconectar();
   }, 30_000);
 });
+
+describe("detalleProyecto", () => {
+  it("devuelve el proyecto y sus demos de la misma fuente, con tieneDemo coherente", async () => {
+    const [p] = await Proyecto.create([proyectoDoc("solo-en-la-base")]);
+    await Demo.create({ proyecto: p._id, titulo: "Demo", url: "https://a.example.com" });
+    expect(await detalleProyecto("solo-en-la-base")).toEqual({
+      proyecto: expect.objectContaining({ slug: "solo-en-la-base", tieneDemo: true }),
+      demos: [{ titulo: "Demo", url: "https://a.example.com", descripcion: "" }],
+    });
+    expect(await detalleProyecto("ucanode")).toBeNull();
+    expect(await detalleProyecto("__proto__")).toBeNull();
+  });
+
+  it("con la base vacía, proyecto y demos salen los dos del respaldo", async () => {
+    expect(await detalleProyecto("ucanode")).toEqual({
+      proyecto: proyectoDesdePerfil(projects[0]),
+      demos: [demoDesdePerfil(projects[0])],
+    });
+    expect(cacheLife).toHaveBeenCalledWith("minutes");
+  });
+});
+

@@ -55,7 +55,11 @@ describe("el sitio lee el contenido de la base (src/lib/contenido.ts)", () => {
   });
 
   it("el detalle da 404 si el proyecto no está publicado y muestra las demos activas", () => {
-    expect(fuentes.detalle).toMatch(/buscarProyecto\(slug\)[\s\S]*if \(!project\) notFound\(\)/);
-    expect(fuentes.detalle).toMatch(/demosDe\(/);
+    // Proyecto y demos en una sola lectura: no se mezclan la base y el respaldo.
+    expect(fuentes.detalle).toMatch(/await detalleProyecto\(slug\)[\s\S]*if \(!detalle\) notFound\(\)/);
+  });
+
+  it("una demo http no va en el iframe (contenido mixto en el sitio https): solo el enlace", () => {
+    expect(fuentes.detalle).toMatch(/esUrlHttps\(demo\.url\)\s*&&\s*\(\s*<iframe/);
   });
 });

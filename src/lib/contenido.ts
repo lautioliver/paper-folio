@@ -201,3 +201,8 @@ export async function listarServicios(): Promise<Servicio[]> {
   else cacheLife("minutes");
   return datos;
 }
+
+export async function detalleProyecto(slug: string): Promise<{ proyecto: Proyecto; demos: Demo[] } | null> {
+  void slug;
+  return null;
+}
