@@ -24,6 +24,12 @@ function texto(formData: FormData, nombre: string): string {
   return typeof valor === "string" ? valor : "";
 }
 
+// `previo` lo reenvía el cliente: si no es un entero, se arranca de cero (solo es la clave del formulario).
+function siguienteEnvio(previo: EstadoFormulario | undefined): number {
+  const envio = previo?.envio;
+  return (typeof envio === "number" && Number.isSafeInteger(envio) && envio >= 0 ? envio : 0) + 1;
+}
+
 function invalidarSiSalioBien(r: ResultadoServicio): void {
   if (r.ok) updateTag(TAG_CONTENIDO);
 }
@@ -31,7 +37,7 @@ function invalidarSiSalioBien(r: ResultadoServicio): void {
 /** Crea (`id` null) o edita el servicio con los campos del formulario. Si sale bien, vuelve a la lista. */
 export async function guardarServicioAccion(
   id: string | null,
-  _previo: EstadoFormulario,
+  previo: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
   await requerirRol(id ? rutaEdicion(id) : RUTA_NUEVO_SERVICIO, "admin");
@@ -44,7 +50,8 @@ export async function guardarServicioAccion(
     publicado: formData.get("publicado") === "on",
   };
   const r = id ? await editarServicio(id, valores) : await crearServicio(valores);
-  if (!r.ok) return { error: r.mensaje, campos: r.campos ?? {}, valores };
+  // Vuelve lo que se mandó y un envío más: el formulario se vuelve a montar con estos valores.
+  if (!r.ok) return { error: r.mensaje, campos: r.campos ?? {}, valores, envio: siguienteEnvio(previo) };
   invalidarSiSalioBien(r);
   redirect(RUTA_SERVICIOS);
 }
