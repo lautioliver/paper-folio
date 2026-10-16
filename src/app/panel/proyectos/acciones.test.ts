@@ -158,3 +158,16 @@ describe("acciones de la lista", () => {
     expect(servicio.reordenar).toHaveBeenCalledWith([OTRO, ID]);
   });
 });
+
+describe("acciones de la lista con la pantalla vieja", () => {
+  it("si el proyecto ya no existe o la lista cambió, devuelven el mensaje y refrescan para mostrar la lista real", async () => {
+    servicio.borrarProyecto.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "El proyecto no existe." });
+    servicio.publicarProyecto.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "El proyecto no existe." });
+    servicio.reordenar.mockResolvedValue({ ok: false, error: "desactualizada", mensaje: "La lista cambió." });
+    expect(await borrarProyectoAccion(ID, SIN_ERROR)).toEqual({ error: "El proyecto no existe." });
+    expect(await publicarProyectoAccion(ID, true, SIN_ERROR)).toEqual({ error: "El proyecto no existe." });
+    expect(await reordenarProyectosAccion(SIN_ERROR, form({ orden: [ID] }))).toEqual({ error: "La lista cambió." });
+    expect(refresh).toHaveBeenCalledTimes(3);
+    expect(updateTag).not.toHaveBeenCalled();
+  });
+});
