@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { EnvInvalidoError } from "./env";
 import { comprobarSesion, type EstadoSesion } from "./ingreso";
 import { buscarRol } from "./usuarios";
+import type { Rol } from "@/models/Usuario";
 
 export type SesionDeLaApp = Session | null;
 
@@ -43,4 +44,8 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
     return { estado: "ninguna", configurado: true };
   }
   return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
+}
+
+export async function rolDeLaSesion(): Promise<Rol | null> {
+  return null;
 }
