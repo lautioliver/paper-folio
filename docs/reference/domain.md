@@ -71,7 +71,7 @@ Modelo: `src/models/Proyecto.ts`.
 
 **Desde el panel (#51):** lo valida `proyectoEntradaEsquema` (`src/lib/proyecto-entrada.ts`, `LIMITES`), que extiende el esquema de lectura para que nada de lo que se guarda lo descarte después el sitio (sin strings vacíos en `stack` ni en `caso`). Largos máximos: `slug` 80 (único, minúsculas, números y guiones), `nombre` 80, `categoria` 60, `descripcion` 300, `stack` de 1 a 10 ítems de hasta 40 caracteres, `caso.problema` y `caso.solucion` 1500, `caso.funcionalidades` hasta 20 ítems de hasta 1500 y `caso.stack` hasta 20 ítems de hasta 40. Un proyecto nuevo va al final del orden; el orden se guarda entero desde la lista.
 
-**Borrar un proyecto borra todas sus demos** (activas o no): una demo sin proyecto no se puede mostrar ni editar. Se borra primero el proyecto y después las demos; si lo segundo falla, pueden quedar demos huérfanas, que no se muestran (el sitio las busca por proyecto), y el panel lo avisa. La imagen de Blob no se borra.
+**Borrar un proyecto borra todas sus demos** (activas o no): una demo sin proyecto no se muestra en el sitio. Se borra primero el proyecto y después las demos; si lo segundo falla, pueden quedar demos huérfanas, que no se muestran (el sitio las busca por proyecto), y el panel lo avisa; en `/panel/demos` aparecen en "Sin proyecto", donde se pueden borrar o pasar a otro proyecto. La imagen de Blob no se borra.
 
 ### Demo (`demos`)
 
@@ -88,6 +88,8 @@ Modelo: `src/models/Demo.ts`. Un proyecto puede tener varias; el detalle muestra
 | `creadaEn`, `actualizadaEn` | fecha | Timestamps |
 
 Índice `{ proyecto: 1, activa: 1, orden: 1 }`.
+
+**Desde el panel (#50):** la demo va con un proyecto que exista (publicado o no); título de 1 a 80 caracteres, descripción de hasta 300 y URL `https` (el modelo acepta también `http`, ADR-003 R-8, pero el panel no guarda una `http` nueva ni cambia una URL a `http`, así se puede embeber; una demo `http` anterior se edita sin cambiarle la URL: enmienda del 2026-10-16 de ADR-003). El `orden` es por proyecto: una demo nueva, o una que cambia de proyecto, va al final de las de ese proyecto.
 
 ### Servicio (`servicios`)
 

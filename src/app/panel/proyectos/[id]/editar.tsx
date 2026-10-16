@@ -13,7 +13,7 @@ export async function EditarProyecto({ id }: { id: string }) {
   return (
     <>
       <h1 className="text-h2 font-bold">Editar «{proyecto.nombre}»</h1>
-      <FormularioProyecto id={proyecto.id} valores={valoresDeProyecto(proyecto)} />
+      <FormularioProyecto id={proyecto.id} valores={valoresDeProyecto(proyecto)} version={proyecto.version} />
     </>
   );
 }

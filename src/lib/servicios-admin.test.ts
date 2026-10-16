@@ -170,6 +170,25 @@ describe("crear y editar", () => {
   });
 });
 
+describe("versión", () => {
+  it("cambia con cada guardado (editar, publicar, mover): es la key del formulario de edición", async () => {
+    const id = await crear();
+    await crear({ titulo: "Otro" });
+    const versiones = [(await obtenerServicioAdmin(id))?.version];
+    for (const escribir of [
+      () => editarServicio(id, entrada({ descripcion: "Otra." })),
+      () => publicarServicio(id, false),
+      () => moverServicio(id, "bajar"),
+    ]) {
+      await new Promise((r) => setTimeout(r, 5));
+      await escribir();
+      versiones.push((await obtenerServicioAdmin(id))?.version);
+    }
+    expect(versiones.every((v) => typeof v === "string" && v !== "")).toBe(true);
+    expect(new Set(versiones).size).toBe(versiones.length);
+  });
+});
+
 describe("ordenar", () => {
   it("subir y bajar intercambian con el vecino", async () => {
     await crear({ titulo: "A" });
