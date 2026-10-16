@@ -53,21 +53,26 @@ export default async function DemosPage() {
                       {d.descripcion && <p className="mt-1 text-pequeno break-words">{d.descripcion}</p>}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <form action={moverDemoAccion.bind(null, d.id, "subir")}>
-                        <button type="submit" className={boton} disabled={i === 0} aria-label={`Subir ${d.titulo}`}>
-                          Subir
-                        </button>
-                      </form>
-                      <form action={moverDemoAccion.bind(null, d.id, "bajar")}>
-                        <button
-                          type="submit"
-                          className={boton}
-                          disabled={i === g.demos.length - 1}
-                          aria-label={`Bajar ${d.titulo}`}
-                        >
-                          Bajar
-                        </button>
-                      </form>
+                      {/* Las huérfanas no se ordenan: no se muestran, y vienen de proyectos distintos. */}
+                      {g.proyecto && (
+                        <>
+                          <form action={moverDemoAccion.bind(null, d.id, "subir")}>
+                            <button type="submit" className={boton} disabled={i === 0} aria-label={`Subir ${d.titulo}`}>
+                              Subir
+                            </button>
+                          </form>
+                          <form action={moverDemoAccion.bind(null, d.id, "bajar")}>
+                            <button
+                              type="submit"
+                              className={boton}
+                              disabled={i === g.demos.length - 1}
+                              aria-label={`Bajar ${d.titulo}`}
+                            >
+                              Bajar
+                            </button>
+                          </form>
+                        </>
+                      )}
                       <form action={activarDemoAccion.bind(null, d.id, !d.activa)}>
                         <button type="submit" className={boton} aria-label={`${d.activa ? "Desactivar" : "Activar"} ${d.titulo}`}>
                           {d.activa ? "Desactivar" : "Activar"}

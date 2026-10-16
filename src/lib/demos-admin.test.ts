@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 // `use cache` no corre en Vitest: detalleProyecto (el detalle público) lee directo de la base.
 vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 
+import { Types } from "mongoose";
 import { Demo } from "@/models/Demo";
 import { Proyecto } from "@/models/Proyecto";
 import { detalleProyecto } from "./contenido";
@@ -265,6 +266,13 @@ describe("editar y borrar", () => {
     expect(r).toMatchObject({ ok: false, error: "invalido" });
     expect(r.ok ? null : r.campos?.url).toBeTruthy();
     expect((await obtenerDemoAdmin(id))?.url).toBe("http://vieja.example.com");
+  });
+
+  it("una URL guardada por fuera del modelo (javascript:) no se conserva al editar: da error, no lanza", async () => {
+    const { insertedId } = await Demo.collection.insertOne({ proyecto: new Types.ObjectId(uno), titulo: "Mala", url: "javascript:alert(1)" });
+    const r = await editarDemo(String(insertedId), entrada({ url: "javascript:alert(1)" }));
+    expect(r).toMatchObject({ ok: false, error: "invalido" });
+    expect(r.ok ? null : r.campos?.url).toBeTruthy();
   });
 
   it("los ids en mayúsculas valen igual: mover funciona y el mismo proyecto no cuenta como cambio", async () => {

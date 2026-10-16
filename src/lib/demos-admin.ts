@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Demo } from "@/models/Demo";
 import { Proyecto } from "@/models/Proyecto";
-import { esUrlHttps } from "./contenido-esquemas";
+import { esUrlHttp, esUrlHttps } from "./contenido-esquemas";
 import { conectar } from "./db";
 import { LARGO_DESCRIPCION, LARGO_TITULO, type CampoDemo } from "./demos-campos";
 
@@ -13,7 +13,7 @@ export { LARGO_DESCRIPCION, LARGO_TITULO, type CampoDemo } from "./demos-campos"
 //
 // El orden es por proyecto: el detalle muestra las demos activas de un proyecto de menor a mayor `orden`.
 // Desde el panel la URL tiene que ser `https` (el modelo acepta también `http`, ADR-003 R-8): así toda demo
-// nueva o editada se puede embeber en el iframe del detalle.
+// nueva o con la URL cambiada se puede embeber en el iframe del detalle.
 
 /** Una demo como la ve el panel (activa o no). `proyecto`: el id del proyecto. */
 export type DemoAdmin = {
@@ -63,28 +63,40 @@ const PROYECTO_INEXISTENTE: ResultadoDemo = {
   campos: { proyecto: "Ese proyecto no existe (¿lo borraron?). Elegí otro." },
 };
 
-const entradaEsquema = z.object({
-  proyecto: z.string({ error: ELEGI_PROYECTO }).regex(ID_VALIDO, { error: ELEGI_PROYECTO }),
-  titulo: z
-    .string()
-    .trim()
-    .min(1, { error: "Poné un título." })
-    .max(LARGO_TITULO, { error: `El título tiene que tener hasta ${LARGO_TITULO} caracteres.` }),
-  url: z.string().trim().refine(esUrlHttps, { error: "Tiene que ser una URL https (por ejemplo, https://demo.com)." }),
-  descripcion: z
-    .string()
-    .trim()
-    .max(LARGO_DESCRIPCION, { error: `La descripción tiene que tener hasta ${LARGO_DESCRIPCION} caracteres.` }),
-  activa: z.boolean(),
-});
+const URL_HTTPS = "Tiene que ser una URL https (por ejemplo, https://demo.com).";
 
-type DatosDemo = z.output<typeof entradaEsquema>;
+/**
+ * `urlActual`: al editar, la URL guardada. Una demo `http` anterior al panel (el modelo la acepta) se puede
+ * editar sin cambiarle la URL; cambiarla, solo a una `https`. Lo que no sea `http(s)` (escrito por fuera
+ * del modelo) no se conserva nunca.
+ */
+const esquemaEntrada = (urlActual?: string) =>
+  z.object({
+    // En minúsculas, como lo guarda Mongo: así se compara bien con el proyecto actual de la demo.
+    proyecto: z.string({ error: ELEGI_PROYECTO }).trim().toLowerCase().regex(ID_VALIDO, { error: ELEGI_PROYECTO }),
+    titulo: z
+      .string()
+      .trim()
+      .min(1, { error: "Poné un título." })
+      .max(LARGO_TITULO, { error: `El título tiene que tener hasta ${LARGO_TITULO} caracteres.` }),
+    url: z
+      .string()
+      .trim()
+      .refine((url) => esUrlHttps(url) || (url === urlActual && esUrlHttp(url)), { error: URL_HTTPS }),
+    descripcion: z
+      .string()
+      .trim()
+      .max(LARGO_DESCRIPCION, { error: `La descripción tiene que tener hasta ${LARGO_DESCRIPCION} caracteres.` }),
+    activa: z.boolean(),
+  });
+
+type DatosDemo = z.output<ReturnType<typeof esquemaEntrada>>;
 type Rechazo = Extract<ResultadoDemo, { ok: false }>;
 
 const CAMPOS: readonly CampoDemo[] = ["proyecto", "titulo", "url", "descripcion"];
 
-function validarEntrada(entrada: EntradaDemo): { ok: true; datos: DatosDemo } | Rechazo {
-  const r = entradaEsquema.safeParse(entrada);
+function validarEntrada(entrada: EntradaDemo, urlActual?: string): { ok: true; datos: DatosDemo } | Rechazo {
+  const r = esquemaEntrada(urlActual).safeParse(entrada);
   if (r.success) return { ok: true, datos: r.data };
   const campos: Partial<Record<CampoDemo, string>> = {};
   for (const issue of r.error.issues) {
@@ -170,8 +182,9 @@ export async function crearDemo(entrada: EntradaDemo): Promise<ResultadoDemo> {
   const v = validarEntrada(entrada);
   if (!v.ok) return v;
   await conectar();
-  if (!(await Proyecto.exists({ _id: v.datos.proyecto }))) return PROYECTO_INEXISTENTE;
-  const doc = await new Demo({ ...v.datos, orden: await siguienteOrden(v.datos.proyecto) }).save();
+  const [existe, orden] = await Promise.all([Proyecto.exists({ _id: v.datos.proyecto }), siguienteOrden(v.datos.proyecto)]);
+  if (!existe) return PROYECTO_INEXISTENTE;
+  const doc = await new Demo({ ...v.datos, orden }).save();
   return { ok: true, id: String(doc._id) };
 }
 
@@ -181,11 +194,11 @@ export async function crearDemo(entrada: EntradaDemo): Promise<ResultadoDemo> {
  */
 export async function editarDemo(id: string, entrada: EntradaDemo): Promise<ResultadoDemo> {
   if (!ID_VALIDO.test(id)) return NO_ENCONTRADO;
-  const v = validarEntrada(entrada);
-  if (!v.ok) return v;
   await conectar();
   const doc = await Demo.findById(id);
   if (!doc) return NO_ENCONTRADO;
+  const v = validarEntrada(entrada, doc.url);
+  if (!v.ok) return v;
   if (!(await Proyecto.exists({ _id: v.datos.proyecto }))) return PROYECTO_INEXISTENTE;
   const cambiaDeProyecto = String(doc.proyecto) !== v.datos.proyecto;
   doc.set(v.datos);
@@ -225,10 +238,11 @@ export async function moverDemo(id: string, direccion: unknown): Promise<Resulta
   await conectar();
   const demo = await Demo.findById(id, { proyecto: 1 }).lean();
   if (!demo) return NO_ENCONTRADO;
+  const propio = String(demo._id); // en minúsculas: `id` puede venir en mayúsculas
   const docs = await Demo.find({ proyecto: demo.proyecto }, { orden: 1 })
     .sort(EN_ORDEN)
     .lean<{ _id: unknown; orden?: number }[]>();
-  const i = docs.findIndex((d) => String(d._id) === id);
+  const i = docs.findIndex((d) => String(d._id) === propio);
   if (i === -1) return NO_ENCONTRADO;
   const j = dir.data === "subir" ? i - 1 : i + 1;
   if (j < 0 || j >= docs.length) return { ok: true, id };
