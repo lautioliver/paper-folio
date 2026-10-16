@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { enlacesPara, esActual } from "./enlaces";
 
 describe("enlacesPara", () => {
-  it("el operador ve Consultas y no Servicios ni Proyectos", () => {
+  it("el operador ve Consultas y no Proyectos, Demos ni Servicios", () => {
     const etiquetas = enlacesPara("operador").map((e) => e.etiqueta);
     expect(etiquetas).toContain("Consultas");
     expect(etiquetas).not.toContain("Demos");
@@ -10,7 +10,7 @@ describe("enlacesPara", () => {
     expect(etiquetas).not.toContain("Proyectos");
   });
 
-  it("el admin ve Consultas, Proyectos y Servicios", () => {
+  it("el admin ve Consultas, Proyectos, Demos y Servicios", () => {
     expect(enlacesPara("admin")).toEqual(
       expect.arrayContaining([
         { href: "/panel/consultas", etiqueta: "Consultas" },

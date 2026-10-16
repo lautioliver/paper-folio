@@ -19,3 +19,17 @@ export type EstadoFormulario = {
 };
 
 export const FORMULARIO_INICIAL: EstadoFormulario = { error: null, campos: {} };
+
+/** Los valores con los que se arma el formulario: los del último envío fallido o, si no hubo, los iniciales. */
+export function valoresAMostrar(estado: EstadoFormulario, inicial: ValoresFormulario): ValoresFormulario {
+  return estado.valores ?? inicial;
+}
+
+/**
+ * Clave de los campos del formulario: cambia con cada respuesta de la acción, así se vuelven a montar con
+ * `valoresAMostrar` como valores por defecto. React 19 resetea el formulario después de la acción, y un
+ * control no controlado (el select del proyecto, el checkbox) volvería a sus valores iniciales.
+ */
+export function claveDelFormulario(estado: EstadoFormulario): string {
+  return String(estado.envio ?? 0);
+}
