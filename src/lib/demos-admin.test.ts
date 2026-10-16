@@ -256,6 +256,28 @@ describe("orden", () => {
 });
 
 describe("editar y borrar", () => {
+  it("una demo http anterior al panel se puede editar sin cambiarle la URL; cambiarla a otra http no", async () => {
+    const vieja = await Demo.create({ proyecto: uno, titulo: "Vieja", url: "http://vieja.example.com" });
+    const id = String(vieja._id);
+    expect(await editarDemo(id, entrada({ titulo: "Vieja 2", url: "http://vieja.example.com" }))).toEqual({ ok: true, id });
+    expect((await obtenerDemoAdmin(id))?.titulo).toBe("Vieja 2");
+    const r = await editarDemo(id, entrada({ url: "http://otra.example.com" }));
+    expect(r).toMatchObject({ ok: false, error: "invalido" });
+    expect(r.ok ? null : r.campos?.url).toBeTruthy();
+    expect((await obtenerDemoAdmin(id))?.url).toBe("http://vieja.example.com");
+  });
+
+  it("los ids en mayúsculas valen igual: mover funciona y el mismo proyecto no cuenta como cambio", async () => {
+    await crear({ titulo: "A" });
+    const b = await crear({ titulo: "B" });
+    await crear({ titulo: "C" });
+    expect(await moverDemo(b.toUpperCase(), "subir")).toEqual({ ok: true, id: b.toUpperCase() });
+    expect(await titulosDe(uno)).toEqual(["B", "A", "C"]);
+    expect(await editarDemo(b, entrada({ titulo: "B2", proyecto: uno.toUpperCase() }))).toMatchObject({ ok: true });
+    expect(await titulosDe(uno)).toEqual(["B2", "A", "C"]);
+    expect((await obtenerDemoAdmin(b))?.proyecto).toBe(uno);
+  });
+
   it("editar guarda todos los campos", async () => {
     const id = await crear();
     const r = await editarDemo(
