@@ -42,6 +42,7 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 | `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET` | Cliente OAuth de Google (ver "Ingreso con Google"). Obligatorias para iniciar sesión; sin ellas la landing funciona y `/api/auth/*` responde 500 con las variables que faltan en el log |
 | `ADMIN_EMAILS` y `OPERADOR_EMAILS` | Emails separados por comas que reciben el rol `admin` u `operador` en cada ingreso (ADR-002). Opcionales: vacías, todos son `usuario`. Nunca en el repo |
 | `CONTACTO_EMAIL_DESTINO` | Email que recibe el aviso de cada consulta nueva. Con el remitente de pruebas `onboarding@resend.dev`, Resend solo entrega al email con el que se creó la cuenta. Va solo en `.env.local` y en las variables de Vercel, nunca en el repo |
+| `BLOB_STORE_ID` | Id del store de Vercel Blob de las imágenes (empieza con `store_`; ver "Imágenes en Vercel Blob"). Obligatoria para subir imágenes; la base y `/api/salud` no la piden |
 
 `src/lib/env.ts` las valida con Zod cada vez que se leen (`IP_HASH_SAL`, `RESEND_API_KEY` y `CONTACTO_EMAIL_DESTINO` aparte, así la base y `/api/salud` no las exigen). Si falta una o tiene mal formato, el error nombra la variable y nunca su valor.
 
@@ -53,6 +54,13 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
    - Redirecciones: `http://localhost:3000/api/auth/callback/google` y `https://paper-folio.vercel.app/api/auth/callback/google`.
 3. Copiar el ID y el secreto a `AUTH_GOOGLE_ID` y `AUTH_GOOGLE_SECRET`, generar `AUTH_SECRET` y cargar `ADMIN_EMAILS`.
 4. Probar con `npm run dev`: `curl localhost:3000/api/auth/providers` tiene que listar Google. En Vercel, Auth.js confía en el host solo; fuera de Vercel hay que poner `AUTH_TRUST_HOST=true`.
+
+### Imágenes en Vercel Blob
+
+1. En Vercel, en el proyecto: **Storage → Create → Blob**, y conectarlo al proyecto. Vercel carga `BLOB_STORE_ID` en sus variables (si el store se conectó con otro prefijo, aparecen otras como `BLOB_STORE_ID_STORE_ID`, que el código no usa).
+2. La autenticación es por **OIDC**: en Vercel, `VERCEL_OIDC_TOKEN` lo inyecta la plataforma; no hace falta `BLOB_READ_WRITE_TOKEN`.
+3. En local hacen falta `BLOB_STORE_ID` y `VERCEL_OIDC_TOKEN` en `.env.local`. El token vence a las ~12 h: para renovarlo, **no** corras `vercel env pull` sobre `.env.local` (lo pisa entero); bajalo a un archivo aparte (`vercel env pull .env.oidc`) y copiá solo esa variable. Si la subida responde `503 SUBIDA_FALLIDA` en local, lo primero es renovarlo.
+4. Los tests no las necesitan: el cliente de Blob se inyecta y `vitest.config.ts` las vacía.
 
 ### Crear el cluster de Atlas
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, rutaInterna, urlDeIngreso } from "./acceso";
+import { evaluarAcceso, respuestaSinAcceso, rutaInterna, urlDeIngreso } from "./acceso";
 
 const base: Record<string, Rol> = { u1: "usuario", o1: "operador", a1: "admin" };
 const buscarRol = async (id: string) => base[id] ?? null;
@@ -75,5 +75,23 @@ describe("urlDeIngreso", () => {
   it("con sesión huérfana suma error=sesion", () => {
     expect(urlDeIngreso("/panel", "sesion-huerfana")).toBe("/ingresar?callbackUrl=%2Fpanel&error=sesion");
     expect(urlDeIngreso("/panel", "sin-sesion")).toBe("/ingresar?callbackUrl=%2Fpanel");
+  });
+});
+
+describe("respuestaSinAcceso (APIs, #47)", () => {
+  it("sin sesión o con sesión huérfana: 401 JSON SIN_SESION, sin redirect", async () => {
+    for (const motivo of ["sin-sesion", "sesion-huerfana"] as const) {
+      const res = respuestaSinAcceso(motivo);
+      expect(res.status).toBe(401);
+      expect(res.headers.get("location")).toBeNull();
+      expect(res.headers.get("content-type")).toMatch(/application\/json/);
+      expect(await res.json()).toEqual({ error: { codigo: "SIN_SESION", mensaje: expect.any(String) } });
+    }
+  });
+
+  it("sin el rol: 403 JSON SIN_PERMISO", async () => {
+    const res = respuestaSinAcceso("sin-permiso");
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: { codigo: "SIN_PERMISO", mensaje: expect.any(String) } });
   });
 });

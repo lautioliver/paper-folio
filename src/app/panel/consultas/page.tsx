@@ -2,12 +2,11 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { ChipEstado } from "@/components/panel/ChipEstado";
 import {
-  ESTADOS_CONSULTA,
-  ETIQUETAS_ESTADO,
   listarConsultas,
   parsearFiltros,
   type FiltrosValidos,
 } from "@/lib/bandeja";
+import { ESTADOS_CONSULTA, ETIQUETAS_ESTADO } from "@/lib/estados-consulta";
 import { CONTACT_TYPE_LABELS, CONTACT_TYPES } from "@/lib/contact";
 import { requerirRol } from "@/lib/permisos";
 
@@ -105,7 +104,12 @@ export default async function ConsultasPage({
           {items.map((c) => (
             <li key={c.id} className="contorno bg-papel p-4">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-bold">{c.nombre}</span>
+                <Link
+                  href={`${RUTA}/${c.id}`}
+                  className="font-bold underline decoration-2 underline-offset-4"
+                >
+                  {c.nombre}
+                </Link>
                 <ChipEstado estado={c.estado} />
                 <span className="text-pequeno">
                   {CONTACT_TYPE_LABELS[c.tipo]}
