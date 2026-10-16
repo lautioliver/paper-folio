@@ -1,4 +1,5 @@
 import type { Rol } from "@/models/Usuario";
+import { respuestaError } from "./api-error";
 
 export type SesionMinima = { user?: { id?: string | null; rol?: Rol | null } | null } | null;
 export type Acceso =
@@ -43,4 +44,14 @@ export const RUTA_INGRESO = "/ingresar";
 export function urlDeIngreso(volverA: string, motivo: Exclude<Acceso, { ok: true }>["motivo"]): string {
   const url = `${RUTA_INGRESO}?callbackUrl=${encodeURIComponent(rutaInterna(volverA))}`;
   return motivo === "sesion-huerfana" ? `${url}&error=sesion` : url;
+}
+
+/**
+ * Respuesta de una API cuando la sesión no alcanza, con el formato único de error y sin redirect:
+ * 401 `SIN_SESION` (sin sesión o con sesión huérfana) o 403 `SIN_PERMISO` (sin el rol).
+ */
+export function respuestaSinAcceso(motivo: Exclude<Acceso, { ok: true }>["motivo"]): Response {
+  return motivo === "sin-permiso"
+    ? respuestaError(403, "SIN_PERMISO", "No tenés permiso para hacer esto.")
+    : respuestaError(401, "SIN_SESION", "Tu sesión venció. Ingresá de nuevo.");
 }

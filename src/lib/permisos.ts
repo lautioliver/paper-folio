@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { forbidden, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, urlDeIngreso } from "./acceso";
+import { evaluarAcceso, respuestaSinAcceso, urlDeIngreso } from "./acceso";
 import { buscarRol } from "./usuarios";
 
 export { evaluarAcceso, rutaInterna, RUTA_INGRESO, type Acceso, type SesionMinima } from "./acceso";
@@ -34,4 +34,19 @@ export async function requerirRol(
   if (!acceso.ok && acceso.motivo !== "sin-permiso") redirect(urlDeIngreso(volverA, acceso.motivo));
   if (!acceso.ok) forbidden();
   return { id: acceso.id, rol: acceso.rol };
+}
+
+/**
+ * Para route handlers: la misma decisión que `requerirRol` (rol releído de la base), pero sin redirect ni
+ * `forbidden()`. Si no alcanza devuelve la respuesta JSON para devolver tal cual: 401 `SIN_SESION` o
+ * 403 `SIN_PERMISO` (`respuestaSinAcceso`). Un `fetch` del panel nunca termina siguiendo una redirección.
+ */
+export async function requerirRolApi(
+  rol: Rol,
+  ...otros: Rol[]
+): Promise<{ ok: true; id: string; rol: Rol } | { ok: false; respuesta: Response }> {
+  await connection(); // ver `requerirSesion`
+  const acceso = await evaluarAcceso(await auth(), [rol, ...otros], (id) => buscarRol(id));
+  if (!acceso.ok) return { ok: false, respuesta: respuestaSinAcceso(acceso.motivo) };
+  return { ok: true, id: acceso.id, rol: acceso.rol };
 }

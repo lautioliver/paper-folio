@@ -36,6 +36,16 @@ const esquemaRoles = z.object({
   OPERADOR_EMAILS: z.string().default(""),
 });
 
+// Vercel Blob (#47): se autentica por OIDC (VERCEL_OIDC_TOKEN, que inyecta Vercel) con el id del store.
+// Aparte para que `next build` y /api/salud no la exijan.
+const esquemaBlob = z.object({
+  BLOB_STORE_ID: z
+    .string({ error: "falta" })
+    .trim()
+    .min(1, { error: "falta" }) // vacía, como queda al copiar .env.example
+    .startsWith("store_", { error: "debe empezar con store_" }),
+});
+
 export type Env = z.infer<typeof esquema> & z.infer<typeof esquemaSal> & z.infer<typeof esquemaEmail>;
 
 /**
@@ -70,6 +80,11 @@ export function leerAuthRoles(fuente: Record<string, string | undefined> = proce
 } {
   const { ADMIN_EMAILS, OPERADOR_EMAILS } = validar(esquemaRoles, fuente);
   return { admin: ADMIN_EMAILS, operador: OPERADOR_EMAILS };
+}
+
+/** Valida `BLOB_STORE_ID` (el store de Vercel Blob de las imágenes). Mismas reglas que `leerEnv`. */
+export function leerBlobConfig(fuente: Record<string, string | undefined> = process.env): z.infer<typeof esquemaBlob> {
+  return validar(esquemaBlob, fuente);
 }
 
 function validar<T extends z.ZodType>(schema: T, fuente: Record<string, string | undefined>): z.infer<T> {
