@@ -84,7 +84,7 @@ export function ListaProyectos({ proyectos }: { proyectos: ProyectoEnLista[] }) 
                 )}
               </div>
             </div>
-            <ControlesFila proyecto={p} />
+            <ControlesFila proyecto={p} ultimo={proyectos.length === 1} />
           </li>
         ))}
       </ol>
@@ -92,7 +92,7 @@ export function ListaProyectos({ proyectos }: { proyectos: ProyectoEnLista[] }) 
   );
 }
 
-function ControlesFila({ proyecto }: { proyecto: ProyectoEnLista }) {
+function ControlesFila({ proyecto, ultimo }: { proyecto: ProyectoEnLista; ultimo: boolean }) {
   const [estadoPublicar, publicar, publicando] = useActionState(
     publicarProyectoAccion.bind(null, proyecto.id, !proyecto.publicado),
     SIN_ERROR,
@@ -121,6 +121,8 @@ function ControlesFila({ proyecto }: { proyecto: ProyectoEnLista }) {
           <form action={borrar} className="flex flex-wrap items-center gap-2">
             <span className="text-pequeno font-bold">
               ¿Borrar «{proyecto.nombre}»{demos}? No se puede deshacer.
+              {/* ADR-003: con la colección vacía, el sitio vuelve al contenido estático. */}
+              {ultimo && " Es el último: sin proyectos en la base, el sitio vuelve a mostrar los del contenido estático."}
             </span>
             <button type="submit" disabled={borrando} className={`${boton} bg-tinta text-papel`}>
               {borrando ? "Borrando…" : "Sí, borrar"}

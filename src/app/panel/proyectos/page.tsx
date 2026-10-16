@@ -30,7 +30,8 @@ export default async function ProyectosPanelPage() {
       </p>
       {proyectos.length === 0 ? (
         <p className="contorno mt-8 bg-superficie p-8 text-center">
-          Todavía no hay proyectos en la base. Mientras tanto, el sitio muestra los del contenido estático.
+          Todavía no hay proyectos en la base: el sitio muestra los del contenido estático. Cuando crees el
+          primero, el sitio va a mostrar solo los proyectos publicados de la base (ADR-003).
         </p>
       ) : (
         <ListaProyectos proyectos={proyectos} />

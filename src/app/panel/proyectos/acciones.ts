@@ -30,10 +30,11 @@ function formulario(previo: EstadoFormulario, formData: FormData, r: ResultadoPr
 }
 
 function lista(r: ResultadoProyecto): EstadoAccion {
-  if (!r.ok) return { error: r.mensaje };
-  updateTag(TAG_CONTENIDO);
-  refresh();
-  return { error: null };
+  if (r.ok) updateTag(TAG_CONTENIDO);
+  // Un proyecto que ya no existe o una lista que cambió es una pantalla vieja (otro admin la tocó en el medio):
+  // se refresca igual, así se ve la lista real junto con el mensaje.
+  if (r.ok || r.error === "no-encontrado" || r.error === "desactualizada") refresh();
+  return { error: r.ok ? null : r.mensaje };
 }
 
 export async function crearProyectoAccion(previo: EstadoFormulario, formData: FormData): Promise<EstadoFormulario> {

@@ -63,10 +63,24 @@ function Campo({
  * URL que devuelve va en el campo oculto `imagen`. El archivo no viaja con el formulario (el input no tiene
  * `name`): las server actions tienen un límite de 1 MB.
  */
-function CampoImagen({ inicial, errores }: { inicial: string; errores: Errores }) {
+function CampoImagen({
+  inicial,
+  errores,
+  alSubir,
+}: {
+  inicial: string;
+  errores: Errores;
+  /** Avisa si hay una subida en curso: mientras tanto no se puede guardar (se guardaría la imagen anterior). */
+  alSubir: (subiendo: boolean) => void;
+}) {
   const [url, setUrl] = useState(inicial);
-  const [subiendo, setSubiendo] = useState(false);
+  const [subiendo, setSubiendoLocal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function setSubiendo(valor: boolean) {
+    setSubiendoLocal(valor);
+    alSubir(valor);
+  }
 
   async function subir(archivo: File | undefined) {
     if (!archivo) return;
@@ -122,7 +136,17 @@ function CampoImagen({ inicial, errores }: { inicial: string; errores: Errores }
   );
 }
 
-function Campos({ valores, errores, nuevo }: { valores: ValoresFormulario; errores: Errores; nuevo: boolean }) {
+function Campos({
+  valores,
+  errores,
+  nuevo,
+  alSubir,
+}: {
+  valores: ValoresFormulario;
+  errores: Errores;
+  nuevo: boolean;
+  alSubir: (subiendo: boolean) => void;
+}) {
   const [nombre, setNombre] = useState(valores.nombre);
   const [slug, setSlug] = useState(valores.slug);
   // En uno nuevo, el slug se sugiere desde el nombre hasta que se lo edita a mano.
@@ -228,7 +252,7 @@ function Campos({ valores, errores, nuevo }: { valores: ValoresFormulario; error
           {...aria("repoUrl", errores)}
         />
       </Campo>
-      <CampoImagen inicial={valores.imagen} errores={errores} />
+      <CampoImagen inicial={valores.imagen} errores={errores} alSubir={alSubir} />
 
       <fieldset className="grid gap-5">
         <legend className="text-h3 font-bold">Caso de estudio</legend>
@@ -294,17 +318,24 @@ function Campos({ valores, errores, nuevo }: { valores: ValoresFormulario; error
 export function FormularioProyecto({ id, valores }: { id?: string; valores: ValoresFormulario }) {
   const accion = id ? actualizarProyectoAccion.bind(null, id) : crearProyectoAccion;
   const [estado, enviar, enviando] = useActionState(accion, FORMULARIO_INICIAL);
+  const [subiendo, setSubiendo] = useState(false);
 
   return (
     <form action={enviar} className="mt-6 grid max-w-2xl gap-6">
       {/* Un intento fallido remonta los campos con lo que se mandó (React resetea el formulario). */}
-      <Campos key={estado.intento} valores={estado.valores ?? valores} errores={estado.campos} nuevo={!id} />
+      <Campos
+        key={estado.intento}
+        valores={estado.valores ?? valores}
+        errores={estado.campos}
+        nuevo={!id}
+        alSubir={setSubiendo}
+      />
       <p aria-live="polite" className="min-h-5 text-pequeno font-bold text-tinta">
         {estado.error}
       </p>
       <div className="flex flex-wrap items-center gap-4">
-        <button type="submit" disabled={enviando} className={boton}>
-          {enviando ? "Guardando…" : id ? "Guardar cambios" : "Crear proyecto"}
+        <button type="submit" disabled={enviando || subiendo} className={boton}>
+          {enviando ? "Guardando…" : subiendo ? "Esperando la imagen…" : id ? "Guardar cambios" : "Crear proyecto"}
         </button>
         <Link href={RUTA_PROYECTOS_PANEL} className="text-pequeno font-bold underline">
           Cancelar

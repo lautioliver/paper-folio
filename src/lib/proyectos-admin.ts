@@ -61,10 +61,9 @@ function validar(datos: unknown): { ok: true; datos: ProyectoEntrada } | Extract
 /** Todos los proyectos (publicados o no), en orden, con la cantidad de demos de cada uno. */
 export async function listarProyectosAdmin(): Promise<ProyectoEnLista[]> {
   await conectar();
-  const docs = await Proyecto.find({}, { slug: 1, nombre: 1, orden: 1, publicado: 1 }).sort(EN_ORDEN).lean();
-  const conteos = await Demo.aggregate<{ _id: unknown; total: number }>([
-    { $match: { proyecto: { $in: docs.map((d) => d._id) } } },
-    { $group: { _id: "$proyecto", total: { $sum: 1 } } },
+  const [docs, conteos] = await Promise.all([
+    Proyecto.find({}, { slug: 1, nombre: 1, orden: 1, publicado: 1 }).sort(EN_ORDEN).lean(),
+    Demo.aggregate<{ _id: unknown; total: number }>([{ $group: { _id: "$proyecto", total: { $sum: 1 } } }]),
   ]);
   const demos = new Map(conteos.map((c) => [String(c._id), c.total]));
   return docs.map((d) => ({
