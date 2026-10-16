@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Por ahora el panel tiene una sola sección.
+// Consultas es la sección que ven todos los roles del panel (operador y admin).
 export default function PanelPage() {
   redirect("/panel/consultas");
 }

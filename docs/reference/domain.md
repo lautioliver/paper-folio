@@ -58,13 +58,17 @@ Modelo: `src/models/Proyecto.ts`.
 | `publicado` | boolean | `false` por defecto. Despublicado: no aparece en la landing ni en `/proyectos`, y su detalle da 404 |
 | `creadoEn`, `actualizadoEn` | fecha | Timestamps |
 
+**Desde el panel (#51):** lo valida `proyectoEntradaEsquema` (`src/lib/proyecto-entrada.ts`, `LIMITES`), que extiende el esquema de lectura para que nada de lo que se guarda lo descarte después el sitio (sin strings vacíos en `stack` ni en `caso`). Largos máximos: `slug` 80 (único, minúsculas, números y guiones), `nombre` 80, `categoria` 60, `descripcion` 300, `stack` de 1 a 10 ítems de hasta 40 caracteres, `caso.problema` y `caso.solucion` 1500, `caso.funcionalidades` hasta 20 ítems de hasta 1500 y `caso.stack` hasta 20 ítems de hasta 40. Un proyecto nuevo va al final del orden; el orden se guarda entero desde la lista.
+
+**Borrar un proyecto borra todas sus demos** (activas o no): una demo sin proyecto no se puede mostrar ni editar. Se borra primero el proyecto y después las demos; si lo segundo falla, pueden quedar demos huérfanas, que no se muestran (el sitio las busca por proyecto), y el panel lo avisa. La imagen de Blob no se borra.
+
 ### Demo (`demos`)
 
 Modelo: `src/models/Demo.ts`. Un proyecto puede tener varias; el detalle muestra las activas, cada una en un iframe con sandbox y con el enlace aparte.
 
 | Campo | Tipo | Detalle |
 |---|---|---|
-| `proyecto` | ObjectId (ref `Proyecto`) | |
+| `proyecto` | ObjectId (ref `Proyecto`) | Se borra junto con su proyecto (ver arriba) |
 | `titulo` | string | Título del iframe (y encabezado si hay más de una) |
 | `url` | string | URL `http` o `https` (nada de `javascript:` ni `data:`). Solo las `https` se embeben; una `http` va como enlace |
 | `descripcion` | string | Opcional (`""`) |
