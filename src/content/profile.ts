@@ -1,7 +1,8 @@
 import type { Tone } from "@/components/sitio/tones";
 
 // Datos del PoC (#18): perfil, README y repos PÚBLICOS de github.com/lautioliver (2026-10-15).
-// Los repos privados no se muestran. Se reemplaza por contenido administrable con el CRUD del hito 5.
+// Los repos privados no se muestran. Los proyectos y servicios viven en la base (#48, ADR-003): esto es
+// el contenido inicial que carga `npm run seed:contenido` y el respaldo si la base no responde.
 
 export const profile = {
   name: "Lautaro Zahir Oliver",
@@ -33,10 +34,14 @@ export const stack = [
   "Vitest",
 ] as const;
 
+// Íconos SVG de los servicios (`ServiceIcon`): el modelo `Servicio` solo acepta estos.
+export const SERVICE_ICONS = ["frontend", "backend", "database", "integrations", "deploy"] as const;
+export type ServiceIcon = (typeof SERVICE_ICONS)[number];
+
 export type Service = {
   title: string;
   description: string;
-  icon: "frontend" | "backend" | "database" | "integrations" | "deploy";
+  icon: ServiceIcon;
 };
 
 export const services: Service[] = [

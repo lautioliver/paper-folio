@@ -30,6 +30,7 @@ npm run dev          # http://localhost:3000
 npm run lint
 npm run typecheck    # next typegen + tsc --noEmit
 npm test             # o: npx vitest related <archivos> --run
+npm run seed:contenido  # carga el contenido inicial (lo corre una persona; ver setup.md)
 ```
 
 No se corren:

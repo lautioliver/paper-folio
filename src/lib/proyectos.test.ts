@@ -1,19 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { projects } from "@/content/profile";
-import { buscarProyecto, rutaDemo, rutaDetalle } from "./proyectos";
-
-describe("buscarProyecto", () => {
-  it("encuentra cada proyecto por su slug", () => {
-    for (const project of projects) expect(buscarProyecto(project.slug)).toBe(project);
-  });
-
-  it("un slug inexistente da undefined, también con nombres de Object.prototype", () => {
-    for (const slug of ["no-existe", "", "UCANODE", "__proto__", "constructor", "toString"]) {
-      expect(buscarProyecto(slug)).toBeUndefined();
-    }
-  });
-});
+import { rutaDemo, rutaDetalle } from "./proyectos";
 
 describe("rutaDetalle", () => {
   it("arma /proyectos/<slug>", () => {
@@ -49,5 +37,29 @@ describe("detalle protegido en el servidor", () => {
   it("la página de detalle llama a requerirSesion con su propia ruta (sin depender de proxy.ts)", () => {
     const fuente = readFileSync("src/app/(sitio)/proyectos/[slug]/page.tsx", "utf8");
     expect(fuente).toMatch(/requerirSesion\(\s*rutaDetalle\(/);
+  });
+});
+
+describe("el sitio lee el contenido de la base (src/lib/contenido.ts)", () => {
+  const fuentes = {
+    secciones: readFileSync("src/components/sitio/Sections.tsx", "utf8"),
+    listado: readFileSync("src/app/(sitio)/proyectos/page.tsx", "utf8"),
+    detalle: readFileSync("src/app/(sitio)/proyectos/[slug]/page.tsx", "utf8"),
+  };
+
+  it("la landing, /proyectos y el detalle no leen los proyectos ni los servicios de profile.ts", () => {
+    for (const [nombre, fuente] of Object.entries(fuentes)) {
+      expect(fuente, nombre).not.toMatch(/import\s*\{[^}]*\b(projects|services)\b[^}]*\}\s*from\s*"@\/content\/profile"/);
+      expect(fuente, nombre).toMatch(/from "@\/lib\/contenido"/);
+    }
+  });
+
+  it("el detalle da 404 si el proyecto no está publicado y muestra las demos activas", () => {
+    // Proyecto y demos en una sola lectura: no se mezclan la base y el respaldo.
+    expect(fuentes.detalle).toMatch(/await detalleProyecto\(slug\)[\s\S]*if \(!detalle\) notFound\(\)/);
+  });
+
+  it("una demo http no va en el iframe (contenido mixto en el sitio https): solo el enlace", () => {
+    expect(fuentes.detalle).toMatch(/esUrlHttps\(demo\.url\)\s*&&\s*\(\s*<iframe/);
   });
 });

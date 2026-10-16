@@ -62,6 +62,7 @@ Regla: si un documento de producto y el código no coinciden, **gana** [architec
 - [Cómo se escribe un ADR](decisions/README.md)
 - [ADR-001](decisions/ADR-001-stack.md) — Next.js fullstack, MongoDB con Mongoose, Auth.js con Google, Tailwind y Vercel
 - [ADR-002](decisions/ADR-002-auth.md) — Auth.js v5 (beta) con Google, sesión JWT, rol releído de la base y roles por email
+- [ADR-003](decisions/ADR-003-contenido-en-la-base.md) — Proyectos, demos y servicios en la base, solo lo publicado, con caché por tag y respaldo estático
 
 ### Guías
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Container } from "@/components/Container";
-import { milestones, profile, projects, services, type Project } from "@/content/profile";
+import { milestones, profile } from "@/content/profile";
 import { cn } from "@/lib/cn";
+import { listarProyectos, listarServicios, type Proyecto, type Servicio } from "@/lib/contenido";
 import { RUTA_PROYECTOS, rutaDemo, rutaDetalle } from "@/lib/proyectos";
 import { Highlight, SectionTitle } from "./Highlight";
 import { BrowserMock, HeroCharacter, Portrait, ServiceIcon } from "./Illustrations";
@@ -42,7 +43,8 @@ export function Hero() {
   );
 }
 
-export function Services() {
+export async function Services() {
+  const servicios = await listarServicios();
   return (
     <section id="servicios" className="py-16">
       <Container>
@@ -50,16 +52,16 @@ export function Services() {
           Mi amplio <Highlight tone="acento">set de habilidades</Highlight>
         </SectionTitle>
         <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
-            <li key={service.title}>
+          {servicios.map((servicio) => (
+            <li key={servicio.titulo}>
               <Reveal className="h-full">
                 <article className="contorno h-full overflow-hidden bg-papel">
                   <div className="grid place-items-center border-b-(length:--borde-marca) border-tinta bg-superficie py-6">
-                    <ServiceIcon icon={service.icon} />
+                    <IlustracionServicio servicio={servicio} />
                   </div>
                   <div className="p-6">
-                    <h3 className="text-h3 font-bold">{service.title}</h3>
-                    <p className="mt-2 text-pequeno">{service.description}</p>
+                    <h3 className="text-h3 font-bold">{servicio.titulo}</h3>
+                    <p className="mt-2 text-pequeno">{servicio.descripcion}</p>
                   </div>
                 </article>
               </Reveal>
@@ -84,7 +86,17 @@ export function Services() {
   );
 }
 
-export function About() {
+/** El ícono del servicio o, si el panel le puso una imagen en lugar de ícono, la imagen. */
+function IlustracionServicio({ servicio }: { servicio: Servicio }) {
+  if (servicio.icono) return <ServiceIcon icon={servicio.icono} />;
+  if (!servicio.imagen) return null;
+  // URL https validada (ADR-003). next/image necesita `remotePatterns`, que llega con las imágenes (#47).
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={servicio.imagen} alt="" className="h-24 w-auto object-contain" />;
+}
+
+export async function About() {
+  const proyectos = await listarProyectos();
   return (
     <section id="sobre-mi" className="py-16">
       <Container className="grid items-center gap-12 lg:grid-cols-[1fr_1.2fr]">
@@ -104,7 +116,7 @@ export function About() {
             </li>
             <li className="flex items-center gap-2">
               <span className="size-4 rounded-sm border-2 border-tinta bg-secundario" />
-              {projects.length} proyectos públicos en producción
+              {proyectos.length} proyectos públicos en producción
             </li>
           </ul>
           <a href={profile.githubUrl} target="_blank" rel="noreferrer" className={cn(BUTTON, "mt-8 bg-tinta text-papel")}>
@@ -117,7 +129,7 @@ export function About() {
 }
 
 /** Tarjeta de un proyecto: la usan la landing y el listado `/proyectos`. */
-export function ProjectCard({ project }: { project: Project }) {
+export function ProjectCard({ project }: { project: Proyecto }) {
   return (
     <Reveal>
       <article className="contorno grid overflow-hidden bg-papel lg:grid-cols-2">
@@ -125,17 +137,17 @@ export function ProjectCard({ project }: { project: Project }) {
           <span
             className={cn(
               "grid size-11 place-items-center rounded-lg border-2 border-tinta text-h3 font-bold",
-              TONE_BG[project.accent],
+              TONE_BG[project.acento],
             )}
             aria-hidden="true"
           >
-            {project.initial}
+            {project.inicial}
           </span>
           <p className="mt-4 inline-block rounded-md bg-tinta px-2 py-0.5 text-xs font-bold text-papel">
-            {project.category}
+            {project.categoria}
           </p>
-          <h3 className="mt-3 text-h3 font-bold">{project.name}</h3>
-          <p className="mt-2 text-pequeno">{project.description}</p>
+          <h3 className="mt-3 text-h3 font-bold">{project.nombre}</h3>
+          <p className="mt-2 text-pequeno">{project.descripcion}</p>
           <p className="mt-3 text-xs font-bold">{project.stack.join(" · ")}</p>
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-pequeno font-bold">
             {/* Detalle y demo solo para registrados: sin prefetch, así no se pide la ruta protegida antes de un clic. */}
@@ -147,29 +159,32 @@ export function ProjectCard({ project }: { project: Project }) {
               Ver caso de estudio
             </Link>
             {/* La demo también es solo para registrados: pasa por el ingreso y vuelve al detalle. */}
-            <Link href={rutaDemo(project.slug)} prefetch={false} className="underline decoration-2 underline-offset-4">
-              Ver demo →
-            </Link>
+            {project.tieneDemo && (
+              <Link href={rutaDemo(project.slug)} prefetch={false} className="underline decoration-2 underline-offset-4">
+                Ver demo →
+              </Link>
+            )}
             <a href={project.repoUrl} target="_blank" rel="noreferrer" className="underline decoration-2 underline-offset-4">
               Ver en GitHub →
             </a>
-            <ShareButton title={project.name} slug={project.slug} />
+            <ShareButton title={project.nombre} slug={project.slug} />
           </div>
         </div>
         <div
           className={cn(
             "order-1 grid place-items-center border-b-(length:--borde-marca) border-tinta p-8 lg:order-2 lg:border-b-0 lg:border-l-(length:--borde-marca)",
-            PANEL_BG[project.accent],
+            PANEL_BG[project.acento],
           )}
         >
-          <BrowserMock tone={project.accent} />
+          <BrowserMock tone={project.acento} />
         </div>
       </article>
     </Reveal>
   );
 }
 
-export function Projects() {
+export async function Projects() {
+  const proyectos = await listarProyectos();
   return (
     <section id="proyectos" className="py-16">
       <Container>
@@ -177,7 +192,7 @@ export function Projects() {
           Mirá mis <Highlight tone="primario">proyectos destacados</Highlight>
         </SectionTitle>
         <ul className="mt-12 grid gap-8">
-          {projects.map((project) => (
+          {proyectos.map((project) => (
             <li key={project.slug} id={`proyecto-${project.slug}`} className="scroll-mt-28">
               <ProjectCard project={project} />
             </li>

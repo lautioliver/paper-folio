@@ -1,6 +1,8 @@
 // Ilustraciones de línea simple del manual: contorno de 2 px en tinta y rellenos planos de la paleta.
 // Colores solo por token (var(--color-…)); nada de HEX.
 
+import type { ServiceIcon as ServiceIconName } from "@/content/profile";
+
 const INK = "var(--color-tinta)";
 
 /** Personaje con anteojos y una etiqueta de código, sobre la tarjeta amarilla del hero. */
@@ -57,7 +59,7 @@ export function BrowserMock({ tone }: { tone: "primario" | "acento" | "secundari
   );
 }
 
-type ServiceIconProps = { icon: "frontend" | "backend" | "database" | "integrations" | "deploy" };
+type ServiceIconProps = { icon: ServiceIconName };
 
 /** Ilustración chica de cada servicio, sobre el fondo superficie de la tarjeta. */
 export function ServiceIcon({ icon }: ServiceIconProps) {
