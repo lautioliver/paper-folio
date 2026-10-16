@@ -47,10 +47,11 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
 }
 
 /**
- * Si quien hace el pedido es `admin`, con la misma decisión que los permisos (`evaluarAcceso` con el rol releído
- * de la base por `buscarRol`, más `ADMIN_EMAILS`). Lo usa `POST /api/visitas` para no contar a los admin: no es
- * un permiso. Sin sesión, sin `AUTH_*`, con la cuenta bloqueada o borrada, `false`: una cuenta bloqueada no tiene
- * permisos (domain.md), así que su visita cuenta como la de cualquiera. Si la base falla, tira (quien llama decide).
+ * Si quien hace el pedido es `admin`, con la misma decisión que los permisos (`evaluarAcceso` con el rol que
+ * relee `buscarRol`, que ya suma `ADMIN_EMAILS`). Lo usa `POST /api/visitas` para no contar a los admin: no es
+ * un permiso. `false` sin sesión, con una sesión ilegible, sin `AUTH_*` o con `ADMIN_EMAILS` inválida, y con la
+ * cuenta bloqueada o borrada: una cuenta bloqueada no tiene permisos (domain.md), así que su visita cuenta como
+ * la de cualquiera. Si la base falla, tira (quien llama decide).
  */
 export async function esAdminLaSesion(): Promise<boolean> {
   await connection(); // ver `estadoDeSesion`
@@ -62,5 +63,11 @@ export async function esAdminLaSesion(): Promise<boolean> {
     console.error("sesion: no se pudo leer la sesión", error instanceof Error ? error.name : "desconocido");
     return false;
   }
-  return (await evaluarAcceso(sesion, ["admin"], (id) => buscarRol(id))).ok;
+  try {
+    return (await evaluarAcceso(sesion, ["admin"], (id) => buscarRol(id))).ok;
+  } catch (error) {
+    // `ADMIN_EMAILS` inválida (`buscarRol` la lee): es configuración, no la base, y la visita se cuenta igual.
+    if (error instanceof EnvInvalidoError) return false;
+    throw error;
+  }
 }
