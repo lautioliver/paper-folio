@@ -111,7 +111,8 @@ describe("detalle de una consulta: respuestas por email (#40)", () => {
   });
 
   it("una respuesta pendiente (sin emailEnviado) se muestra como sin confirmar", async () => {
-    const { emailEnviado: _, ...pendiente } = respuesta(true);
+    const pendiente: Record<string, unknown> = respuesta(true);
+    delete pendiente.emailEnviado;
     const r = await html({ estado: "en_curso", seguimiento: [pendiente] });
     expect(r).toContain("Envío en curso o sin confirmar; puede haber llegado.");
   });

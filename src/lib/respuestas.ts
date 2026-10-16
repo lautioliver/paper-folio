@@ -10,7 +10,13 @@ import {
   estadoLeido,
   LARGO_MAXIMO_RESPUESTA,
 } from "./estados-consulta";
-import { exigirAutor, ID_VALIDO, NO_ENCONTRADA, registrarRespuesta } from "./seguimiento";
+import {
+  completarRespuesta,
+  exigirAutor,
+  ID_VALIDO,
+  NO_ENCONTRADA,
+  reservarRespuesta,
+} from "./seguimiento";
 
 /** Lo mínimo de un transporte de nodemailer que usamos: se inyecta para testear sin Gmail. */
 export type TransporteEmail = {
@@ -21,7 +27,13 @@ export type ResultadoRespuesta =
   | { ok: true; estadoCambiado: boolean }
   | {
       ok: false;
-      error: "invalida" | "no-encontrada" | "estado-invalido" | "envio-fallido";
+      error:
+        | "invalida"
+        | "no-encontrada"
+        | "estado-invalido"
+        | "en-envio"
+        | "envio-fallido"
+        | "registro-fallido";
       mensaje: string;
     };
 
@@ -98,11 +110,13 @@ function cuerpo(respuesta: string, c: { nombre: string; mensaje: string; creadaE
 }
 
 /**
- * Responde por email (SMTP de Gmail, épica #36 decisión 4) una consulta en curso y lo registra en el
- * seguimiento (`registrarRespuesta`). El destino sale siempre de la consulta guardada; el cuerpo es texto
- * plano con la respuesta y, debajo, el mensaje original citado. Si el email sale, la consulta pasa a
- * `respondida`; si falla o tarda más de 10 s, queda una entrada con `emailEnviado: false`, el estado no cambia
- * y devuelve el error con su código. Del error solo se loguea el código: nunca la credencial, el destino ni
+ * Responde por email (SMTP de Gmail, ADR-001 R-4) una consulta en curso y lo registra en el seguimiento.
+ * Antes de enviar reserva la respuesta (`reservarRespuesta`: una entrada pendiente, así un segundo intento
+ * simultáneo recibe `en-envio` y no sale otro email) y al terminar la completa (`completarRespuesta`). El
+ * destino sale siempre de la consulta guardada; el cuerpo es texto plano con la respuesta y, debajo, el
+ * mensaje original citado. Si el email sale, la consulta pasa a `respondida`; si falla o tarda más de 10 s,
+ * la entrada queda con `emailEnviado: false`, el estado no cambia y devuelve el error con su código. Si el
+ * email sale pero falla el registro, devuelve `registro-fallido` y la entrada queda pendiente (sin confirmar). Del error solo se loguea el código: nunca la credencial, el destino ni
  * el texto. `transporte` es para los tests; sin él, usa Gmail con `GMAIL_USER` y `GMAIL_APP_PASSWORD`.
  */
 export async function responderConsulta(
@@ -164,6 +178,9 @@ export async function responderConsulta(
     };
   }
 
+  const reserva = await reservarRespuesta(id, respuesta.data, autor);
+  if (!reserva.ok) return reserva;
+
   const nombre = String(c.nombre).replace(CONTROL, " ").trim();
   const tipo = CONTACT_TYPE_LABELS[c.tipo as ContactType] ?? String(c.tipo).replace(CONTROL, " ");
   let codigo: string | null = null;
@@ -183,20 +200,33 @@ export async function responderConsulta(
     console.error(`responderConsulta: no se pudo enviar el email (${codigo})`);
   }
 
-  const r = await registrarRespuesta(id, respuesta.data, autor, codigo === null);
-  if (!r.ok) {
+  let r: { encontrada: boolean; estadoCambiado: boolean };
+  try {
+    r = await completarRespuesta(id, autor, reserva.fecha, codigo === null);
+  } catch (e) {
+    console.error(`responderConsulta: no se pudo registrar el resultado del envío (${codigoDe(e)})`);
+    return {
+      ok: false,
+      error: "registro-fallido",
+      mensaje:
+        codigo === null
+          ? "El email se envió, pero no se pudo registrar: en el seguimiento queda como sin confirmar. No lo vuelvas a mandar."
+          : `No se pudo enviar el email (${codigo}) ni registrarlo: en el seguimiento queda como sin confirmar.`,
+    };
+  }
+  if (!r.encontrada) {
     return codigo === null
       ? { ...NO_ENCONTRADA, mensaje: "El email se envió, pero la consulta ya no existe: no quedó registrado." }
       : NO_ENCONTRADA;
   }
   if (codigo === null) return { ok: true, estadoCambiado: r.estadoCambiado };
-  const sigue = `La respuesta quedó en el seguimiento como no enviada y la consulta sigue ${ETIQUETAS_ESTADO[estado]}.`;
+  const sigue = `En el seguimiento queda como no confirmada y la consulta sigue ${ETIQUETAS_ESTADO[estado]}.`;
   return {
     ok: false,
     error: "envio-fallido",
     mensaje:
       codigo === "timeout"
-        ? `Gmail no confirmó el envío en ${Math.round((opciones.timeoutMs ?? TIMEOUT_MS) / 1000)} s: el email puede llegar igual. Revisá Enviados en Gmail antes de reintentar. ${sigue}`
+        ? `Gmail no confirmó el envío en ${Math.round((opciones.timeoutMs ?? TIMEOUT_MS) / 1000)} s: el email puede haber llegado. Revisá Enviados en Gmail antes de volver a responder. ${sigue}`
         : `No se pudo enviar el email (${codigo}). ${sigue}`,
   };
 }

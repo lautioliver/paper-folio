@@ -156,7 +156,7 @@ describe("responderConsulta: envío fallido", () => {
     const r = await responderConsulta(id, "Hola", AUTOR, t, { timeoutMs: 50 });
     expect(r).toMatchObject({ ok: false, error: "envio-fallido" });
     // nodemailer no se puede cancelar: el envío colgado puede terminar después (hallazgo de la autorevisión).
-    if (!r.ok) expect(r.mensaje).toMatch(/puede llegar igual/);
+    if (!r.ok) expect(r.mensaje).toMatch(/puede haber llegado/);
     const doc = await leer(id);
     expect(doc?.estado).toBe("en_curso");
     expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });

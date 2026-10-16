@@ -24,6 +24,15 @@ function textoDe(e: EntradaSeguimiento): string {
   return e.texto;
 }
 
+// `false` cubre un error y un timeout (tras el que el email puede haber llegado): no afirma que no llegó.
+// Sin `emailEnviado`, la respuesta está reservada y se está enviando, o el registro del resultado falló.
+function envioDe(e: EntradaSeguimiento, email: string): string {
+  if (e.emailEnviado === true) return `Enviada por email a ${email}.`;
+  const revisar = "Revisá Enviados en Gmail antes de volver a responder.";
+  if (e.emailEnviado === false) return `No se pudo confirmar el envío; puede haber llegado. ${revisar}`;
+  return `Envío en curso o sin confirmar; puede haber llegado. ${revisar}`;
+}
+
 const TITULOS: Record<EntradaSeguimiento["tipo"], string> = {
   estado: "Estado",
   nota: "Nota",
@@ -101,12 +110,8 @@ export async function DetalleConsulta({ id }: { id: string }) {
                 <p className="mt-1 whitespace-pre-wrap break-words">
                   {textoDe(e)}
                 </p>
-                {e.tipo === "respuesta" && e.emailEnviado !== undefined && (
-                  <p className="mt-1 text-pequeno font-bold">
-                    {e.emailEnviado
-                      ? `Enviada por email a ${c.email}.`
-                      : "El email no se pudo enviar: el visitante no la recibió."}
-                  </p>
+                {e.tipo === "respuesta" && (
+                  <p className="mt-1 text-pequeno font-bold">{envioDe(e, c.email)}</p>
                 )}
               </li>
             ))}

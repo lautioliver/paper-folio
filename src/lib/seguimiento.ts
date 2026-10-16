@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { z } from "zod";
 import { Consulta, TIPOS_SEGUIMIENTO } from "@/models/Consulta";
 import { Usuario } from "@/models/Usuario";
@@ -188,69 +189,149 @@ export async function agregarNota(
   return r.matchedCount === 1 ? { ok: true } : NO_ENCONTRADA;
 }
 
-export type ResultadoRegistro =
-  | { ok: true; estadoCambiado: boolean }
-  | { ok: false; error: "no-encontrada"; mensaje: string };
+/**
+ * Una respuesta pendiente (reservada y sin `emailEnviado`) más vieja que esto se da por abandonada (el
+ * proceso se cayó a mitad del envío): ya no bloquea otra respuesta. Es mucho más que el timeout del envío.
+ */
+export const RESERVA_VENCE_MS = 2 * 60_000;
+
+export type ResultadoReserva =
+  | { ok: true; fecha: Date }
+  | { ok: false; error: "no-encontrada" | "estado-invalido" | "en-envio"; mensaje: string };
+
+/** Condición sobre `seguimiento`: hay una respuesta pendiente sin vencer. */
+function pendienteVigente() {
+  return {
+    $elemMatch: {
+      tipo: "respuesta",
+      emailEnviado: { $exists: false },
+      fecha: { $gt: new Date(Date.now() - RESERVA_VENCE_MS) },
+    },
+  };
+}
 
 /**
- * Registra en el seguimiento una respuesta por email ya intentada (la envía `responderConsulta`,
- * src/lib/respuestas.ts). Si el email salió y la consulta sigue en un estado desde el que se responde
- * (`ESTADOS_PARA_RESPONDER`), en un solo update agrega la entrada `respuesta` (con `emailEnviado: true`), la
- * entrada `estado` y la pasa a `respondida`. Si no salió, o si otro operador le cambió el estado mientras se
- * enviaba, solo agrega la respuesta (con su `emailEnviado`): el email que salió queda registrado igual.
- * `texto` ya viene validado.
+ * Reserva el envío de una respuesta por email antes de mandarla (la usa `responderConsulta`,
+ * src/lib/respuestas.ts): en un solo update condicionado a que la consulta esté en un estado desde el que se
+ * responde (`ESTADOS_PARA_RESPONDER`) y a que no haya otra respuesta pendiente, agrega la entrada `respuesta`
+ * sin `emailEnviado` (pendiente). Así dos pestañas u operadores no mandan dos emails: el segundo no matchea
+ * y recibe `en-envio`. Si el envío sale pero falla el registro, la entrada queda pendiente ("sin confirmar").
+ * `fecha` identifica la entrada para `completarRespuesta`. `texto` ya viene validado.
  */
-export async function registrarRespuesta(
+export async function reservarRespuesta(
   id: string,
   texto: string,
   autor: string,
-  emailEnviado: boolean,
-): Promise<ResultadoRegistro> {
-  exigirAutor(autor, "registrarRespuesta");
+): Promise<ResultadoReserva> {
+  exigirAutor(autor, "reservarRespuesta");
   if (!ID_VALIDO.test(id)) return NO_ENCONTRADA;
   await conectar();
   const fecha = new Date();
-  const respuesta = { tipo: "respuesta", texto, autor, fecha, emailEnviado };
+  const r = await Consulta.updateOne(
+    {
+      _id: id,
+      estado: filtroDeEstados(ESTADOS_PARA_RESPONDER),
+      seguimiento: { $not: pendienteVigente() },
+    },
+    { $push: { seguimiento: { tipo: "respuesta", texto, autor, fecha } } },
+    { runValidators: true },
+  );
+  if (r.matchedCount === 1) return { ok: true, fecha };
+
+  const actual = await Consulta.findById(id, { estado: 1 }).lean();
+  if (!actual) return NO_ENCONTRADA;
+  const estado = estadoLeido(actual.estado);
+  if (!ESTADOS_PARA_RESPONDER.includes(estado)) {
+    return {
+      ok: false,
+      error: "estado-invalido",
+      mensaje: `La consulta está ${ETIQUETAS_ESTADO[estado]}: para responder por email, pasala a En curso.`,
+    };
+  }
+  return {
+    ok: false,
+    error: "en-envio",
+    mensaje: "Ya se está enviando otra respuesta a esta consulta. Esperá unos segundos y mirá el seguimiento.",
+  };
+}
+
+/**
+ * Completa la respuesta que reservó `reservarRespuesta` (la de ese `autor` y esa `fecha`). Si el email salió
+ * y la consulta sigue en un estado desde el que se responde, en un solo update marca `emailEnviado: true`,
+ * agrega la entrada `estado` y la pasa a `respondida`. Si no salió, o si otro operador le cambió el estado
+ * mientras se enviaba, solo marca `emailEnviado` (el email que salió queda registrado igual).
+ */
+export async function completarRespuesta(
+  id: string,
+  autor: string,
+  fecha: Date,
+  emailEnviado: boolean,
+): Promise<{ encontrada: boolean; estadoCambiado: boolean }> {
+  exigirAutor(autor, "completarRespuesta");
+  if (!ID_VALIDO.test(id)) return { encontrada: false, estadoCambiado: false };
+  await conectar();
+  const autorId = new mongoose.Types.ObjectId(autor);
+  const pendiente = { tipo: "respuesta", autor: autorId, fecha, emailEnviado: { $exists: false } };
 
   if (emailEnviado) {
+    // Pipeline: marcar la entrada y agregar otra al mismo array en un solo update (con `$set` posicional y
+    // `$push` juntos, Mongo rechaza el conflicto). En un pipeline no hay casteo: el autor va como ObjectId.
     const r = await Consulta.updateOne(
-      { _id: id, estado: filtroDeEstados(ESTADOS_PARA_RESPONDER) },
       {
-        $set: { estado: "respondida" },
-        $push: {
-          seguimiento: {
-            $each: [respuesta, { tipo: "estado", texto: "respondida", autor, fecha }],
+        _id: id,
+        estado: filtroDeEstados(ESTADOS_PARA_RESPONDER),
+        seguimiento: { $elemMatch: pendiente },
+      },
+      [
+        {
+          $set: {
+            estado: "respondida",
+            seguimiento: {
+              $concatArrays: [
+                {
+                  $map: {
+                    input: "$seguimiento",
+                    as: "e",
+                    in: {
+                      $cond: [
+                        {
+                          $and: [
+                            { $eq: ["$$e.tipo", "respuesta"] },
+                            { $eq: ["$$e.autor", autorId] },
+                            { $eq: ["$$e.fecha", fecha] },
+                            { $eq: [{ $type: "$$e.emailEnviado" }, "missing"] },
+                          ],
+                        },
+                        { $mergeObjects: ["$$e", { emailEnviado: true }] },
+                        "$$e",
+                      ],
+                    },
+                  },
+                },
+                [{ tipo: "estado", texto: "respondida", autor: autorId, fecha: new Date() }],
+              ],
+            },
           },
         },
-      },
-      { runValidators: true },
+      ],
+      { updatePipeline: true },
     );
-    if (r.matchedCount === 1) return { ok: true, estadoCambiado: true };
+    if (r.matchedCount === 1) return { encontrada: true, estadoCambiado: true };
   }
 
   const r = await Consulta.updateOne(
     { _id: id },
-    { $push: { seguimiento: respuesta } },
-    { runValidators: true },
+    { $set: { "seguimiento.$[e].emailEnviado": emailEnviado } },
+    {
+      arrayFilters: [
+        {
+          "e.tipo": "respuesta",
+          "e.autor": autorId,
+          "e.fecha": fecha,
+          "e.emailEnviado": { $exists: false },
+        },
+      ],
+    },
   );
-  return r.matchedCount === 1 ? { ok: true, estadoCambiado: false } : NO_ENCONTRADA;
-}
-
-/** STUB */
-export const RESERVA_VENCE_MS = 0;
-export type ResultadoReserva =
-  | { ok: true; fecha: Date }
-  | { ok: false; error: "no-encontrada" | "estado-invalido" | "en-envio"; mensaje: string };
-/** STUB */
-export async function reservarRespuesta(_id: string, _texto: string, _autor: string): Promise<ResultadoReserva> {
-  return { ok: true, fecha: new Date() };
-}
-/** STUB */
-export async function completarRespuesta(
-  _id: string,
-  _autor: string,
-  _fecha: Date,
-  _emailEnviado: boolean,
-): Promise<{ encontrada: boolean; estadoCambiado: boolean }> {
-  return { encontrada: false, estadoCambiado: false };
+  return { encontrada: r.matchedCount === 1, estadoCambiado: false };
 }

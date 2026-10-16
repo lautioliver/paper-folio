@@ -61,6 +61,7 @@ export async function responderAccion(
   const sesion = await requerirRol(rutaDelDetalle(id), "operador", "admin");
   const texto = campo(formData, "texto");
   const r = await responderConsulta(id, texto, sesion.id);
-  if (r.ok || r.error === "envio-fallido" || r.error === "estado-invalido") refresh();
+  // Salvo un texto inválido o una consulta inexistente, el estado o el seguimiento cambiaron: se refresca.
+  if (r.ok || (r.error !== "invalida" && r.error !== "no-encontrada")) refresh();
   return r.ok ? { error: null, texto: "" } : { error: r.mensaje, texto: texto ?? "" };
 }

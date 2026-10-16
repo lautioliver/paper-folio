@@ -70,7 +70,7 @@ El operador responde las consultas por SMTP de Gmail, desde la cuenta de la pers
 1. En la cuenta de Google que va a enviar, activar la **verificación en dos pasos** (sin ella Google no ofrece contraseñas de aplicación).
 2. Ir a [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), crear una contraseña de aplicación ("Paperfolio") y copiarla. Google la muestra en cuatro grupos: los espacios no cuentan.
 3. Cargar `GMAIL_USER` (el email de esa cuenta) y `GMAIL_APP_PASSWORD` en `.env.local` y en las variables de Vercel. Nunca la contraseña normal de la cuenta.
-4. Gmail permite unos 500 envíos por día. Si un envío falla, el panel muestra el código del error (por ejemplo `EAUTH` si la contraseña es incorrecta) y la respuesta queda en el seguimiento como no enviada. Si falta una variable, el código es `configuracion` y no se registra nada. Si Gmail no confirma en 10 s (`timeout`), el email puede llegar igual: revisá Enviados en Gmail antes de reintentar.
+4. Gmail permite unos 500 envíos por día. Si un envío falla, el panel muestra el código del error (por ejemplo `EAUTH` si la contraseña es incorrecta) y la respuesta queda en el seguimiento como "no se pudo confirmar el envío". Si falta una variable, el código es `configuracion` y no se registra nada. Si Gmail no confirma en 10 s (`timeout`), el email puede haber llegado: revisá Enviados en Gmail antes de volver a responder.
 5. Los tests no las necesitan: el transporte se inyecta y `vitest.config.ts` las vacía.
 
 ### Crear el cluster de Atlas

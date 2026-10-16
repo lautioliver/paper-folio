@@ -40,7 +40,7 @@ export function origenesDe(hacia: EstadoConsulta): EstadoConsulta[] {
 /**
  * Estados desde los que se puede responder por email (#40). Responder pasa la consulta a `respondida`, y a
  * mano a `respondida` solo se llega desde `en_curso`: responder no abre otro camino. Desde `nueva`,
- * `respondida` (una segunda respuesta) o `archivada`, primero se la pasa a `en_curso`.
+ * `respondida` o `archivada` no se responde.
  */
 export const ESTADOS_PARA_RESPONDER: readonly EstadoConsulta[] = ["en_curso"];
 
