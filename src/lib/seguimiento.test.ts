@@ -6,7 +6,9 @@ import {
   agregarNota,
   cambiarEstado,
   obtenerConsulta,
-  registrarRespuesta,
+  completarRespuesta,
+  RESERVA_VENCE_MS,
+  reservarRespuesta,
 } from "./seguimiento";
 import { LARGO_MAXIMO_NOTA } from "./estados-consulta";
 import { Consulta } from "@/models/Consulta";
@@ -292,7 +294,8 @@ describe("obtenerConsulta", () => {
 
   it("devuelve emailEnviado de las respuestas, también cuando es false", async () => {
     const id = await insertarCruda({ estado: "en_curso" });
-    await registrarRespuesta(id, "no salió", autor, false);
+    const r = await reservarRespuesta(id, "no salió", autor);
+    if (r.ok) await completarRespuesta(id, autor, r.fecha, false);
     const d = await obtenerConsulta(id);
     expect(d?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
   });
@@ -306,11 +309,52 @@ describe("obtenerConsulta", () => {
   });
 });
 
-describe("registrarRespuesta", () => {
-  it("con el email enviado y la consulta en curso, en un solo update agrega la respuesta y el cambio a respondida", async () => {
+describe("reservarRespuesta y completarRespuesta (#40)", () => {
+  it("reservar agrega una respuesta pendiente (sin emailEnviado) y no cambia el estado", async () => {
     const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
-    const r = await registrarRespuesta(id, "Hola", autor, true);
-    expect(r).toEqual({ ok: true, estadoCambiado: true });
+    const r = await reservarRespuesta(id, "Hola", autor);
+    expect(r.ok).toBe(true);
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("en_curso");
+    expect(doc?.seguimiento).toHaveLength(1);
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", texto: "Hola" });
+    expect(doc?.seguimiento[0]).not.toHaveProperty("emailEnviado");
+  });
+
+  it("una segunda reserva con otra pendiente no matchea: devuelve en-envio y no agrega nada", async () => {
+    const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
+    const [a, b] = await Promise.all([
+      reservarRespuesta(id, "Primera", autor),
+      reservarRespuesta(id, "Segunda", autor),
+    ]);
+    expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+    expect([a, b].find((r) => !r.ok)).toMatchObject({ ok: false, error: "en-envio" });
+    expect((await leer(id))?.seguimiento).toHaveLength(1);
+  });
+
+  it("una pendiente vencida (proceso caído a mitad del envío) no bloquea para siempre", async () => {
+    const vieja = new Date(Date.now() - RESERVA_VENCE_MS - 1000);
+    const id = await insertarCruda({
+      estado: "en_curso",
+      seguimiento: [{ tipo: "respuesta", texto: "colgada", autor: new mongoose.Types.ObjectId(autor), fecha: vieja }],
+    });
+    expect((await reservarRespuesta(id, "Hola", autor)).ok).toBe(true);
+  });
+
+  it("reservar fuera de en curso devuelve estado-invalido; una inexistente, no-encontrada", async () => {
+    const id = await insertarCruda({ estado: "nueva", seguimiento: [] });
+    expect(await reservarRespuesta(id, "Hola", autor)).toMatchObject({ ok: false, error: "estado-invalido" });
+    expect((await leer(id))?.seguimiento).toEqual([]);
+    expect(
+      await reservarRespuesta(String(new mongoose.Types.ObjectId()), "Hola", autor),
+    ).toMatchObject({ ok: false, error: "no-encontrada" });
+  });
+
+  it("completar con el email enviado, en un solo update, marca la respuesta, agrega el estado y pasa a respondida", async () => {
+    const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
+    const r = await reservarRespuesta(id, "Hola", autor);
+    if (!r.ok) throw new Error("no reservó");
+    expect(await completarRespuesta(id, autor, r.fecha, true)).toEqual({ encontrada: true, estadoCambiado: true });
     const doc = await leer(id);
     expect(doc?.estado).toBe("respondida");
     expect(doc?.seguimiento.map((e: { tipo: string; texto: string }) => [e.tipo, e.texto])).toEqual([
@@ -318,32 +362,37 @@ describe("registrarRespuesta", () => {
       ["estado", "respondida"],
     ]);
     expect(doc?.seguimiento[0].emailEnviado).toBe(true);
-    expect(doc?.seguimiento[1].emailEnviado).toBeUndefined();
+    expect(String(doc?.seguimiento[1].autor)).toBe(autor);
+    expect(doc?.seguimiento[1].autor).toBeInstanceOf(mongoose.Types.ObjectId);
+    expect(doc?.seguimiento[1]).not.toHaveProperty("emailEnviado");
   });
 
-  it("con el email enviado pero la consulta ya no en curso, registra la respuesta sin cambiar el estado", async () => {
-    const id = await insertarCruda({ estado: "archivada", seguimiento: [] });
-    const r = await registrarRespuesta(id, "Hola", autor, true);
-    expect(r).toEqual({ ok: true, estadoCambiado: false });
+  it("completar con el email enviado pero la consulta ya no en curso marca la respuesta sin cambiar el estado", async () => {
+    const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
+    const r = await reservarRespuesta(id, "Hola", autor);
+    if (!r.ok) throw new Error("no reservó");
+    await Consulta.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { estado: "archivada" } });
+    expect(await completarRespuesta(id, autor, r.fecha, true)).toEqual({ encontrada: true, estadoCambiado: false });
     const doc = await leer(id);
     expect(doc?.estado).toBe("archivada");
     expect(doc?.seguimiento).toHaveLength(1);
     expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: true });
   });
 
-  it("si el email no salió, registra la respuesta con emailEnviado false y no cambia el estado", async () => {
+  it("completar con el email fallido marca emailEnviado false, no cambia el estado y libera la reserva", async () => {
     const id = await insertarCruda({ estado: "en_curso", seguimiento: [] });
-    const r = await registrarRespuesta(id, "Hola", autor, false);
-    expect(r).toEqual({ ok: true, estadoCambiado: false });
+    const r = await reservarRespuesta(id, "Hola", autor);
+    if (!r.ok) throw new Error("no reservó");
+    expect(await completarRespuesta(id, autor, r.fecha, false)).toEqual({ encontrada: true, estadoCambiado: false });
     const doc = await leer(id);
     expect(doc?.estado).toBe("en_curso");
-    expect(doc?.seguimiento).toHaveLength(1);
     expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
+    expect((await reservarRespuesta(id, "Otra", autor)).ok).toBe(true);
   });
 
-  it("una consulta inexistente devuelve no-encontrada", async () => {
-    const r = await registrarRespuesta(String(new mongoose.Types.ObjectId()), "Hola", autor, true);
-    expect(r).toMatchObject({ ok: false, error: "no-encontrada" });
+  it("completar sobre una consulta borrada devuelve encontrada false", async () => {
+    const r = await completarRespuesta(String(new mongoose.Types.ObjectId()), autor, new Date(), true);
+    expect(r).toEqual({ encontrada: false, estadoCambiado: false });
   });
 });
 

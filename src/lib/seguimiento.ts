@@ -235,3 +235,22 @@ export async function registrarRespuesta(
   );
   return r.matchedCount === 1 ? { ok: true, estadoCambiado: false } : NO_ENCONTRADA;
 }
+
+/** STUB */
+export const RESERVA_VENCE_MS = 0;
+export type ResultadoReserva =
+  | { ok: true; fecha: Date }
+  | { ok: false; error: "no-encontrada" | "estado-invalido" | "en-envio"; mensaje: string };
+/** STUB */
+export async function reservarRespuesta(_id: string, _texto: string, _autor: string): Promise<ResultadoReserva> {
+  return { ok: true, fecha: new Date() };
+}
+/** STUB */
+export async function completarRespuesta(
+  _id: string,
+  _autor: string,
+  _fecha: Date,
+  _emailEnviado: boolean,
+): Promise<{ encontrada: boolean; estadoCambiado: boolean }> {
+  return { encontrada: false, estadoCambiado: false };
+}

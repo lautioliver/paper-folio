@@ -192,6 +192,51 @@ describe("responderConsulta: envío fallido", () => {
   });
 });
 
+describe("responderConsulta: doble envío y registro (revisión del PR #62)", () => {
+  it("dos respuestas a la vez (dos pestañas u operadores) mandan un solo email; la otra recibe un error claro", async () => {
+    const id = await insertar();
+    const enviados: SendMailOptions[] = [];
+    const lento: TransporteEmail = {
+      sendMail: async (m) => {
+        enviados.push(m);
+        await new Promise((r) => setTimeout(r, 100));
+        return {};
+      },
+    };
+    const [a, b] = await Promise.all([
+      responderConsulta(id, "Primera", AUTOR, lento),
+      responderConsulta(id, "Segunda", AUTOR, lento),
+    ]);
+    expect(enviados).toHaveLength(1);
+    expect([a, b].filter((r) => r.ok)).toHaveLength(1);
+    const otra = [a, b].find((r) => !r.ok);
+    expect(otra).toMatchObject({ ok: false, error: "en-envio" });
+    if (otra && !otra.ok) expect(otra.mensaje).toMatch(/otra respuesta/);
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("respondida");
+    expect(doc?.seguimiento.filter((e: { tipo: string }) => e.tipo === "respuesta")).toHaveLength(1);
+  });
+
+  it("si el email salió pero falla el registro del resultado, lo dice y la respuesta queda en el seguimiento como sin confirmar", async () => {
+    const id = await insertar();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const t: TransporteEmail = {
+      sendMail: vi.fn(async () => {
+        // El próximo update (el que completa la respuesta) falla, como en un failover de Atlas.
+        vi.spyOn(Consulta, "updateOne").mockRejectedValueOnce(new Error("failover"));
+        return {};
+      }),
+    };
+    const r = await responderConsulta(id, "Hola", AUTOR, t);
+    expect(r).toMatchObject({ ok: false, error: "registro-fallido" });
+    if (!r.ok) expect(r.mensaje).toMatch(/se envió/);
+    const doc = await leer(id);
+    expect(doc?.seguimiento).toHaveLength(1);
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", texto: "Hola" });
+    expect(doc?.seguimiento[0]).not.toHaveProperty("emailEnviado");
+  });
+});
+
 describe("responderConsulta: cabeceras", () => {
   it("los saltos de línea en el nombre o el tipo no generan cabeceras extra", async () => {
     const id = await insertar({

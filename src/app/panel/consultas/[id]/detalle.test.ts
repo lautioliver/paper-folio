@@ -105,13 +105,21 @@ describe("detalle de una consulta: respuestas por email (#40)", () => {
   it("muestra cuándo el email de una respuesta no se pudo enviar", async () => {
     const r = await html({ estado: "en_curso", seguimiento: [respuesta(false)] });
     expect(r).toContain("Hola Ada");
-    expect(r).toContain("El email no se pudo enviar");
+    // Tras un timeout el email puede haber llegado: el historial no afirma que no (revisión del PR #62).
+    expect(r).toContain("No se pudo confirmar el envío; puede haber llegado.");
+    expect(r).not.toContain("no la recibió");
+  });
+
+  it("una respuesta pendiente (sin emailEnviado) se muestra como sin confirmar", async () => {
+    const { emailEnviado: _, ...pendiente } = respuesta(true);
+    const r = await html({ estado: "en_curso", seguimiento: [pendiente] });
+    expect(r).toContain("Envío en curso o sin confirmar; puede haber llegado.");
   });
 
   it("muestra las respuestas enviadas como enviadas", async () => {
     const r = await html({ estado: "respondida", seguimiento: [respuesta(true)] });
     expect(r).toContain("Enviada por email a ada@example.com");
-    expect(r).not.toContain("El email no se pudo enviar");
+    expect(r).not.toContain("puede haber llegado");
   });
 
   it("en curso ofrece el formulario para responder, con el destino de la consulta y el límite de 5000", async () => {

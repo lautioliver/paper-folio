@@ -166,11 +166,15 @@ describe("responderAccion", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("si la consulta ya no está en curso, devuelve el mensaje y refresca para mostrar el estado real", async () => {
-    responderConsulta.mockResolvedValue({ ok: false, error: "estado-invalido", mensaje: "x" });
-    const r = await responderAccion(ID, previo, form({ texto: "Hola" }));
-    expect(r).toEqual({ error: "x", texto: "Hola" });
-    expect(refresh).toHaveBeenCalledTimes(1);
+  it("si ya no está en curso, otra respuesta se está enviando o falló el registro, devuelve el mensaje y refresca", async () => {
+    // En los tres casos la pantalla quedó vieja: el estado o el seguimiento cambiaron.
+    for (const error of ["estado-invalido", "en-envio", "registro-fallido"]) {
+      refresh.mockReset();
+      responderConsulta.mockResolvedValue({ ok: false, error, mensaje: "x" });
+      const r = await responderAccion(ID, previo, form({ texto: "Hola" }));
+      expect(r).toEqual({ error: "x", texto: "Hola" });
+      expect(refresh).toHaveBeenCalledTimes(1);
+    }
   });
 
   it("con un texto inválido o una consulta inexistente, devuelve el mensaje y no refresca", async () => {
