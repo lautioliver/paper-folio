@@ -46,7 +46,7 @@ function Acciones({ u, propio, q, pagina }: { u: UsuarioAdmin; propio: boolean; 
           {ocultos}
           <button
             type="submit"
-            className={`${boton} ${u.bloqueado ? "" : "bg-acento"}`}
+            className={boton}
             aria-label={`${u.bloqueado ? "Desbloquear" : "Bloquear"} a ${u.email}`}
           >
             {u.bloqueado ? "Desbloquear" : "Bloquear"}
