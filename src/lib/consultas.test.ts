@@ -233,4 +233,23 @@ describe("crearConsulta", () => {
     for (let i = 0; i < 5; i++) await crearConsulta(valida, { ip: " 10.0.0.8 " });
     expect((await crearConsulta(valida, { ip: "10.0.0.8" })).tipo).toBe("limite");
   });
+
+  it("si no se puede crear un índice, la consulta igual se guarda y se loguea solo el nombre del error", async () => {
+    await desconectar(); // olvida los índices ya creados en este proceso
+    const crear = vi
+      .spyOn(Consulta, "createIndexes")
+      .mockRejectedValue(Object.assign(new Error("mongodb://usuario:clave@host"), { name: "MongoServerError" }));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(crearConsulta(valida, { ip: "10.0.0.9" })).resolves.toMatchObject({ tipo: "creada" });
+      expect(await Consulta.countDocuments()).toBe(1);
+      const logueado = JSON.stringify(log.mock.calls);
+      expect(logueado).toContain("MongoServerError");
+      expect(logueado).not.toContain("clave");
+      expect(logueado).not.toContain("10.0.0.9");
+    } finally {
+      crear.mockRestore();
+      log.mockRestore();
+    }
+  });
 });

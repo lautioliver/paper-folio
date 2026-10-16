@@ -84,7 +84,8 @@ describe("cambiarEstadoAccion", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("si el servicio rechaza el cambio, devuelve el mensaje y no refresca", async () => {
+  it("con una transición inválida devuelve el mensaje y refresca, para que se vea el estado real", async () => {
+    // Otro operador pudo haberla cambiado en el medio: la pantalla de este quedó vieja.
     cambiarEstado.mockResolvedValue({
       ok: false,
       error: "transicion-invalida",
@@ -92,6 +93,14 @@ describe("cambiarEstadoAccion", () => {
     });
     const r = await cambiarEstadoAccion(ID, previo, form({ estado: "nueva" }));
     expect(r).toEqual({ error: "No se puede pasar de Respondida a Nueva." });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("con un estado inválido o una consulta inexistente, devuelve el mensaje y no refresca", async () => {
+    for (const error of ["invalida", "no-encontrada"]) {
+      cambiarEstado.mockResolvedValue({ ok: false, error, mensaje: "x" });
+      expect(await cambiarEstadoAccion(ID, previo, form({ estado: "y" }))).toEqual({ error: "x" });
+    }
     expect(refresh).not.toHaveBeenCalled();
   });
 

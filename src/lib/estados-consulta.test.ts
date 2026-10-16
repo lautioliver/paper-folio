@@ -8,10 +8,13 @@ import {
 } from "./estados-consulta";
 
 // Épica #36, decisión 2: nueva → en_curso → respondida → archivada; de archivada se vuelve a en_curso.
+// Más nueva → archivada y respondida → en_curso (aprobadas por @lautioliver en #39).
 const VALIDAS = new Set([
   "nueva>en_curso",
+  "nueva>archivada",
   "en_curso>respondida",
   "respondida>archivada",
+  "respondida>en_curso",
   "archivada>en_curso",
 ]);
 
@@ -27,9 +30,13 @@ describe("origenesDe", () => {
   });
 
   it("devuelve los estados desde los que se llega a cada uno; a nueva no se vuelve nunca", () => {
-    expect(origenesDe("en_curso").sort()).toEqual(["archivada", "nueva"]);
+    expect(origenesDe("en_curso").sort()).toEqual([
+      "archivada",
+      "nueva",
+      "respondida",
+    ]);
     expect(origenesDe("respondida")).toEqual(["en_curso"]);
-    expect(origenesDe("archivada")).toEqual(["respondida"]);
+    expect(origenesDe("archivada").sort()).toEqual(["nueva", "respondida"]);
     expect(origenesDe("nueva")).toEqual([]);
   });
 });

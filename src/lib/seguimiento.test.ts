@@ -113,8 +113,18 @@ describe("cambiarEstado", () => {
     expect(await cambiarEstado(id, "en_curso", autor)).toMatchObject({
       ok: false,
       error: "transicion-invalida",
+      mensaje: "La consulta ya está En curso.",
     });
     expect((await leer(id))?.seguimiento).toBeUndefined();
+  });
+
+  it("nueva → archivada (spam) y respondida → en_curso (el visitante vuelve a escribir) son válidas", async () => {
+    const spam = await insertarCruda();
+    expect(await cambiarEstado(spam, "archivada", autor)).toEqual({ ok: true });
+    expect((await leer(spam))?.estado).toBe("archivada");
+    const vuelve = await insertarCruda({ estado: "respondida" });
+    expect(await cambiarEstado(vuelve, "en_curso", autor)).toEqual({ ok: true });
+    expect((await leer(vuelve))?.estado).toBe("en_curso");
   });
 
   it("un estado inexistente o con operadores de Mongo es inválido y no cambia nada", async () => {
