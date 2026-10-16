@@ -22,6 +22,7 @@ npm run dev          # http://localhost:3000
 | `npm run typecheck` | `next typegen` (genera los tipos de rutas, como `LayoutProps`) + `tsc --noEmit` |
 | `npm test` | Vitest, una pasada |
 | `npm run build` | Build de producción |
+| `npm run seed:contenido` | Carga los proyectos, demos y servicios iniciales en la base (ver [Cargar el contenido](#cargar-el-contenido)) |
 
 ## CI
 
@@ -62,6 +63,22 @@ Van en `.env.local`, que no se commitea. Se copia de la plantilla: `cp .env.exam
 5. Con `npm run dev`, `curl localhost:3000/api/salud` tiene que responder `200 {"ok":true}`. Si responde `503`, la URI o el acceso de red están mal.
 
 No corras scripts de seed ni de borrado contra la base compartida: usá `paperfolio-dev` o una base propia.
+
+## Cargar el contenido
+
+Los proyectos, sus demos y los servicios viven en la base (ADR-003). Mientras la base no los tenga, el sitio muestra los de `src/content/profile.ts`, así que no hace falta correr nada para desarrollar. Para cargarlos (una vez por base):
+
+```bash
+npm run seed:contenido -- --env-file .env.local    # toma MONGODB_URI y MONGODB_DB de ese archivo
+MONGODB_URI=mongodb://localhost:27017 MONGODB_DB=paperfolio-dev npm run seed:contenido   # o del entorno
+```
+
+- Imprime el nombre de la base antes de escribir (nunca la URI): revisalo. Contra la base de producción lo corre una persona, no un agente.
+- Es idempotente: inserta los proyectos (por `slug`) y servicios (por `titulo`) que faltan, publicados y en el orden de `profile.ts`, y no toca los que ya están, aunque se hayan editado o despublicado en el panel. La demo de cada proyecto (su `demoUrl`) se carga solo si el proyecto no tiene ninguna.
+- Si en el panel se renombra un slug o un título, o se borran todas las demos de un proyecto, correrlo de nuevo vuelve a cargar el original.
+- No lo corras dos veces a la vez (podría duplicar una demo).
+- El sitio lo muestra en hasta un minuto (el respaldo estático se cachea con `cacheLife("minutes")`).
+- Rollback: borrar las colecciones `proyectos`, `demos` y `servicios`; el sitio vuelve al contenido estático.
 
 ## Tests con MongoDB
 

@@ -49,6 +49,21 @@
     },
     {
       "cuando": [
+        "src/lib/contenido.ts",
+        "src/lib/contenido-esquemas.ts",
+        "src/lib/seed-contenido.ts",
+        "scripts/seed-contenido.ts",
+        "scripts/ts-hooks.mjs"
+      ],
+      "revisar": [
+        "docs/decisions/ADR-003-contenido-en-la-base.md",
+        "docs/development/setup.md",
+        "docs/development/architecture.md"
+      ],
+      "motivo": "cambió la lectura del contenido (respaldo, caché) o el seed"
+    },
+    {
+      "cuando": [
         "package.json",
         "?**/package.json",
         "?.github/workflows/**",
