@@ -14,7 +14,7 @@
  */
 export type Deduplicador = { montar(ruta: string): boolean; desmontar(): void };
 
-export function crearDeduplicador(): Deduplicador {
+export function crearDeduplicador(_opciones: { produccion?: boolean } = {}): Deduplicador {
   let ultima: string | null = null;
   let olvido: ReturnType<typeof setTimeout> | undefined;
   return {

@@ -10,6 +10,7 @@ afterEach(() => {
 });
 
 describe("crearDeduplicador (cuándo ContadorVisitas manda el aviso)", () => {
+  // Sin opciones: el modo de desarrollo, con StrictMode.
   it("cuenta el primer montaje", () => {
     expect(crearDeduplicador().montar("/")).toBe(true);
   });
@@ -19,9 +20,16 @@ describe("crearDeduplicador (cuándo ContadorVisitas manda el aviso)", () => {
     expect(d.montar("/")).toBe(true);
     d.desmontar();
     expect(d.montar("/")).toBe(false);
+  });
+
+  it("en producción cuenta cada montaje: no depende del orden de los timers (StrictMode no corre ahí)", () => {
+    const d = crearDeduplicador({ produccion: true });
+    expect(d.montar("/")).toBe(true);
+    d.desmontar();
+    expect(d.montar("/")).toBe(true); // Activity vuelve a mostrar el layout en el mismo task
+    d.desmontar();
     vi.runAllTimers();
-    // Sigue visible: un timer pendiente no puede habilitar otra cuenta sin un montaje nuevo.
-    expect(d.montar("/")).toBe(false);
+    expect(d.montar("/")).toBe(true);
   });
 
   it("cuenta cada cambio de ruta", () => {

@@ -22,7 +22,7 @@ export type ResultadoVisita = "contada" | "descartada";
 export const RUTA_OTRA = "otra";
 
 // Las páginas fijas del grupo `(sitio)`. Una página pública nueva se suma acá para contarse con su ruta.
-const RUTAS_FIJAS = new Set(["/", "/proyectos", "/cuenta"]);
+export const RUTAS_FIJAS: ReadonlySet<string> = new Set(["/", "/proyectos", "/cuenta"]);
 const DETALLE = /^\/proyectos\/([a-z0-9-]+)$/;
 
 /**

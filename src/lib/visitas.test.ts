@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { readdirSync } from "node:fs";
+import { join, relative } from "node:path";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { desconectar } from "./db";
-import { esBot, esquemaVisita, fechaDeVisita, normalizarRuta, registrarVisita, RUTA_OTRA } from "./visitas";
+import { esBot, esquemaVisita, fechaDeVisita, normalizarRuta, registrarVisita, RUTA_OTRA, RUTAS_FIJAS } from "./visitas";
 import { VisitaDiaria } from "@/models/VisitaDiaria";
 import { VisitanteDiario } from "@/models/VisitanteDiario";
 
@@ -194,5 +196,18 @@ describe("esquemaVisita", () => {
       null,
     ];
     for (const cuerpo of malas) expect(esquemaVisita.safeParse(cuerpo).success, JSON.stringify(cuerpo)).toBe(false);
+  });
+});
+
+describe("RUTAS_FIJAS", () => {
+  it("cubre cada página del grupo (sitio): una página nueva sin sumarla acá iría a `otra`", () => {
+    const raiz = join(__dirname, "..", "app", "(sitio)");
+    const paginas = readdirSync(raiz, { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith("page.tsx"))
+      .map((f) => "/" + relative(".", join(f, "..")).replace(/\\/g, "/"))
+      .map((r) => (r === "/." ? "/" : r))
+      .filter((r) => !r.includes("["));
+    expect(paginas.length).toBeGreaterThan(0);
+    for (const ruta of paginas) expect(RUTAS_FIJAS.has(ruta), ruta).toBe(true);
   });
 });
