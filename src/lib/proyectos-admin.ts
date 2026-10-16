@@ -13,7 +13,8 @@ export type ResultadoProyecto =
   | { ok: true; id?: string }
   | {
       ok: false;
-      error: "invalida" | "no-encontrado" | "desactualizada";
+      /** `parcial`: se escribió algo (el proyecto se borró) pero no todo; igual hay que invalidar el sitio. */
+      error: "invalida" | "no-encontrado" | "desactualizada" | "parcial";
       mensaje: string;
       campos?: Record<string, string>;
     };
@@ -141,15 +142,26 @@ export async function actualizarProyecto(id: string, datos: unknown): Promise<Re
 
 /**
  * Borra el proyecto y todas sus demos (activas o no): una demo sin proyecto no se puede mostrar ni editar.
- * Primero el proyecto: si borrar las demos fallara, quedan huérfanas pero invisibles, nunca un proyecto sin
- * las demos que tenía. La imagen de Blob no se borra.
+ * Primero el proyecto: si borrar las demos falla, quedan huérfanas pero invisibles (el sitio las busca por
+ * proyecto), nunca un proyecto sin las demos que tenía; devuelve `parcial`, así quien llama invalida el sitio
+ * igual y avisa. La imagen de Blob no se borra.
  */
 export async function borrarProyecto(id: string): Promise<ResultadoProyecto> {
   if (!ID_VALIDO.test(id)) return NO_ENCONTRADO;
   await conectar();
   const r = await Proyecto.deleteOne({ _id: id });
   if (r.deletedCount !== 1) return NO_ENCONTRADO;
-  await Demo.deleteMany({ proyecto: id });
+  try {
+    await Demo.deleteMany({ proyecto: id });
+  } catch (error) {
+    // Solo el nombre: el mensaje del driver puede traer la URI.
+    console.error("proyectos: se borró el proyecto pero no sus demos", error instanceof Error ? error.name : "error");
+    return {
+      ok: false,
+      error: "parcial",
+      mensaje: "Se borró el proyecto, pero quedaron demos sin borrar (no se ven en el sitio). Avisale a quien mantiene la base.",
+    };
+  }
   return { ok: true };
 }
 

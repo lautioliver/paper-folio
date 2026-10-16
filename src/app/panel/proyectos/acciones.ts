@@ -30,10 +30,12 @@ function formulario(previo: EstadoFormulario, formData: FormData, r: ResultadoPr
 }
 
 function lista(r: ResultadoProyecto): EstadoAccion {
-  if (r.ok) updateTag(TAG_CONTENIDO);
+  // `parcial`: algo se escribió (el proyecto se borró, sus demos no): el sitio se invalida igual.
+  const escribio = r.ok || r.error === "parcial";
+  if (escribio) updateTag(TAG_CONTENIDO);
   // Un proyecto que ya no existe o una lista que cambió es una pantalla vieja (otro admin la tocó en el medio):
   // se refresca igual, así se ve la lista real junto con el mensaje.
-  if (r.ok || r.error === "no-encontrado" || r.error === "desactualizada") refresh();
+  if (escribio || r.error === "no-encontrado" || r.error === "desactualizada") refresh();
   return { error: r.ok ? null : r.mensaje };
 }
 
