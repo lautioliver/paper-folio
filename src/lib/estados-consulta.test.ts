@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ESTADOS_CONSULTA,
-  esTransicionValida,
+  estadoLeido,
+  filtroDeEstados,
+  LARGO_MAXIMO_NOTA,
   origenesDe,
 } from "./estados-consulta";
 
@@ -13,34 +15,53 @@ const VALIDAS = new Set([
   "archivada>en_curso",
 ]);
 
-describe("esTransicionValida", () => {
+describe("origenesDe", () => {
   it("solo acepta las transiciones de la épica, en todos los pares de estados", () => {
     for (const desde of ESTADOS_CONSULTA) {
       for (const hacia of ESTADOS_CONSULTA) {
-        expect(esTransicionValida(desde, hacia), `${desde} → ${hacia}`).toBe(
+        expect(origenesDe(hacia).includes(desde), `${desde} → ${hacia}`).toBe(
           VALIDAS.has(`${desde}>${hacia}`),
         );
       }
     }
   });
 
-  it("nunca se vuelve a nueva, ni desde archivada ni desde respondida", () => {
-    expect(esTransicionValida("respondida", "nueva")).toBe(false);
-    expect(esTransicionValida("archivada", "nueva")).toBe(false);
-  });
-
-  it("un estado desconocido nunca es una transición válida", () => {
-    expect(esTransicionValida("nueva", "cerrada")).toBe(false);
-    expect(esTransicionValida("cerrada", "en_curso")).toBe(false);
-    expect(esTransicionValida("constructor", "en_curso")).toBe(false);
-  });
-});
-
-describe("origenesDe", () => {
-  it("devuelve los estados desde los que se llega a cada uno", () => {
+  it("devuelve los estados desde los que se llega a cada uno; a nueva no se vuelve nunca", () => {
     expect(origenesDe("en_curso").sort()).toEqual(["archivada", "nueva"]);
     expect(origenesDe("respondida")).toEqual(["en_curso"]);
     expect(origenesDe("archivada")).toEqual(["respondida"]);
     expect(origenesDe("nueva")).toEqual([]);
+  });
+});
+
+describe("estadoLeido (hallazgo de la autorevisión)", () => {
+  it("un estado guardado desconocido o ausente se trata como nueva", () => {
+    expect(estadoLeido("raro")).toBe("nueva");
+    expect(estadoLeido(undefined)).toBe("nueva");
+    expect(estadoLeido(null)).toBe("nueva");
+    expect(estadoLeido("constructor")).toBe("nueva");
+    for (const e of ESTADOS_CONSULTA) expect(estadoLeido(e)).toBe(e);
+  });
+});
+
+describe("filtroDeEstados", () => {
+  it("con nueva incluye los documentos con un estado desconocido o sin estado", () => {
+    expect(filtroDeEstados(["nueva"])).toEqual({
+      $nin: ["en_curso", "respondida", "archivada"],
+    });
+    expect(filtroDeEstados(["nueva", "archivada"])).toEqual({
+      $nin: ["en_curso", "respondida"],
+    });
+  });
+
+  it("sin nueva, solo los estados pedidos", () => {
+    expect(filtroDeEstados(["respondida"])).toEqual({ $in: ["respondida"] });
+    expect(filtroDeEstados([])).toEqual({ $in: [] });
+  });
+});
+
+describe("LARGO_MAXIMO_NOTA", () => {
+  it("es 2000, compartido por el cliente y el servidor", () => {
+    expect(LARGO_MAXIMO_NOTA).toBe(2000);
   });
 });

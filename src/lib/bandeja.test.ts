@@ -1,5 +1,5 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { desconectar } from "./db";
 import { listarConsultas, parsearFiltros, POR_PAGINA } from "./bandeja";
 import { Consulta } from "@/models/Consulta";
@@ -128,7 +128,52 @@ describe("hallazgos de la autorevisión", () => {
   });
 });
 
+describe("estado guardado desconocido o ausente (#39)", () => {
+  it("se muestra como nueva y entra en el filtro de nueva, no en los demás", async () => {
+    await sembrar(3, (i) => ({ estado: ["raro", "nueva", "archivada"][i] }));
+    await Consulta.collection.insertOne({
+      nombre: "Sin estado",
+      email: "s@example.com",
+      tipo: "general",
+      mensaje: "sin campo estado",
+      ipHash: "h",
+      creadaEn: new Date(BASE - 60_000),
+    });
+    const todas = await listarConsultas({ pagina: 1 });
+    expect(todas.items.map((c) => c.estado)).toEqual([
+      "archivada",
+      "nueva",
+      "nueva",
+      "nueva",
+    ]);
+    const nuevas = await listarConsultas({ estado: "nueva", pagina: 1 });
+    expect(nuevas.total).toBe(3);
+    const archivadas = await listarConsultas({ estado: "archivada", pagina: 1 });
+    expect(archivadas.total).toBe(1);
+  });
+});
+
 describe("índice de la bandeja (#39)", () => {
+  it("si no se puede crear el índice, la bandeja igual responde y loguea solo el nombre del error", async () => {
+    await sembrar(2);
+    await desconectar(); // olvida los índices ya creados en este proceso
+    const crear = vi
+      .spyOn(Consulta, "createIndexes")
+      .mockRejectedValue(Object.assign(new Error("mongodb://usuario:clave@host"), { name: "MongoServerError" }));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const r = await listarConsultas({ pagina: 1 });
+      expect(r.total).toBe(2);
+      expect(log).toHaveBeenCalled();
+      expect(JSON.stringify(log.mock.calls)).toContain("MongoServerError");
+      expect(JSON.stringify(log.mock.calls)).not.toContain("clave");
+    } finally {
+      crear.mockRestore();
+      log.mockRestore();
+    }
+  });
+
+
   it("listarConsultas crea el índice { creadaEn: -1, _id: -1 } que usa el orden", async () => {
     await sembrar(1);
     await listarConsultas({ pagina: 1 });

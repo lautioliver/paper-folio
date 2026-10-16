@@ -140,6 +140,28 @@ describe("cambiarEstado", () => {
   });
 });
 
+describe("estado guardado desconocido o ausente (hallazgo de la autorevisión)", () => {
+  it("se lee como nueva y se puede pasar a en_curso, pero no saltear a respondida", async () => {
+    for (const extra of [{ estado: "raro" }, { estado: undefined }]) {
+      await Consulta.deleteMany({});
+      const id = await insertarCruda(extra);
+      if (extra.estado === undefined)
+        await Consulta.collection.updateOne(
+          { _id: new mongoose.Types.ObjectId(id) },
+          { $unset: { estado: "" } },
+        );
+      expect((await obtenerConsulta(id))?.estado).toBe("nueva");
+      expect(await cambiarEstado(id, "respondida", autor)).toMatchObject({
+        ok: false,
+        error: "transicion-invalida",
+        mensaje: "No se puede pasar de Nueva a Respondida.",
+      });
+      expect(await cambiarEstado(id, "en_curso", autor)).toEqual({ ok: true });
+      expect((await leer(id))?.estado).toBe("en_curso");
+    }
+  });
+});
+
 describe("agregarNota", () => {
   it("agrega una nota con su autor y su fecha, sin tocar el estado", async () => {
     const id = await insertarCruda();
@@ -170,6 +192,16 @@ describe("agregarNota", () => {
     });
     expect(await agregarNota(id, "y", autor)).toEqual({ ok: true });
     expect((await leer(id))?.seguimiento).toHaveLength(2);
+  });
+
+  it("cuenta los saltos de línea CRLF del formulario como uno solo y los guarda como LF", async () => {
+    const id = await insertarCruda();
+    // 1000 líneas: 1999 caracteres con LF (lo que limita el maxLength del textarea), 2998 con CRLF.
+    const texto = Array.from({ length: 1000 }, () => "a").join("\r\n");
+    expect(await agregarNota(id, texto, autor)).toEqual({ ok: true });
+    const [e] = (await leer(id))?.seguimiento ?? [];
+    expect(e.texto).not.toContain("\r");
+    expect(e.texto).toHaveLength(1999);
   });
 
   it("una consulta inexistente o un id inválido devuelve no-encontrada", async () => {

@@ -45,3 +45,14 @@ export function esTransicionValida(desde: string, hacia: string): boolean {
 export function origenesDe(hacia: EstadoConsulta): EstadoConsulta[] {
   return ESTADOS_CONSULTA.filter((e) => TRANSICIONES[e].includes(hacia));
 }
+
+export const LARGO_MAXIMO_NOTA = 0;
+
+export function estadoLeido(valor: unknown): EstadoConsulta {
+  return valor as EstadoConsulta;
+}
+
+export function filtroDeEstados(estados: readonly EstadoConsulta[]): object {
+  void estados;
+  return {};
+}

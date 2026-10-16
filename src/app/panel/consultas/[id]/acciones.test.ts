@@ -67,7 +67,7 @@ describe.each(ACCIONES)("$nombre: permisos", ({ correr, servicio }) => {
 
   it("con admin también pasa", async () => {
     requerirRol.mockResolvedValue({ id: OPERADOR, rol: "admin" });
-    await expect(correr()).resolves.toEqual({ error: null });
+    await expect(correr()).resolves.toMatchObject({ error: null });
     expect(servicio).toHaveBeenCalledTimes(1);
   });
 });
@@ -105,7 +105,7 @@ describe("agregarNotaAccion", () => {
   it("pasa el texto del formulario y el autor de la sesión", async () => {
     const r = await agregarNotaAccion(ID, previo, form({ texto: "Hola" }));
     expect(agregarNota).toHaveBeenCalledWith(ID, "Hola", OPERADOR);
-    expect(r).toEqual({ error: null });
+    expect(r).toEqual({ error: null, texto: "" });
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
@@ -115,8 +115,10 @@ describe("agregarNotaAccion", () => {
       error: "invalida",
       mensaje: "La nota tiene que tener entre 1 y 2000 caracteres.",
     });
-    const r = await agregarNotaAccion(ID, previo, form({ texto: "" }));
+    const r = await agregarNotaAccion(ID, previo, form({ texto: "x".repeat(2500) }));
     expect(r.error).toMatch(/2000/);
+    // React resetea el formulario después de la acción: el texto vuelve para no perder la nota.
+    expect(r.texto).toBe("x".repeat(2500));
     expect(refresh).not.toHaveBeenCalled();
   });
 });
