@@ -6,8 +6,6 @@ const requerirRolApi = vi.fn();
 const put = vi.fn();
 vi.mock("@/lib/permisos", () => ({
   requerirRolApi: (...args: unknown[]) => requerirRolApi(...args),
-  // Transición (commit en rojo): la ruta todavía usa requerirRol y deja pasar a todos.
-  requerirRol: async () => ({ id: "1", rol: "admin" }),
 }));
 vi.mock("@vercel/blob", () => ({
   put: (...args: unknown[]) => put(...args),

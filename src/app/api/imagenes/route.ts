@@ -2,23 +2,25 @@ import { z } from "zod";
 import { respuestaConfiguracionInvalida, respuestaError } from "@/lib/api-error";
 import { EnvInvalidoError } from "@/lib/env";
 import { MENSAJES, subirImagen, TAMANO_MAXIMO } from "@/lib/imagenes";
-import { requerirRol } from "@/lib/permisos";
+import { requerirRolApi } from "@/lib/permisos";
 
 // Lo que agrega el multipart alrededor del archivo (boundary y cabeceras de la parte).
 const MARGEN_MULTIPART = 64 * 1024;
 
 const esquemaArchivo = z.instanceof(File);
 
+const demasiadoGrande = () => respuestaError(413, "IMAGEN_INVALIDA", MENSAJES.tamano, { motivo: "tamano" });
+
 /**
  * Sube una imagen del contenido (campo `archivo` de un multipart/form-data) y responde `{ url }`.
  * Solo `admin`. Route handler y no server action: el límite de 1 MB de las server actions no alcanza
  * para 2 MB y así no hace falta tocar `next.config.ts`.
  */
-const demasiadoGrande = () => respuestaError(413, "IMAGEN_INVALIDA", MENSAJES.tamano, { motivo: "tamano" });
 
 export async function POST(request: Request): Promise<Response> {
-  // Antes de leer el cuerpo: sin sesión redirige a /ingresar y sin rol responde 403 (`forbidden()`).
-  await requerirRol("/panel", "admin");
+  // Antes de leer el cuerpo, y en JSON (nunca un redirect): 401 SIN_SESION o 403 SIN_PERMISO.
+  const permiso = await requerirRolApi("admin");
+  if (!permiso.ok) return permiso.respuesta;
 
   // Las server actions traen su chequeo de origen; un route handler no. Un multipart se manda desde un
   // <form> de cualquier página: la cookie Lax ya frena otro sitio, esto frena además un subdominio
