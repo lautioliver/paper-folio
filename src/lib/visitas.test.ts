@@ -110,6 +110,8 @@ describe("esBot", () => {
       "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
       "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
       "Twitterbot/1.0",
+      "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
+      "TelegramBot (like TwitterBot)",
       "WhatsApp/2.23.20.0",
       "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.0.0 Safari/537.36",
@@ -130,6 +132,9 @@ describe("esBot", () => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0",
       "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0",
+      // Navegadores dentro de apps: son personas (los bots de esas apps se llaman Discordbot y TelegramBot).
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9184 Chrome/130.0.6723.191 Electron/33.4.0 Safari/537.36",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Telegram-iOS/11.2",
     ];
     for (const ua of personas) expect(esBot(ua), ua).toBe(false);
   });

@@ -110,6 +110,12 @@ describe("POST /api/visitas", () => {
     expect(await VisitanteDiario.countDocuments()).toBe(0);
   });
 
+  it("no lee la sesión para un bot ni para una ruta excluida (se descartan antes)", async () => {
+    await pedir({ ruta: "/" }, { "user-agent": "Googlebot/2.1" });
+    await pedir({ ruta: "/panel" });
+    expect(rolDeLaSesion).not.toHaveBeenCalled();
+  });
+
   it("cuenta a un operador o a un usuario con sesión", async () => {
     rolDeLaSesion.mockResolvedValue("operador");
     await pedir({ ruta: "/" });
