@@ -241,19 +241,33 @@ export async function reservarRespuesta(
   const actual = await Consulta.findById(id, { estado: 1 }).lean();
   if (!actual) return NO_ENCONTRADA;
   const estado = estadoLeido(actual.estado);
-  if (!ESTADOS_PARA_RESPONDER.includes(estado)) {
-    return {
-      ok: false,
-      error: "estado-invalido",
-      mensaje: `La consulta está ${ETIQUETAS_ESTADO[estado]}: para responder por email, pasala a En curso.`,
-    };
-  }
+  if (!ESTADOS_PARA_RESPONDER.includes(estado)) return estadoNoRespondible(estado);
+  // La pendiente puede ser un envío en vuelo o uno que salió y no se pudo registrar: no se afirma cuál.
   return {
     ok: false,
     error: "en-envio",
-    mensaje: "Ya se está enviando otra respuesta a esta consulta. Esperá unos segundos y mirá el seguimiento.",
+    mensaje:
+      "Hay otra respuesta a esta consulta enviándose o sin confirmar. Mirá el seguimiento y revisá Enviados en Gmail antes de volver a responder.",
   };
 }
+
+/** Error de una consulta que no está en un estado desde el que se responde (`ESTADOS_PARA_RESPONDER`). */
+export function estadoNoRespondible(estado: EstadoConsulta) {
+  return {
+    ok: false,
+    error: "estado-invalido",
+    mensaje: `La consulta está ${ETIQUETAS_ESTADO[estado]}: para responder por email, pasala a En curso.`,
+  } as const;
+}
+
+/**
+ * `completada`: la entrada reservada quedó marcada. `sin-entrada`: la consulta existe pero la entrada ya no
+ * está pendiente (completada o borrada). `sin-consulta`: la consulta ya no existe.
+ */
+export type ResultadoCompletar = {
+  resultado: "completada" | "sin-entrada" | "sin-consulta";
+  estadoCambiado: boolean;
+};
 
 /**
  * Completa la respuesta que reservó `reservarRespuesta` (la de ese `autor` y esa `fecha`). Si el email salió
@@ -266,9 +280,9 @@ export async function completarRespuesta(
   autor: string,
   fecha: Date,
   emailEnviado: boolean,
-): Promise<{ encontrada: boolean; estadoCambiado: boolean }> {
+): Promise<ResultadoCompletar> {
   exigirAutor(autor, "completarRespuesta");
-  if (!ID_VALIDO.test(id)) return { encontrada: false, estadoCambiado: false };
+  if (!ID_VALIDO.test(id)) return { resultado: "sin-consulta", estadoCambiado: false };
   await conectar();
   const autorId = new mongoose.Types.ObjectId(autor);
   const pendiente = { tipo: "respuesta", autor: autorId, fecha, emailEnviado: { $exists: false } };
@@ -316,11 +330,13 @@ export async function completarRespuesta(
       ],
       { updatePipeline: true },
     );
-    if (r.matchedCount === 1) return { encontrada: true, estadoCambiado: true };
+    if (r.matchedCount === 1) return { resultado: "completada", estadoCambiado: true };
   }
 
+  // El filtro exige la entrada: con `arrayFilters` solo, `matchedCount` cuenta el documento aunque no haya
+  // ningún elemento que marcar.
   const r = await Consulta.updateOne(
-    { _id: id },
+    { _id: id, seguimiento: { $elemMatch: pendiente } },
     { $set: { "seguimiento.$[e].emailEnviado": emailEnviado } },
     {
       arrayFilters: [
@@ -333,5 +349,7 @@ export async function completarRespuesta(
       ],
     },
   );
-  return { encontrada: r.matchedCount === 1, estadoCambiado: false };
+  if (r.matchedCount === 1) return { resultado: "completada", estadoCambiado: false };
+  const existe = await Consulta.exists({ _id: id });
+  return { resultado: existe ? "sin-entrada" : "sin-consulta", estadoCambiado: false };
 }

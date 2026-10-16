@@ -12,10 +12,12 @@ import {
 } from "./estados-consulta";
 import {
   completarRespuesta,
+  estadoNoRespondible,
   exigirAutor,
   ID_VALIDO,
   NO_ENCONTRADA,
   reservarRespuesta,
+  type ResultadoCompletar,
 } from "./seguimiento";
 
 /** Lo mínimo de un transporte de nodemailer que usamos: se inyecta para testear sin Gmail. */
@@ -151,13 +153,9 @@ export async function responderConsulta(
   }).lean();
   if (!c) return NO_ENCONTRADA;
   const estado = estadoLeido(c.estado);
-  if (!ESTADOS_PARA_RESPONDER.includes(estado)) {
-    return {
-      ok: false,
-      error: "estado-invalido",
-      mensaje: `La consulta está ${ETIQUETAS_ESTADO[estado]}: para responder por email, pasala a En curso.`,
-    };
-  }
+  // `reservarRespuesta` lo vuelve a chequear de forma atómica; acá va antes para que un error de
+  // configuración no tape que la consulta no se puede responder.
+  if (!ESTADOS_PARA_RESPONDER.includes(estado)) return estadoNoRespondible(estado);
 
   // Sin configuración o sin un destino válido no se intenta nada: no se registra (reintentar no sirve hasta
   // arreglarlo, y cada clic sumaría una entrada).
@@ -200,7 +198,7 @@ export async function responderConsulta(
     console.error(`responderConsulta: no se pudo enviar el email (${codigo})`);
   }
 
-  let r: { encontrada: boolean; estadoCambiado: boolean };
+  let r: ResultadoCompletar;
   try {
     r = await completarRespuesta(id, autor, reserva.fecha, codigo === null);
   } catch (e) {
@@ -214,10 +212,20 @@ export async function responderConsulta(
           : `No se pudo enviar el email (${codigo}) ni registrarlo: en el seguimiento queda como sin confirmar.`,
     };
   }
-  if (!r.encontrada) {
+  if (r.resultado === "sin-consulta") {
     return codigo === null
       ? { ...NO_ENCONTRADA, mensaje: "El email se envió, pero la consulta ya no existe: no quedó registrado." }
       : NO_ENCONTRADA;
+  }
+  if (r.resultado === "sin-entrada") {
+    return {
+      ok: false,
+      error: "registro-fallido",
+      mensaje:
+        codigo === null
+          ? "El email se envió, pero su entrada ya no estaba en el seguimiento: no quedó registrado. No lo vuelvas a mandar."
+          : `No se pudo enviar el email (${codigo}) y su entrada ya no estaba en el seguimiento.`,
+    };
   }
   if (codigo === null) return { ok: true, estadoCambiado: r.estadoCambiado };
   const sigue = `En el seguimiento queda como no confirmada y la consulta sigue ${ETIQUETAS_ESTADO[estado]}.`;
