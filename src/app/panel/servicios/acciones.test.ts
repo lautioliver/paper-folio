@@ -135,8 +135,17 @@ describe("guardarServicioAccion", () => {
       error: "Revisá los campos marcados.",
       campos: { titulo: "Ya hay un servicio con ese título." },
       valores: { ...CAMPOS, publicado: false },
+      envio: 1,
     });
     expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("cada respuesta fallida suma un envío (el formulario se vuelve a montar con los valores devueltos)", async () => {
+    crearServicio.mockResolvedValue({ ok: false, error: "invalido", mensaje: "x", campos: {} });
+    const conImagen = { ...CAMPOS, ilustracion: "imagen", icono: "", imagen: "https://blob.example/a.png" };
+    const r = await guardarServicioAccion(null, { error: "x", campos: {}, envio: 3 }, form(conImagen));
+    expect(r.envio).toBe(4);
+    expect(r.valores).toEqual({ ...conImagen, publicado: false });
   });
 });
 
