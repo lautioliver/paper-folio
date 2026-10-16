@@ -1,4 +1,4 @@
-import { ETIQUETAS_ESTADO, type EstadoConsulta } from "@/lib/bandeja";
+import { ETIQUETAS_ESTADO, type EstadoConsulta } from "@/lib/estados-consulta";
 
 const COLORES: Record<EstadoConsulta, string> = {
   nueva: "bg-primario text-tinta",
