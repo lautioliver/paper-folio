@@ -182,6 +182,17 @@ describe("obtenerProyectoAdmin", () => {
     expect(await obtenerProyectoAdmin(ID_INEXISTENTE)).toBeNull();
     expect(await obtenerProyectoAdmin("x")).toBeNull();
   });
+
+  it("la versión cambia al guardar: es la key del formulario de edición", async () => {
+    const id = await crear("versionado");
+    const antes = (await obtenerProyectoAdmin(id))?.version;
+    await new Promise((r) => setTimeout(r, 5));
+    expect(await actualizarProyecto(id, entrada("versionado", { nombre: "Otro nombre" }))).toMatchObject({ ok: true });
+    const despues = (await obtenerProyectoAdmin(id))?.version;
+    expect(antes).toBeTruthy();
+    expect(despues).toBeTruthy();
+    expect(despues).not.toBe(antes);
+  });
 });
 
 describe("borrarProyecto", () => {

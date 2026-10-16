@@ -7,6 +7,7 @@ export type EnlacePanel = { href: string; etiqueta: string };
 const SECCIONES: (EnlacePanel & { roles: readonly Rol[] })[] = [
   { href: "/panel/consultas", etiqueta: "Consultas", roles: ["operador", "admin"] },
   { href: "/panel/proyectos", etiqueta: "Proyectos", roles: ["admin"] },
+  { href: "/panel/demos", etiqueta: "Demos", roles: ["admin"] },
   { href: "/panel/servicios", etiqueta: "Servicios", roles: ["admin"] },
   { href: "/panel/usuarios", etiqueta: "Usuarios", roles: ["admin"] },
 ];
