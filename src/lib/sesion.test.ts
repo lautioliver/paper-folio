@@ -39,6 +39,22 @@ describe("esAdminLaSesion (para no contar las visitas de los admin)", () => {
     expect(buscarRol).not.toHaveBeenCalled();
   });
 
+  it("false si ADMIN_EMAILS es inválida al releer el rol (configuración, no un fallo de la base)", async () => {
+    auth.mockResolvedValue({ user: { id: "u1" } });
+    buscarRol.mockRejectedValue(new EnvInvalidoError("Variables de entorno inválidas: ADMIN_EMAILS"));
+    await expect(esAdminLaSesion()).resolves.toBe(false);
+  });
+
+  it("false si auth() falla por otra cosa (una cookie corrupta), y loguea solo el nombre del error", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    auth.mockRejectedValue(Object.assign(new Error("token secreto-123"), { name: "JWTSessionError" }));
+    expect(await esAdminLaSesion()).toBe(false);
+    const logueado = JSON.stringify(log.mock.calls);
+    expect(logueado).toContain("JWTSessionError");
+    expect(logueado).not.toContain("secreto-123");
+    log.mockRestore();
+  });
+
   it("si la base falla, tira: la ruta responde 204 sin contar", async () => {
     auth.mockResolvedValue({ user: { id: "u1" } });
     buscarRol.mockRejectedValue(Object.assign(new Error("x"), { name: "MongoServerSelectionError" }));

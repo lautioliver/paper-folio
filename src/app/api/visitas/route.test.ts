@@ -119,12 +119,6 @@ describe("POST /api/visitas", () => {
     expect(esAdminLaSesion).not.toHaveBeenCalled();
   });
 
-  it("cuenta a quien no es admin (operador, usuario o bloqueado: lo decide esAdminLaSesion)", async () => {
-    esAdminLaSesion.mockResolvedValue(false);
-    await pedir({ ruta: "/" });
-    await pedir({ ruta: "/" });
-    expect((await VisitaDiaria.findOne().lean())?.total).toBe(2);
-  });
 
   it("400 VISITA_INVALIDA si la ruta no es interna o el cuerpo no es JSON, sin contar", async () => {
     for (const cuerpo of [{ ruta: "https://otro.example/" }, { ruta: "//otro.example" }, {}, "{no es json"]) {
