@@ -69,11 +69,14 @@ No corras scripts de seed ni de borrado contra la base compartida: usá `paperfo
 Los proyectos, sus demos y los servicios viven en la base (ADR-003). Mientras la base no los tenga, el sitio muestra los de `src/content/profile.ts`, así que no hace falta correr nada para desarrollar. Para cargarlos (una vez por base):
 
 ```bash
-npm run seed:contenido -- --env-file .env.local    # toma MONGODB_URI y MONGODB_DB de ese archivo
+npm run seed:contenido -- --env-file .env.seed      # MONGODB_URI y MONGODB_DB de ese archivo
 MONGODB_URI=mongodb://localhost:27017 MONGODB_DB=paperfolio-dev npm run seed:contenido   # o del entorno
+npm run seed:contenido -- --env-file .env.local --atlas   # solo si el destino es Atlas a propósito
 ```
 
-- Imprime el nombre de la base antes de escribir (nunca la URI): revisalo. Contra la base de producción lo corre una persona, no un agente.
+- Con `--env-file`, los valores del archivo pisan los que tenga exportados la shell: el seed escribe en la base del archivo. Sin `--env-file`, usa las variables del entorno.
+- Antes de escribir imprime el host y la base de destino (nunca la URI ni las credenciales): revisalos.
+- Si el host es de Atlas (`*.mongodb.net`), se niega a escribir y no se conecta, salvo que se pase `--atlas`. Contra la base de producción lo corre una persona, nunca un agente.
 - Es idempotente: inserta los proyectos (por `slug`) y servicios (por `titulo`) que faltan, publicados y en el orden de `profile.ts`, y no toca los que ya están, aunque se hayan editado o despublicado en el panel. La demo de cada proyecto (su `demoUrl`) se carga solo si el proyecto no tiene ninguna.
 - Si en el panel se renombra un slug o un título, o se borran todas las demos de un proyecto, correrlo de nuevo vuelve a cargar el original.
 - No lo corras dos veces a la vez (podría duplicar una demo).

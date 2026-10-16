@@ -68,7 +68,15 @@ export async function sembrarContenido(): Promise<ResultadoSeed> {
 
 export type DestinoSeed = { host: string; base: string; esAtlas: boolean };
 
+/**
+ * A dónde va a escribir el seed, para mostrarlo antes de escribir: los hosts de la URI sin usuario ni
+ * contraseña, la base y si es Atlas (algún host termina en `.mongodb.net`).
+ */
 export function destinoDelSeed(env: { MONGODB_URI: string; MONGODB_DB: string }): DestinoSeed {
-  return { host: "", base: env.MONGODB_DB, esAtlas: false };
+  const sinEsquema = env.MONGODB_URI.replace(/^mongodb(\+srv)?:\/\//, "");
+  const autoridad = sinEsquema.split(/[/?]/, 1)[0];
+  const host = autoridad.slice(autoridad.lastIndexOf("@") + 1);
+  const esAtlas = host.split(",").some((h) => h.split(":")[0].toLowerCase().endsWith(".mongodb.net"));
+  return { host, base: env.MONGODB_DB, esAtlas };
 }
 
