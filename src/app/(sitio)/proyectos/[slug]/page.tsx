@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { Suspense, type ReactNode } from "react";
 import { Container } from "@/components/Container";
 import { Footer } from "@/components/sitio/Contact";
@@ -10,6 +11,7 @@ import { Highlight } from "@/components/sitio/Highlight";
 import { Navbar } from "@/components/sitio/Navbar";
 import { BUTTON } from "@/components/sitio/Sections";
 import { TONE_BG } from "@/components/sitio/tones";
+import { registrarAcceso } from "@/lib/accesos";
 import { cn } from "@/lib/cn";
 import { detalleProyecto, type Demo } from "@/lib/contenido";
 import { esUrlHttps } from "@/lib/contenido-esquemas";
@@ -45,11 +47,14 @@ export default function DetallePage({ params }: PageProps<"/proyectos/[slug]">) 
 async function Detalle({ params }: { params: PageProps<"/proyectos/[slug]">["params"] }) {
   const { slug } = await params;
   // Primero la sesión: sin ella nadie ve nada, ni siquiera si el slug existe.
-  await requerirSesion(rutaDetalle(slug));
+  const { id } = await requerirSesion(rutaDetalle(slug));
   // Solo lo publicado: un proyecto despublicado (o inexistente) da 404. Proyecto y demos en una sola
   // lectura, así no se mezclan la base y el respaldo estático.
   const detalle = await detalleProyecto(slug);
   if (!detalle) notFound();
+  // Cuenta la vista como acceso de tipo `detalle` (#54) después de responder: no demora la página y, como
+  // `requerirSesion` marca la ruta como dinámica, nunca corre en el prerender. `registrarAcceso` no lanza.
+  after(() => registrarAcceso(id, "detalle"));
   const { proyecto: project, demos } = detalle;
   const { caso } = project;
   const [principal] = demos;

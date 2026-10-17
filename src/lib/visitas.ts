@@ -4,9 +4,7 @@ import { VisitaDiaria } from "@/models/VisitaDiaria";
 import { VisitanteDiario } from "@/models/VisitanteDiario";
 import { listarProyectos } from "./contenido";
 import { asegurarIndicesDe, conectar } from "./db";
-
-/** Zona de las fechas de las métricas (épica #53, decisión 1). */
-export const ZONA_VISITAS = "America/Argentina/Salta";
+import { fechaDeMetrica } from "./fecha-metricas";
 
 export type DatosVisita = {
   /** Ruta de la página, como la manda el navegador (se normaliza acá). */
@@ -82,16 +80,9 @@ export function seDescartaSinSesion(ruta: string, userAgent: string): boolean {
   return esBot(userAgent) || esRutaExcluida(normalizarRuta(ruta));
 }
 
-const formatoFecha = new Intl.DateTimeFormat("en-CA", {
-  timeZone: ZONA_VISITAS,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/** El día de la visita en America/Argentina/Salta, como `YYYY-MM-DD`. */
+/** El día de la visita en America/Argentina/Salta, como `YYYY-MM-DD` (`fechaDeMetrica`). */
 export function fechaDeVisita(ahora: Date): string {
-  return formatoFecha.format(ahora);
+  return fechaDeMetrica(ahora);
 }
 
 function esClaveDuplicada(error: unknown): boolean {

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { z } from "zod";
 import { emailsDeLista, type EstadoRol } from "./acceso";
+import { registrarAcceso } from "./accesos";
 import { asegurarIndicesDe, conectar } from "./db";
 import { leerAdminEmails } from "./env";
 import { Usuario, type Rol } from "@/models/Usuario";
@@ -49,7 +50,8 @@ export function rolGuardado(doc: { rol: Rol; bloqueado?: boolean | null }): Rol 
 /**
  * Crea o actualiza el usuario que acaba de ingresar con Google (upsert por email). No toca el rol guardado
  * (lo asigna el panel); devuelve el vigente, con `admin` si el email está en `ADMIN_EMAILS`. Una cuenta
- * bloqueada no llega acá (la frena el callback `signIn`), pero si llega, lanza `CuentaBloqueadaError`.
+ * bloqueada no llega acá (la frena el callback `signIn`), pero si llega, lanza `CuentaBloqueadaError` sin contar
+ * el acceso. Si no, cuenta un acceso de tipo `ingreso` (`registrarAcceso`, que nunca lanza).
  */
 export async function registrarIngreso(
   datos: DatosIngreso,
@@ -68,7 +70,10 @@ export async function registrarIngreso(
     { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true },
   ).lean();
   if (doc.bloqueado === true) throw new CuentaBloqueadaError("La cuenta está bloqueada.");
-  return { id: String(doc._id), email: doc.email, rol: rolVigente(doc.email, rolGuardado(doc), adminEmails) };
+  const id = String(doc._id);
+  // Cuenta el ingreso (#54). No lanza: si la base falla al contar, el ingreso sigue.
+  await registrarAcceso(id, "ingreso");
+  return { id, email: doc.email, rol: rolVigente(doc.email, rolGuardado(doc), adminEmails) };
 }
 
 /**

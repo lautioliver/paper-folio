@@ -191,7 +191,8 @@ export async function agregarNota(
 
 /**
  * Una respuesta pendiente (reservada y sin `emailEnviado`) más vieja que esto se da por abandonada (el
- * proceso se cayó a mitad del envío): ya no bloquea otra respuesta. Es mucho más que el timeout del envío.
+ * proceso se cayó a mitad del envío, o no llegó a registrar un envío que venció por timeout): ya no bloquea
+ * otra respuesta. Es mucho más que el timeout del envío y que los timeouts propios de nodemailer.
  */
 export const RESERVA_VENCE_MS = 2 * 60_000;
 
@@ -215,7 +216,8 @@ function pendienteVigente() {
  * src/lib/respuestas.ts): en un solo update condicionado a que la consulta esté en un estado desde el que se
  * responde (`ESTADOS_PARA_RESPONDER`) y a que no haya otra respuesta pendiente, agrega la entrada `respuesta`
  * sin `emailEnviado` (pendiente). Así dos pestañas u operadores no mandan dos emails: el segundo no matchea
- * y recibe `en-envio`. Si el envío sale pero falla el registro, la entrada queda pendiente ("sin confirmar").
+ * y recibe `en-envio`. Si el envío vence por timeout o sale pero falla el registro, la entrada queda
+ * pendiente ("sin confirmar") y sigue bloqueando hasta vencer.
  * `fecha` identifica la entrada para `completarRespuesta`. `texto` ya viene validado.
  */
 export async function reservarRespuesta(
@@ -242,7 +244,8 @@ export async function reservarRespuesta(
   if (!actual) return NO_ENCONTRADA;
   const estado = estadoLeido(actual.estado);
   if (!ESTADOS_PARA_RESPONDER.includes(estado)) return estadoNoRespondible(estado);
-  // La pendiente puede ser un envío en vuelo o uno que salió y no se pudo registrar: no se afirma cuál.
+  // La pendiente puede ser un envío en vuelo, uno que venció por timeout o uno que salió y no se pudo
+  // registrar: no se afirma cuál.
   return {
     ok: false,
     error: "en-envio",
