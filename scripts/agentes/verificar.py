@@ -26,6 +26,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mapa import RAIZ, archivos_cambiados, coincide, existe, rama_base  # noqa: E402
 
 
+def dependencias_viejas(raiz):
+    """Aviso si package-lock.json es más nuevo que lo instalado. Por implementar (#11)."""
+    return None
+
+
 def referencia_base(args, base):
     return f"origin/{base}" if existe(f"origin/{base}") else base
 
