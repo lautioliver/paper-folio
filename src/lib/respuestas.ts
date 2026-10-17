@@ -89,13 +89,12 @@ function transporteGmail(user: string, pass: string): TransporteEmail {
   });
 }
 
-async function enviarConTimeout(t: TransporteEmail, mensaje: SendMailOptions, timeoutMs: number) {
+/** Espera `envio` hasta `timeoutMs`; si vence, rechaza con `timeout`, pero el envío sigue en curso. */
+async function esperarConTimeout(envio: Promise<unknown>, timeoutMs: number) {
   let reloj: ReturnType<typeof setTimeout> | undefined;
   const vencido = new Promise<never>((_, rechazar) => {
     reloj = setTimeout(() => rechazar(new EnvioError("timeout")), timeoutMs);
   });
-  const envio = t.sendMail(mensaje);
-  envio.catch(() => {}); // si gana el timeout, que el rechazo tardío no quede sin atender
   try {
     await Promise.race([envio, vencido]);
   } finally {
@@ -120,8 +119,9 @@ function cuerpo(respuesta: string, c: { nombre: string; mensaje: string; creadaE
  * mensaje original citado. Si el email sale, la consulta pasa a `respondida`; si falla, la entrada queda con
  * `emailEnviado: false`, el estado no cambia y devuelve el error con su código. Si tarda más de 10 s
  * (`timeout`), el envío puede seguir y llegar: la entrada queda pendiente (sin confirmar) y la reserva bloquea
- * otro envío hasta vencer. Si el email sale pero falla el registro, devuelve `registro-fallido` y la entrada
- * queda pendiente. Del error solo se loguea el código: nunca la credencial, el destino ni el texto.
+ * otro envío; cuando el envío termina, la completa una tarea que se le pasa a `opciones.seguir` (la acción
+ * usa `after`, así sigue después de responder). Si el email sale pero falla el registro, devuelve
+ * `registro-fallido` y la entrada queda pendiente. Del error solo se loguea el código: nunca la credencial, el destino ni el texto.
  * `transporte` es para los tests; sin él, usa Gmail con `GMAIL_USER` y `GMAIL_APP_PASSWORD`.
  */
 export async function responderConsulta(
@@ -184,30 +184,47 @@ export async function responderConsulta(
 
   const nombre = String(c.nombre).replace(CONTROL, " ").trim();
   const tipo = CONTACT_TYPE_LABELS[c.tipo as ContactType] ?? String(c.tipo).replace(CONTROL, " ");
+  const timeoutMs = opciones.timeoutMs ?? TIMEOUT_MS;
+  let envio: Promise<unknown> | undefined;
   let codigo: string | null = null;
   try {
-    await enviarConTimeout(
-      transporte ?? transporteGmail(config.GMAIL_USER, config.GMAIL_APP_PASSWORD),
-      {
-        from: config.GMAIL_USER,
-        to: { name: nombre, address: destino },
-        subject: `Re: tu consulta en Paperfolio (${tipo})`,
-        text: cuerpo(respuesta.data, { nombre, mensaje: c.mensaje, creadaEn: c.creadaEn }),
-      },
-      opciones.timeoutMs ?? TIMEOUT_MS,
-    );
+    const t = transporte ?? transporteGmail(config.GMAIL_USER, config.GMAIL_APP_PASSWORD);
+    envio = t.sendMail({
+      from: config.GMAIL_USER,
+      to: { name: nombre, address: destino },
+      subject: `Re: tu consulta en Paperfolio (${tipo})`,
+      text: cuerpo(respuesta.data, { nombre, mensaje: c.mensaje, creadaEn: c.creadaEn }),
+    });
+    envio.catch(() => {}); // si gana el timeout, que el rechazo tardío no quede sin atender
+    await esperarConTimeout(envio, timeoutMs);
   } catch (e) {
     codigo = codigoDe(e);
     console.error(`responderConsulta: no se pudo enviar el email (${codigo})`);
   }
 
   // Tras un timeout el envío sigue en curso y puede salir: la entrada queda pendiente, así la reserva bloquea
-  // otro envío hasta vencer (`RESERVA_VENCE_MS`) en vez de habilitar un segundo email (#66).
-  if (codigo === "timeout") {
+  // otro envío (#66), y se completa cuando el envío termina. Si el proceso no llega a completarla (se cayó,
+  // o la plataforma lo congeló), queda sin confirmar y la reserva vence a los `RESERVA_VENCE_MS`.
+  if (codigo === "timeout" && envio) {
+    const tarea = envio
+      .then(
+        () => true,
+        (e: unknown) => {
+          console.error(`responderConsulta: el envío falló después del timeout (${codigoDe(e)})`);
+          return false;
+        },
+      )
+      .then((enviado) => completarRespuesta(id, autor, reserva.fecha, enviado))
+      .then(
+        () => {},
+        (e: unknown) =>
+          console.error(`responderConsulta: no se pudo registrar el envío tardío (${codigoDe(e)})`),
+      );
+    opciones.seguir?.(tarea);
     return {
       ok: false,
       error: "envio-fallido",
-      mensaje: `Gmail no confirmó el envío en ${Math.round((opciones.timeoutMs ?? TIMEOUT_MS) / 1000)} s: el email puede haber llegado. Revisá Enviados en Gmail antes de volver a responder. En el seguimiento queda sin confirmar y la consulta sigue ${ETIQUETAS_ESTADO[estado]}; hasta ${RESERVA_VENCE_MS / 60_000} minutos después del intento no se puede mandar otra respuesta.`,
+      mensaje: `Gmail no confirmó el envío en ${Math.round(timeoutMs / 1000)} s: el email puede haber llegado. Revisá Enviados en Gmail antes de volver a responder. En el seguimiento queda sin confirmar hasta que Gmail responda, y por hasta ${Math.round(RESERVA_VENCE_MS / 60_000)} minutos no se puede mandar otra respuesta.`,
     };
   }
 

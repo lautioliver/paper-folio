@@ -191,7 +191,8 @@ export async function agregarNota(
 
 /**
  * Una respuesta pendiente (reservada y sin `emailEnviado`) más vieja que esto se da por abandonada (el
- * proceso se cayó a mitad del envío): ya no bloquea otra respuesta. Es mucho más que el timeout del envío.
+ * proceso se cayó a mitad del envío, o no llegó a registrar un envío que venció por timeout): ya no bloquea
+ * otra respuesta. Es mucho más que el timeout del envío y que los timeouts propios de nodemailer.
  */
 export const RESERVA_VENCE_MS = 2 * 60_000;
 
