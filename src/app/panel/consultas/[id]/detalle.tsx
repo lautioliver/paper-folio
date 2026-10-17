@@ -24,8 +24,8 @@ function textoDe(e: EntradaSeguimiento): string {
   return e.texto;
 }
 
-// `false` cubre un error y un timeout (tras el que el email puede haber llegado): no afirma que no llegó.
-// Sin `emailEnviado`, la respuesta está reservada y se está enviando, o el registro del resultado falló.
+// `false` es un error del envío: igual no afirma que no llegó. Sin `emailEnviado`, la respuesta está reservada
+// y se está enviando, venció el timeout (el envío pudo seguir, #66) o el registro del resultado falló.
 function envioDe(e: EntradaSeguimiento, email: string): string {
   if (e.emailEnviado === true) return `Enviada por email a ${email}.`;
   const revisar = "Revisá Enviados en Gmail antes de volver a responder.";

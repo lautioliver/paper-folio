@@ -17,6 +17,8 @@ vi.mock("@/lib/respuestas", () => ({
   responderConsulta: (...args: unknown[]) => responderConsulta(...args),
 }));
 vi.mock("next/cache", () => ({ refresh: () => refresh() }));
+const after = vi.fn();
+vi.mock("next/server", () => ({ after: (...args: unknown[]) => after(...args) }));
 
 import { agregarNotaAccion, cambiarEstadoAccion, responderAccion } from "./acciones";
 
@@ -150,9 +152,23 @@ describe("responderAccion", () => {
       form({ texto: "Hola", email: "otro@example.com", to: "otro@example.com", autor: "otro" }),
     );
     expect(responderConsulta).toHaveBeenCalledTimes(1);
-    expect(responderConsulta).toHaveBeenCalledWith(ID, "Hola", OPERADOR);
+    expect(responderConsulta).toHaveBeenCalledWith(ID, "Hola", OPERADOR, undefined, {
+      seguir: expect.any(Function),
+    });
     expect(r).toEqual({ error: null, texto: "" });
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("tras un timeout, el registro del envío tardío sigue con after() después de responder (#66)", async () => {
+    const tarea = Promise.resolve();
+    responderConsulta.mockImplementation(
+      async (_id: string, _t: string, _a: string, _tr: unknown, o: { seguir?: (p: Promise<void>) => void }) => {
+        o?.seguir?.(tarea);
+        return { ok: false, error: "envio-fallido", mensaje: "timeout" };
+      },
+    );
+    await responderAccion(ID, previo, form({ texto: "Hola" }));
+    expect(after).toHaveBeenCalledWith(tarea);
   });
 
   it("si el envío falla, devuelve el error, conserva el texto y refresca (quedó la entrada no enviada)", async () => {
