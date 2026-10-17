@@ -56,7 +56,7 @@ function esquemaCoincide(esquema: string, sitio: URL): boolean {
 }
 
 const FUENTE_ESQUEMA = /^[a-z][a-z0-9+.-]*:$/;
-const FUENTE_HOST = /^(?:([a-z][a-z0-9+.-]*:)\/\/)?(\*|(?:\*\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*)(?::(\d+|\*))?(?:\/.*)?$/;
+const FUENTE_HOST = /^(?:([a-z][a-z0-9+.-]*:)\/\/)?(\*|(?:\*\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)*)(?::(\d+|\*))?(\/.*)?$/;
 
 /** ¿La fuente de frame-ancestors (en minúsculas) deja que el sitio embeba la demo? */
 function fuenteCoincide(fuente: string, sitio: URL, demo: URL): boolean {
@@ -65,7 +65,10 @@ function fuenteCoincide(fuente: string, sitio: URL, demo: URL): boolean {
   if (FUENTE_ESQUEMA.test(fuente)) return esquemaCoincide(fuente, sitio);
   const partes = FUENTE_HOST.exec(fuente);
   if (!partes) return false; // 'none', nonces y lo que no aplica a frame-ancestors
-  const [, esquema, host, puerto] = partes;
+  const [, esquema, host, puerto, ruta] = partes;
+  // El navegador compara la ruta de la fuente contra el origen del sitio, cuya ruta es `/`: cualquier otra
+  // ruta no coincide (Chromium bloquea `https://sitio/proyectos/` aunque la página esté en /proyectos/x).
+  if (ruta !== undefined && ruta !== "/") return false;
   // Sin esquema vale el de la demo (y una demo http también acepta un sitio https).
   if (!esquemaCoincide(esquema ?? demo.protocol, sitio)) return false;
   const hostSitio = sitio.hostname;
@@ -157,56 +160,80 @@ async function pedirCabeceras(f: typeof fetch, url: URL, signal: AbortSignal): P
   return respuesta;
 }
 
+/** Lo que hace falta para decidir, en datos planos (lo guarda `use cache`): la URL final y las dos cabeceras. */
+export type CabecerasDemo = { url: string; xFrameOptions: string | null; contentSecurityPolicy: string | null };
+
 /**
- * Consulta las cabeceras de la demo (con `fetch` inyectable para los tests). Nunca falla: si la URL no se puede
- * consultar, la consulta falla o tarda más de `timeoutMs`, devuelve `desconocido`. Del error se loguea solo el
- * origen y el nombre del error: ni la ruta ni la query, que podrían llevar algo privado.
+ * Pide la demo y devuelve sus cabeceras de embebido (con `fetch` inyectable para los tests). Nunca falla: si la
+ * URL no se puede consultar, la consulta falla, tarda más de `timeoutMs` o la respuesta final no es 2xx,
+ * devuelve `null`. Del error se loguea solo el origen y el nombre del error: ni la ruta ni la query, que
+ * podrían llevar algo privado.
  */
-export async function consultarEmbebible(
+export async function consultarCabeceras(
   url: string,
-  origenSitio: string,
   { fetch: f = fetch, timeoutMs = TIMEOUT_MS }: { fetch?: typeof fetch; timeoutMs?: number } = {},
-): Promise<Embebible> {
+): Promise<CabecerasDemo | null> {
   let actual = urlConsultable(url);
-  if (!actual) return "desconocido";
+  if (!actual) return null;
   const origen = actual.origin;
   const signal = AbortSignal.timeout(timeoutMs);
   try {
     for (let saltos = 0; saltos <= MAX_REDIRECTS; saltos++) {
       const respuesta = await pedirCabeceras(f, actual, signal);
       if (respuesta.status >= 200 && respuesta.status < 300) {
-        return permiteEmbeber(respuesta.headers, origenSitio, actual.href) ? "si" : "no";
+        return {
+          url: actual.href,
+          xFrameOptions: respuesta.headers.get("x-frame-options"),
+          contentSecurityPolicy: respuesta.headers.get("content-security-policy"),
+        };
       }
       // Un error o un desafío anti-bots no dice qué recibe el navegador: no se decide con eso.
-      if (respuesta.status < 300 || respuesta.status >= 400) return "desconocido";
+      if (respuesta.status < 300 || respuesta.status >= 400) return null;
       const destino = respuesta.headers.get("location");
       const siguiente: URL | null = destino === null ? null : URL.parse(destino, actual);
       actual = siguiente && urlConsultable(siguiente);
-      if (!actual) return "desconocido";
+      if (!actual) return null;
     }
-    return "desconocido";
+    return null;
   } catch (error) {
     console.warn(`demos: no se pudo comprobar si ${origen} se deja embeber (${nombreDe(error)})`);
-    return "desconocido";
+    return null;
   }
 }
 
-export type CabecerasDemo = { url: string; xFrameOptions: string | null; contentSecurityPolicy: string | null };
+/** Decide con las cabeceras (ya cacheadas o recién pedidas) para el origen del sitio. */
+function evaluar(cabeceras: CabecerasDemo | null, origenSitio: string): Embebible {
+  if (!cabeceras) return "desconocido";
+  const h = new Headers();
+  if (cabeceras.xFrameOptions !== null) h.set("x-frame-options", cabeceras.xFrameOptions);
+  if (cabeceras.contentSecurityPolicy !== null) h.set("content-security-policy", cabeceras.contentSecurityPolicy);
+  return permiteEmbeber(h, origenSitio, cabeceras.url) ? "si" : "no";
+}
 
-export async function cabecerasDeDemo(_url: string): Promise<CabecerasDemo | null> {
-  return null;
+/** `consultarCabeceras` y la decisión, sin caché. */
+export async function consultarEmbebible(
+  url: string,
+  origenSitio: string,
+  opciones: { fetch?: typeof fetch; timeoutMs?: number } = {},
+): Promise<Embebible> {
+  return evaluar(await consultarCabeceras(url, opciones), origenSitio);
 }
 
 /**
- * `consultarEmbebible` cacheada: un pedido externo por URL, no por visita. El resultado dura horas; si no se
- * pudo saber, minutos. Va con el tag del contenido, así un cambio desde el panel también la recalcula (y una
- * URL nueva es otra entrada de la caché).
+ * `consultarCabeceras` cacheada con la URL como única clave: un pedido externo por demo, no por visita ni por
+ * origen (un preview o un host falseado no crean entradas nuevas). Dura horas; si no se pudo saber, minutos. Va
+ * con el tag del contenido, así un cambio desde el panel también la recalcula (y una URL nueva es otra entrada).
  */
-export async function demoEmbebible(url: string, origenSitio: string): Promise<Embebible> {
+export async function cabecerasDeDemo(url: string): Promise<CabecerasDemo | null> {
   "use cache";
   cacheTag(TAG_CONTENIDO);
-  const resultado = await consultarEmbebible(url, origenSitio);
-  if (resultado === "desconocido") cacheLife("minutes");
+  const cabeceras = await consultarCabeceras(url);
+  if (cabeceras === null) cacheLife("minutes");
   else cacheLife("hours");
-  return resultado;
+  return cabeceras;
+}
+
+/** ¿La demo se deja embeber desde `origenSitio`? Las cabeceras salen de la caché; la decisión, afuera. */
+export async function demoEmbebible(url: string, origenSitio: string): Promise<Embebible> {
+  return evaluar(await cabecerasDeDemo(url), origenSitio);
 }
