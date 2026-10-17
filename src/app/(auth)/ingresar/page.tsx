@@ -13,7 +13,12 @@ const BOTON = "marca apretable inline-flex min-h-11 items-center justify-center 
 
 async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParams"] }) {
   const { error, callbackUrl } = await params;
-  const [{ estado, configurado }, vueltaGuardada] = await Promise.all([estadoDeSesion(), vueltaDeAuthJs()]);
+  // La ruta guardada solo sirve si vino un error sin `callbackUrl` (`decidirIngreso`): si no, ni se lee.
+  const leerVuelta = error !== undefined && callbackUrl === undefined;
+  const [{ estado, configurado }, vueltaGuardada] = await Promise.all([
+    estadoDeSesion(),
+    leerVuelta ? vueltaDeAuthJs() : undefined,
+  ]);
   const decision = decidirIngreso({ sesion: estado, error, callbackUrl, vueltaGuardada });
   if (decision.accion === "redirigir") redirect(decision.destino);
 
