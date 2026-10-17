@@ -29,7 +29,8 @@ function desfase(instante: Date): number {
 }
 
 /** Instante (UTC) en que empieza el día `fecha` (`YYYY-MM-DD`) en America/Argentina/Salta. */
-export function inicioDelDia(fecha: string): Date {
+export function inicioDelDia(fecha: string, zona: string = ZONA_METRICAS): Date {
+  void zona;
   const medianocheUtc = Date.parse(`${fecha}T00:00:00Z`);
   return new Date(medianocheUtc - desfase(new Date(medianocheUtc)));
 }
@@ -44,4 +45,16 @@ export function diasEntre(desde: string, hasta: string): string[] {
   const dias: string[] = [];
   for (let dia = desde; dia <= hasta; dia = sumarDias(dia, 1)) dias.push(dia);
   return dias;
+}
+
+/** `2026-10-16` → `16/10`. */
+export function diaCorto(fecha: string): string {
+  void fecha;
+  return "";
+}
+
+/** `2026-10-16` → `16/10/2026`. */
+export function diaLargo(fecha: string): string {
+  void fecha;
+  return "";
 }

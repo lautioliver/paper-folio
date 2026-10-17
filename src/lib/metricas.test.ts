@@ -129,6 +129,17 @@ describe("consultasPorDia", () => {
   });
 });
 
+describe("consultas con un tipo fuera de la lista", () => {
+  it("no cuentan en ninguna serie, así la tarjeta y el resumen por día coinciden", async () => {
+    // Un documento viejo o escrito a mano, con un tipo que el modelo ya no acepta.
+    await Consulta.collection.insertOne({ nombre: "X", email: "x@example.com", tipo: "soporte", mensaje: "viejo", ipHash: "x", creadaEn: new Date("2026-10-13T15:00:00Z") });
+    const porTipo = await consultasPorTipo(RANGO);
+    const porDia = await consultasPorDia(RANGO);
+    expect(porDia.reduce((a, p) => a + p.total, 0)).toBe(porTipo.reduce((a, p) => a + p.total, 0));
+    expect(porDia.find((p) => p.fecha === "2026-10-13")?.total).toBe(0);
+  });
+});
+
 describe("registrosPorDia", () => {
   it("cuenta los usuarios nuevos por día de Salta, con los días vacíos en 0", async () => {
     expect(await registrosPorDia(RANGO)).toEqual(serie({ "2026-10-11": 2 }));

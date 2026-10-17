@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diasEntre, fechaDeMetrica, inicioDelDia, sumarDias } from "./fecha-metricas";
+import { diaCorto, diaLargo, diasEntre, fechaDeMetrica, inicioDelDia, sumarDias } from "./fecha-metricas";
 
 describe("fechaDeMetrica", () => {
   it("toma el día de Salta, no el de UTC", () => {
@@ -19,6 +19,21 @@ describe("inicioDelDia", () => {
       expect(fechaDeMetrica(inicioDelDia(fecha))).toBe(fecha);
       expect(fechaDeMetrica(new Date(inicioDelDia(fecha).getTime() - 1))).toBe(sumarDias(fecha, -1));
     }
+  });
+});
+
+describe("inicioDelDia en una zona con horario de verano", () => {
+  it("toma el desfase de la medianoche local, no el de la medianoche UTC", () => {
+    // Santiago de Chile atrasa la hora a las 00:00 (-03) del 5 de abril de 2026: el día empieza a las 00:00 -04.
+    expect(inicioDelDia("2026-04-05", "America/Santiago").toISOString()).toBe("2026-04-05T04:00:00.000Z");
+    expect(inicioDelDia("2026-04-04", "America/Santiago").toISOString()).toBe("2026-04-04T03:00:00.000Z");
+  });
+});
+
+describe("diaCorto y diaLargo", () => {
+  it("muestran el día sin pasar por Date", () => {
+    expect(diaCorto("2026-10-06")).toBe("06/10");
+    expect(diaLargo("2026-10-06")).toBe("06/10/2026");
   });
 });
 
