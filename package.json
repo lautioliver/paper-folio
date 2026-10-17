@@ -26,7 +26,6 @@
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24",
-    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
