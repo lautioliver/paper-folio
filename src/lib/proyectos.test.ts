@@ -60,6 +60,10 @@ describe("el sitio lee el contenido de la base (src/lib/contenido.ts)", () => {
   });
 
   it("una demo http no va en el iframe (contenido mixto en el sitio https): solo el enlace", () => {
-    expect(fuentes.detalle).toMatch(/esUrlHttps\(demo\.url\)\s*&&\s*\(\s*<iframe/);
+    // El iframe solo está en `MarcoDemo`, y `MarcoDemo` solo se usa con una URL https.
+    expect(fuentes.detalle).toMatch(/esUrlHttps\(demo\.url\)\s*\?\s*\([\s\S]*<MarcoDemo demo=\{demo\} \/>[\s\S]*\)\s*:\s*\(/);
+    expect(fuentes.detalle.match(/<MarcoDemo/g)).toHaveLength(1);
+    expect(fuentes.detalle.match(/<iframe/g)).toHaveLength(1);
+    expect(fuentes.detalle.indexOf("<iframe")).toBeGreaterThan(fuentes.detalle.indexOf("async function MarcoDemo"));
   });
 });
