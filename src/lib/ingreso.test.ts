@@ -229,7 +229,8 @@ describe("ningún destino bajo /api/ (segunda revisión del PR #73: bucle por la
     "/API/auth/error",
     "/%61pi/auth/error",
     "/./api/auth/error",
-    "//api/auth/error",
+    "/.//api/auth/error",
+    "/x/..//api/auth/error",
   ];
 
   it("un callbackUrl a /api/… lleva a /, con o sin sesión", () => {
@@ -237,6 +238,18 @@ describe("ningún destino bajo /api/ (segunda revisión del PR #73: bucle por la
       expect(decidirIngreso({ sesion: "valida", error: "AccessDenied", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
       expect(decidirIngreso({ sesion: "ninguna", error: "Configuration", callbackUrl }), callbackUrl).toMatchObject({ callbackUrl: "/" });
     }
+  });
+});
+
+describe("un destino con ?, # o \\ codificados en el camino no sirve (code-review del PR #73)", () => {
+  it("no se puede esconder /ingresar ni /api/ detrás de un %3F, %23 o %5C", () => {
+    for (const callbackUrl of ["/x%3F/..%2Fingresar", "/x%23/..%2Fapi/auth/signout", "/%5Cingresar", "/proyectos%5C..%5Capi"]) {
+      expect(decidirIngreso({ sesion: "valida", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
+    }
+  });
+
+  it("una query con esos caracteres sigue valiendo", () => {
+    expect(decidirIngreso({ sesion: "valida", callbackUrl: "/proyectos?q=a%3Fb%23c" })).toEqual({ accion: "redirigir", destino: "/proyectos?q=a%3Fb%23c" });
   });
 });
 
