@@ -143,7 +143,7 @@ function respuesta({ status = 200, headers = [], body = null }: Respuesta): Resp
 
 function fetchFalso(...respuestas: Respuesta[]) {
   const cola = [...respuestas];
-  return vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => {
+  return vi.fn<typeof fetch>(async () => {
     const siguiente = cola.shift();
     if (!siguiente) throw new Error("sin respuesta");
     return respuesta(siguiente);
@@ -178,12 +178,16 @@ describe("consultarEmbebible", () => {
   it("si el servidor no acepta HEAD, prueba con GET y no lee el cuerpo", async () => {
     let leido = false;
     const cancel = vi.fn();
-    const body = new ReadableStream({
-      pull() {
-        leido = true;
+    // highWaterMark 0: el stream no se llena solo, así `pull` marca una lectura de verdad.
+    const body = new ReadableStream(
+      {
+        pull() {
+          leido = true;
+        },
+        cancel,
       },
-      cancel,
-    });
+      { highWaterMark: 0 },
+    );
     const f = fetchFalso({ status: 405 }, { headers: [["Content-Security-Policy", "frame-ancestors 'none'"]], body });
     expect(await consultarEmbebible(DEMO, SITIO, { fetch: f })).toBe("no");
     expect(f.mock.calls[1][1]?.method).toBe("GET");

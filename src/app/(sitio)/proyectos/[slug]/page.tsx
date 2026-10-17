@@ -12,6 +12,7 @@ import { TONE_BG } from "@/components/sitio/tones";
 import { cn } from "@/lib/cn";
 import { detalleProyecto, type Demo } from "@/lib/contenido";
 import { esUrlHttps } from "@/lib/contenido-esquemas";
+import { demoEmbebible, origenDelSitio } from "@/lib/embebible";
 import { requerirSesion } from "@/lib/permisos";
 import { RUTA_PROYECTOS, rutaDetalle } from "@/lib/proyectos";
 
@@ -131,32 +132,67 @@ async function Detalle({ params }: { params: PageProps<"/proyectos/[slug]">["par
   );
 }
 
-/** Una demo: el sitio en un iframe con sandbox y, aparte, el enlace para abrirlo en otra pestaña. */
+/**
+ * Una demo: el sitio en un iframe con sandbox y, aparte, el enlace para abrirlo en otra pestaña. Si la demo no
+ * se deja embeber (#61), solo el botón: un iframe así queda como un recuadro vacío.
+ */
 function VistaDemo({ demo, conTitulo }: { demo: Demo; conTitulo: boolean }) {
   return (
     <div>
       {conTitulo && <h3 className="mt-2 text-cuerpo font-bold">{demo.titulo}</h3>}
       {demo.descripcion && <p className="mt-2 text-cuerpo">{demo.descripcion}</p>}
-      <p className="mt-2 text-pequeno">
-        {esUrlHttps(demo.url)
-          ? "Si el sitio no se ve acá (algunos no permiten mostrarse dentro de otra página), abrilo en otra pestaña: "
-          : "Esta demo no usa https, así que no se puede mostrar acá: "}
-        <a href={demo.url} target="_blank" rel="noreferrer" className="font-bold underline decoration-2 underline-offset-4">
-          Abrir en otra pestaña
-        </a>
-        .
-      </p>
       {/* Una demo http no se embebe: el navegador la bloquea como contenido mixto. Queda el enlace. */}
-      {esUrlHttps(demo.url) && (
-        <iframe
-          src={demo.url}
-          title={demo.titulo}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          className="marca mt-4 h-[32rem] w-full bg-papel"
-        />
+      {esUrlHttps(demo.url) ? (
+        <Suspense fallback={<p className="mt-2 text-pequeno">Cargando la demo…</p>}>
+          <MarcoDemo demo={demo} />
+        </Suspense>
+      ) : (
+        <p className="mt-2 text-pequeno">
+          Esta demo no usa https, así que no se puede mostrar acá: <EnlaceDemo url={demo.url} />.
+        </p>
       )}
     </div>
+  );
+}
+
+function EnlaceDemo({ url }: { url: string }) {
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="font-bold underline decoration-2 underline-offset-4">
+      Abrir en otra pestaña
+    </a>
+  );
+}
+
+/**
+ * El iframe, salvo que las cabeceras de la demo lo impidan (`demoEmbebible`, cacheada). Si no se pudo saber
+ * (la demo no respondió a tiempo), se muestra el iframe con el aviso, como antes de #61.
+ */
+async function MarcoDemo({ demo }: { demo: Demo }) {
+  const embebible = await demoEmbebible(demo.url, origenDelSitio());
+  if (embebible === "no") {
+    return (
+      <div className="mt-2">
+        <p className="text-pequeno">Este sitio no permite mostrarse dentro de otra página.</p>
+        <a href={demo.url} target="_blank" rel="noreferrer" className={cn(BUTTON, "mt-4 bg-tinta text-papel")}>
+          Abrir demo
+        </a>
+      </div>
+    );
+  }
+  return (
+    <>
+      <p className="mt-2 text-pequeno">
+        Si el sitio no se ve acá (algunos no permiten mostrarse dentro de otra página), abrilo en otra pestaña:{" "}
+        <EnlaceDemo url={demo.url} />.
+      </p>
+      <iframe
+        src={demo.url}
+        title={demo.titulo}
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        className="marca mt-4 h-[32rem] w-full bg-papel"
+      />
+    </>
   );
 }
