@@ -123,7 +123,7 @@ export default async function MetricasPage({ searchParams }: PageProps<"/panel/m
     { titulo: "Consultas", valor: t.consultas },
     { titulo: "Usuarios nuevos", valor: t.registros },
     { titulo: "Visitas", valor: t.visitas },
-    { titulo: "Visitantes únicos (suma diaria)", valor: t.unicos, nota: "Cada día cuenta a sus únicos: alguien que vino dos días suma dos." },
+    { titulo: "Visitantes únicos (suma diaria)", valor: t.unicos },
     { titulo: "Accesos de registrados", valor: t.accesos },
   ];
 
@@ -151,7 +151,6 @@ export default async function MetricasPage({ searchParams }: PageProps<"/panel/m
           <li key={c.titulo} className="contorno flex flex-col gap-1 bg-superficie p-4">
             <span className="text-pequeno font-bold">{c.titulo}</span>
             <span className="text-h2 font-bold tabular-nums">{c.valor}</span>
-            {c.nota && <span className="text-pequeno">{c.nota}</span>}
           </li>
         ))}
       </ul>
