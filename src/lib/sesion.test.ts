@@ -6,9 +6,13 @@ const auth = vi.fn();
 const buscarRol = vi.fn();
 vi.mock("@/auth", () => ({ auth: (...a: unknown[]) => auth(...a) }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
+const galletas = new Map<string, string>();
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: (nombre: string) => (galletas.has(nombre) ? { name: nombre, value: galletas.get(nombre) } : undefined) }),
+}));
 vi.mock("./usuarios", () => ({ buscarRol: (...a: unknown[]) => buscarRol(...a) }));
 
-import { esAdminLaSesion } from "./sesion";
+import { esAdminLaSesion, vueltaDeAuthJs } from "./sesion";
 
 beforeEach(() => {
   auth.mockReset();
@@ -59,5 +63,22 @@ describe("esAdminLaSesion (para no contar las visitas de los admin)", () => {
     auth.mockResolvedValue({ user: { id: "u1" } });
     buscarRol.mockRejectedValue(Object.assign(new Error("x"), { name: "MongoServerSelectionError" }));
     await expect(esAdminLaSesion()).rejects.toThrow();
+  });
+});
+
+describe("vueltaDeAuthJs (la ruta que Auth.js guardó al empezar el ingreso, #45)", () => {
+  beforeEach(() => galletas.clear());
+
+  it("lee la cookie callback-url de Auth.js (con o sin el prefijo __Secure-) y devuelve solo la ruta interna", async () => {
+    galletas.set("authjs.callback-url", "http://localhost:3000/proyectos/a");
+    expect(await vueltaDeAuthJs()).toBe("/proyectos/a");
+    galletas.set("__Secure-authjs.callback-url", "https://paperfolio.vercel.app/panel/consultas");
+    expect(await vueltaDeAuthJs()).toBe("/panel/consultas");
+  });
+
+  it("sin cookie o con una que lleva a otro sitio, undefined", async () => {
+    expect(await vueltaDeAuthJs()).toBeUndefined();
+    galletas.set("authjs.callback-url", "https://otro.sitio//x.com");
+    expect(await vueltaDeAuthJs()).toBeUndefined();
   });
 });

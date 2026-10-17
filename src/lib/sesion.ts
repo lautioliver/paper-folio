@@ -46,6 +46,11 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
   return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
 }
 
+/** Stub (#45). */
+export async function vueltaDeAuthJs(): Promise<string | undefined> {
+  return undefined;
+}
+
 /**
  * Si quien hace el pedido es `admin`, con la misma decisión que los permisos (`evaluarAcceso` con el rol que
  * relee `buscarRol`, que ya suma `ADMIN_EMAILS`). Lo usa `POST /api/visitas` para no contar a los admin: no es

@@ -26,6 +26,10 @@ export type AvisoIngreso =
   | "reintentar"
   | "generico"
   | "verificacion"
+  | "google"
+  | "cuenta-no-vinculada"
+  | "vencido"
+  | "configuracion"
   | null;
 
 // Los `error` que /ingresar conoce. Los manda la app (`urlDeIngreso`, `permiteIngreso`) o Auth.js (`pages.error`).
@@ -53,6 +57,7 @@ export function decidirIngreso(entrada: {
   sesion: EstadoSesion;
   error?: string | string[];
   callbackUrl?: string | string[];
+  vueltaGuardada?: string;
 }): DecisionIngreso {
   const callbackUrl = rutaInterna(typeof entrada.callbackUrl === "string" ? entrada.callbackUrl : "/");
   const errorDeSesion = entrada.error === "sesion";
@@ -67,6 +72,12 @@ export function decidirIngreso(entrada: {
   if (entrada.sesion === "valida") return { accion: "redirigir", destino: callbackUrl };
   // Auth.js manda acá sus errores (`pages.error` en src/auth.ts) y `signIn` sus URLs (`permiteIngreso`).
   return { accion: "mostrar", aviso: avisoDeError(entrada.error), callbackUrl };
+}
+
+/** Stub (#45). */
+export function rutaDeCookieDeVuelta(valor: unknown): string | undefined {
+  void valor;
+  return undefined;
 }
 
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */

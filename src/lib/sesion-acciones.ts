@@ -9,6 +9,11 @@ export async function ingresarConGoogle(formData: FormData): Promise<void> {
   await signIn("google", { redirectTo: rutaInterna(typeof destino === "string" ? destino : "/") });
 }
 
+/** Stub (#45). */
+export async function ingresarConOtraCuenta(formData: FormData): Promise<void> {
+  await ingresarConGoogle(formData);
+}
+
 /** Server action de "Salir": cierra la sesión y vuelve al inicio. */
 export async function salir(): Promise<void> {
   await signOut({ redirectTo: "/" });
