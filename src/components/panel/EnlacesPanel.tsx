@@ -12,11 +12,12 @@ const base =
 export function EnlacesPanel({ enlaces, vertical }: { enlaces: EnlacePanel[]; vertical: boolean }) {
   const pathname = usePathname();
   return (
-    <ul className={vertical ? "flex flex-col gap-3" : "flex items-center justify-around gap-2"}>
+    // Abajo, en celular: centrada si entra y con scroll horizontal si no (el admin tiene más secciones que ancho).
+    <ul className={vertical ? "flex flex-col gap-3" : "mx-auto flex w-max max-w-full items-center gap-2 overflow-x-auto"}>
       {enlaces.map((e) => {
         const actual = esActual(pathname, e.href);
         return (
-          <li key={e.href}>
+          <li key={e.href} className="shrink-0">
             <Link
               href={e.href}
               aria-current={actual ? "page" : undefined}
@@ -27,7 +28,7 @@ export function EnlacesPanel({ enlaces, vertical }: { enlaces: EnlacePanel[]; ve
           </li>
         );
       })}
-      <li>
+      <li className="shrink-0">
         <Link href="/" className={`${base} bg-papel text-tinta`}>
           Volver al sitio
         </Link>

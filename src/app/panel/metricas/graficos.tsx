@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore, type ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
-import { CONTACT_TYPE_LABELS } from "@/lib/contact";
+import type { ContactType } from "@/lib/contact";
 import type { PuntoAccesos, PuntoDia, PuntoVisitas, TotalTipo } from "@/lib/metricas";
 
 // Gráficos de Recharts del tablero (épica #53, decisión 4). Los datos llegan del servidor ya leídos (la página
@@ -58,6 +58,10 @@ const tooltip = {
   },
   labelStyle: { fontWeight: 700 },
 };
+// El texto de la leyenda en tinta (Recharts lo pinta del color de la serie: el amarillo no se lee sobre papel).
+const leyenda = (valor: string) => <span style={{ color: COLOR.tinta }}>{valor}</span>;
+// Nombres cortos en el eje: los largos se pisan a 375 px (la tabla usa los completos).
+const TIPO_CORTO: Record<ContactType, string> = { general: "General", cotizacion: "Cotización", asesoria: "Asesoría" };
 const eje = { stroke: COLOR.tinta, tick: { fill: COLOR.tinta, fontSize: 12 } };
 
 function Marco({ children }: { children: ReactNode }) {
@@ -70,7 +74,7 @@ function Marco({ children }: { children: ReactNode }) {
 
 export function GraficoConsultasPorTipo({ datos }: { datos: TotalTipo[] }) {
   const animar = useAnimar();
-  const filas = datos.map((d) => ({ tipo: CONTACT_TYPE_LABELS[d.tipo], total: d.total }));
+  const filas = datos.map((d) => ({ tipo: TIPO_CORTO[d.tipo], total: d.total }));
   return (
     <Marco>
       <BarChart data={filas} responsive style={estiloGrafico} margin={margen} accessibilityLayer={false}>
@@ -78,7 +82,7 @@ export function GraficoConsultasPorTipo({ datos }: { datos: TotalTipo[] }) {
         <XAxis dataKey="tipo" interval={0} {...eje} />
         <YAxis allowDecimals={false} {...eje} />
         <Tooltip {...tooltip} cursor={{ fill: COLOR.superficie }} />
-        <Legend />
+        <Legend formatter={leyenda} />
         <Bar dataKey="total" name="Consultas" fill={COLOR.secundario} stroke={COLOR.tinta} strokeWidth={2} isAnimationActive={animar} />
       </BarChart>
     </Marco>
@@ -94,8 +98,8 @@ function GraficoLineaPorDia({ datos, nombre, color }: { datos: PuntoDia[]; nombr
         <XAxis dataKey="fecha" tickFormatter={diaCorto} minTickGap={16} {...eje} />
         <YAxis allowDecimals={false} {...eje} />
         <Tooltip {...tooltip} labelFormatter={(f) => diaLargo(String(f))} />
-        <Legend />
-        <Line type="monotone" dataKey="total" name={nombre} stroke={color} strokeWidth={3} dot={false} isAnimationActive={animar} />
+        <Legend formatter={leyenda} />
+        <Line type="linear" dataKey="total" name={nombre} stroke={color} strokeWidth={3} dot={false} isAnimationActive={animar} />
       </LineChart>
     </Marco>
   );
@@ -118,10 +122,10 @@ export function GraficoVisitasPorDia({ datos }: { datos: PuntoVisitas[] }) {
         <XAxis dataKey="fecha" tickFormatter={diaCorto} minTickGap={16} {...eje} />
         <YAxis allowDecimals={false} {...eje} />
         <Tooltip {...tooltip} labelFormatter={(f) => diaLargo(String(f))} />
-        <Legend />
-        <Line type="monotone" dataKey="visitas" name="Visitas" stroke={COLOR.secundario} strokeWidth={3} dot={false} isAnimationActive={animar} />
+        <Legend formatter={leyenda} />
+        <Line type="linear" dataKey="visitas" name="Visitas" stroke={COLOR.secundario} strokeWidth={3} dot={false} isAnimationActive={animar} />
         <Line
-          type="monotone"
+          type="linear"
           dataKey="unicos"
           name="Visitantes únicos"
           stroke={COLOR.acento}
@@ -144,7 +148,7 @@ export function GraficoAccesosPorDia({ datos }: { datos: PuntoAccesos[] }) {
         <XAxis dataKey="fecha" tickFormatter={diaCorto} minTickGap={16} {...eje} />
         <YAxis allowDecimals={false} {...eje} />
         <Tooltip {...tooltip} labelFormatter={(f) => diaLargo(String(f))} cursor={{ fill: COLOR.superficie }} />
-        <Legend />
+        <Legend formatter={leyenda} />
         <Bar dataKey="ingreso" name="Ingresos" stackId="accesos" fill={COLOR.primario} stroke={COLOR.tinta} isAnimationActive={animar} />
         <Bar dataKey="detalle" name="Vistas de casos" stackId="accesos" fill={COLOR.terciario} stroke={COLOR.tinta} isAnimationActive={animar} />
       </BarChart>
