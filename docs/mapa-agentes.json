@@ -241,6 +241,15 @@
       "correr": "python3 -m unittest scripts/agentes/test_barandas.py"
     },
     {
+      "nombre": "verificar",
+      "cuando": [
+        "scripts/agentes/verificar.py",
+        "scripts/agentes/test_verificar.py",
+        "scripts/agentes/mapa.py"
+      ],
+      "correr": "python3 -m unittest scripts/agentes/test_verificar.py"
+    },
+    {
       "nombre": "lint",
       "siempre": true,
       "correr": "npm run lint"
