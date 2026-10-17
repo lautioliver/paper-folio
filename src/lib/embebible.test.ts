@@ -152,6 +152,7 @@ describe("origenDelPedido", () => {
   it("un host que no es un host, o ninguno, cae en el origen configurado", () => {
     expect(pedido([["host", "evil.example/ruta"]])).toBe("http://localhost:3000");
     expect(pedido([["host", "a b"]])).toBe("http://localhost:3000");
+    expect(pedido([["host", "ucanode.app:99999"]])).toBe("http://localhost:3000");
     expect(pedido([])).toBe("http://localhost:3000");
     expect(origenDelPedido(cabeceras([]), { VERCEL_PROJECT_PRODUCTION_URL: "paper-folio.vercel.app" })).toBe(SITIO);
     expect(pedido([["host", "paper-folio.vercel.app"], ["x-forwarded-proto", "javascript"]])).toBe(SITIO);
@@ -316,7 +317,7 @@ describe("cabecerasDeDemo (cacheada) y demoEmbebible", () => {
     vi.stubGlobal(
       "fetch",
       fetchFalso(
-        { status: 301, headers: [["Location", "https://www.ucanode.app/"]] },
+        { status: 301, headers: [["Location", "https://www.ucanode.app/login?ticket=abc123"]] },
         {
           headers: [
             ["X-Frame-Options", "DENY"],
@@ -328,7 +329,8 @@ describe("cabecerasDeDemo (cacheada) y demoEmbebible", () => {
     );
     const cabeceras = await cabecerasDeDemo(DEMO);
     expect(cabeceras).toEqual({
-      url: "https://www.ucanode.app/",
+      // Solo el origen final: la ruta y la query de un redirect (un ticket de SSO) no se guardan.
+      url: "https://www.ucanode.app",
       xFrameOptions: "DENY",
       contentSecurityPolicy: "default-src 'self'",
     });
