@@ -285,7 +285,15 @@ describe("responderConsulta: reintento después de un timeout (#66)", () => {
   it("antes de que venza la reserva, un segundo intento recibe en-envio y no manda otro email", async () => {
     const id = await insertar();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const { t, enviados } = transporteLento(300);
+    // El envío termina recién cuando el test lo suelta: no depende de cuánto tarde Mongo.
+    const enviados: SendMailOptions[] = [];
+    let soltar: (v: unknown) => void = () => {};
+    const t: TransporteEmail = {
+      sendMail: (m) => {
+        enviados.push(m);
+        return new Promise((ok) => (soltar = ok));
+      },
+    };
     let tarea: Promise<void> | undefined;
     const seguir = (p: Promise<void>) => {
       tarea = p;
@@ -301,6 +309,7 @@ describe("responderConsulta: reintento después de un timeout (#66)", () => {
     const segunda = await responderConsulta(id, "Segunda", AUTOR, t, { timeoutMs: 50 });
     expect(segunda).toMatchObject({ ok: false, error: "en-envio" });
     expect(tarea).toBeDefined();
+    soltar({ messageId: "tarde" });
     await tarea;
     // El primer envío salió tarde: el visitante recibe un solo email.
     expect(enviados).toHaveLength(1);
@@ -338,6 +347,39 @@ describe("responderConsulta: reintento después de un timeout (#66)", () => {
     expect(logueado).not.toContain(GMAIL_APP_PASSWORD);
     const otra = await responderConsulta(id, "Otra", AUTOR, transporteOk().t);
     expect(otra).toMatchObject({ ok: true });
+  });
+
+  it("un error rápido del transporte con código 'timeout' no es el timeout propio: libera la reserva", async () => {
+    const id = await insertar();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const t: TransporteEmail = {
+      sendMail: vi.fn().mockRejectedValue(Object.assign(new Error("x"), { code: "timeout" })),
+    };
+    const seguir = vi.fn();
+    const r = await responderConsulta(id, "Hola", AUTOR, t, { seguir });
+    expect(r).toMatchObject({ ok: false, error: "envio-fallido" });
+    expect(seguir).not.toHaveBeenCalled();
+    const doc = await leer(id);
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
+  });
+
+  it("si el envío sale tarde pero la consulta se borró en el medio, lo deja en el log", async () => {
+    const id = await insertar();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const t: TransporteEmail = {
+      sendMail: () =>
+        new Promise((ok) =>
+          setTimeout(async () => {
+            await Consulta.collection.deleteOne({ _id: new mongoose.Types.ObjectId(id) });
+            ok({});
+          }, 60),
+        ),
+    };
+    let tarea: Promise<void> | undefined;
+    await responderConsulta(id, "Hola", AUTOR, t, { timeoutMs: 20, seguir: (p) => (tarea = p) });
+    await tarea;
+    const logueado = log.mock.calls.flat().map(String).join(" ");
+    expect(logueado).toMatch(/envío tardío.*sin-consulta/);
   });
 
   it("vencida la reserva, se puede volver a responder", async () => {
