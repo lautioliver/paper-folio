@@ -14,12 +14,13 @@ Uso:
   verificar.py --base develop
   verificar.py --listar        # muestra qué correría, sin correr nada
 Sale con 1 si alguna verificación falla.
-Antes de correr, avisa (sin reinstalar ni cambiar el código de salida) si package-lock.json es
-más nuevo que node_modules/.package-lock.json o no hay nada instalado, con el comando para
-reinstalar. Mira el repo o worktree donde corre.
+Antes de correr, si alguna verificación usa npm o npx, avisa (sin reinstalar ni cambiar el código
+de salida) si package-lock.json es más nuevo que node_modules/.package-lock.json o no hay nada
+instalado, con el comando para reinstalar. Mira el repo o worktree donde corre.
 """
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -53,6 +54,11 @@ def dependencias_viejas(raiz):
     return (f"⚠ Dependencias viejas: {problema}. Las verificaciones de npm pueden fallar con errores "
             f"confusos (módulos que no se encuentran) o dar resultados engañosos.\n"
             f"  Reinstalá antes de seguir: {REINSTALAR}")
+
+
+def usa_npm(cmd):
+    """Si la verificación corre algo de npm (npm, npx) y no está sin configurar (TODO)."""
+    return not cmd.startswith("TODO") and re.search(r"(^|[\s;&|(])np[mx](\s|$)", cmd) is not None
 
 
 def referencia_base(args, base):
@@ -89,7 +95,8 @@ def main():
             plan.append((r["nombre"], motivo, cmd))
 
     print(f"Cambios contra {base}: {len(cambiados)} archivo(s). Verificaciones: {len(plan)}.\n")
-    aviso = dependencias_viejas(RAIZ)
+    # Solo importa si alguna verificación que va a correr usa npm.
+    aviso = dependencias_viejas(RAIZ) if any(usa_npm(cmd) for _, _, cmd in plan) else None
     if aviso:
         print(aviso + "\n", flush=True)
     if "--listar" in args:
@@ -100,21 +107,22 @@ def main():
     resultados = []
     for nombre, motivo, cmd in plan:
         if cmd.startswith("TODO"):
-            resultados.append((nombre, "sin configurar", 0))
+            resultados.append((nombre, "sin configurar", 0, cmd))
             continue
         print(f"▶ {nombre} ({motivo})\n  $ {cmd}", flush=True)
         t0 = time.time()
         ok = subprocess.run(cmd, shell=True).returncode == 0
-        resultados.append((nombre, "ok" if ok else "FALLÓ", time.time() - t0))
+        resultados.append((nombre, "ok" if ok else "FALLÓ", time.time() - t0, cmd))
         print(flush=True)
 
     print("Resultado:")
-    for nombre, estado, seg in resultados:
+    for nombre, estado, seg, _ in resultados:
         print(f"  {estado:15} {nombre}" + (f" ({seg:.0f}s)" if seg else ""))
-    sin_config = [n for n, e, _ in resultados if e == "sin configurar"]
-    if any(e == "FALLÓ" for _, e, _ in resultados):
+    sin_config = [n for n, e, _, _ in resultados if e == "sin configurar"]
+    fallaron = [cmd for _, e, _, cmd in resultados if e == "FALLÓ"]
+    if fallaron:
         print("\nHay verificaciones que fallan: corregilas antes de abrir el PR. No las desactives.")
-        if aviso:
+        if aviso and any(usa_npm(cmd) for cmd in fallaron):
             print(f"Las dependencias estaban viejas: corré {REINSTALAR} y volvé a verificar antes de buscar la causa.")
         sys.exit(1)
     if sin_config:
