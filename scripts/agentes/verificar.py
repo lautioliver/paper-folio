@@ -57,7 +57,11 @@ def dependencias_viejas(raiz):
 
 
 def usa_npm(cmd):
-    """Si la verificación corre algo de npm (npm, npx) y no está sin configurar (TODO)."""
+    """Si la verificación corre algo de npm (npm, npx) y no está sin configurar (TODO).
+
+    Mira solo las palabras npm y npx sueltas: no ve rutas (node_modules/.bin/…, /usr/bin/npm) ni
+    comillas, y cuenta un npm mencionado en un echo. Alcanza para las reglas del mapa de hoy.
+    """
     return not cmd.startswith("TODO") and re.search(r"(^|[\s;&|(])np[mx](\s|$)", cmd) is not None
 
 
