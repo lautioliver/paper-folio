@@ -38,6 +38,16 @@ describe("detalle protegido en el servidor", () => {
     const fuente = readFileSync("src/app/(sitio)/proyectos/[slug]/page.tsx", "utf8");
     expect(fuente).toMatch(/requerirSesion\(\s*rutaDetalle\(/);
   });
+
+  it("cuenta la vista como acceso de tipo detalle (#54) solo después de la sesión y si el proyecto existe", () => {
+    const fuente = readFileSync("src/app/(sitio)/proyectos/[slug]/page.tsx", "utf8");
+    // Con el id que devuelve `requerirSesion` (sin sesión redirige antes), después del 404, y con `after`: no
+    // demora la página y nunca corre en el prerender (`requerirSesion` marca la ruta como dinámica).
+    expect(fuente).toMatch(
+      /const \{ id \} = await requerirSesion\(\s*rutaDetalle\(slug\)\s*\);[\s\S]*if \(!detalle\) notFound\(\);[\s\S]*after\(\(\) => registrarAcceso\(id, "detalle"\)\)/,
+    );
+    expect(fuente.match(/registrarAcceso\(/g)).toHaveLength(1);
+  });
 });
 
 describe("el sitio lee el contenido de la base (src/lib/contenido.ts)", () => {

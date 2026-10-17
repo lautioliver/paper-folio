@@ -35,6 +35,14 @@ Las cargas de las páginas del grupo `(sitio)` (`/`, `/proyectos`, `/proyectos/<
 
 No se guarda la IP ni el id de la cookie: solo su hash por día, así no se puede seguir a un visitante entre días. Los índices los crea `asegurarIndicesDe` en `registrarVisita()`; si no se pueden crear, la visita no se cuenta (sin el índice único el upsert podría duplicar el contador).
 
+## Accesos de usuarios registrados: `accesos_diarios` (#54, épica #53)
+
+Un acceso es cada ingreso con Google (`ingreso`, lo cuenta `registrarIngreso` después del upsert del usuario; una cuenta bloqueada no llega a contarse) y cada vista de un caso de estudio (`detalle`, lo cuenta `/proyectos/[slug]` después de `requerirSesion` y solo si el proyecto está publicado). Los admin también cuentan, a diferencia de las visitas (#68), que los descartan: lo decidió @lautioliver en el [#54](https://github.com/lautioliver/paper-folio/issues/54#issuecomment-6227878800), y así corrige los Riesgos de la épica #53, que decían que no se cuentan. Los cuenta `registrarAcceso()` (`src/lib/accesos.ts`): `$inc` con upsert en `accesos_diarios` y `$inc` de `usuarios.accesos`. Nunca lanza: si la base falla, loguea solo el nombre del error y el ingreso o la página siguen (ese acceso se pierde). `fecha` es el día en America/Argentina/Salta, como `YYYY-MM-DD` (`fechaDeMetrica`, `src/lib/fecha-metricas.ts`).
+
+| Colección | Modelo | Campos | Índice |
+|---|---|---|---|
+| `accesos_diarios` | `src/models/AccesoDiario.ts` | `fecha`, `tipo` (`ingreso` \| `detalle`, `TIPOS_ACCESO`), `total` | Único `{ fecha, tipo }`. `total` se suma con `$inc` y upsert: nunca se lee y escribe. Lo crea `asegurarIndicesDe` en `registrarAcceso()`; si no se puede crear, el acceso no se cuenta |
+
 ## Usuario (`usuarios`)
 
 Modelo: `src/models/Usuario.ts`. Se crea o actualiza en cada ingreso con Google (`registrarIngreso`, `src/lib/usuarios.ts`) y lo administra el admin en `/panel/usuarios` (#49). Ver [ADR-002](../decisions/ADR-002-auth.md) y su enmienda.
@@ -46,11 +54,11 @@ Modelo: `src/models/Usuario.ts`. Se crea o actualiza en cada ingreso con Google 
 | `imagen` | string | URL del avatar de Google |
 | `rol` | `usuario` \| `operador` \| `admin` | El guardado, `usuario` al crearse. Lo cambia el admin desde el panel; el ingreso no lo toca. Es la fuente de verdad de los permisos, más `ADMIN_EMAILS`: esos emails son `admin` siempre, pero ese admin no se guarda (se suma al leer, así sacarlos de la lista lo revoca) |
 | `bloqueado` | boolean | `false` por defecto (#49). Bloqueado, no ingresa (callback `signIn`) y sus sesiones abiertas pierden los permisos en el próximo pedido |
-| `accesos` | número | `0` por defecto (#49). Lo incrementa con `$inc` el hito 6; el panel solo lo muestra |
+| `accesos` | número | `0` por defecto (#49). Suma 1 con `$inc` en cada acceso, ingreso o vista de un caso de estudio (`registrarAcceso`, #54); el panel solo lo muestra |
 | `creadoEn` | fecha | Primer ingreso |
 | `ultimoAcceso` | fecha | Último ingreso |
 
-Un documento de antes de #49 no tiene `bloqueado`: su `rol` se había calculado con `ADMIN_EMAILS` y `OPERADOR_EMAILS` en el último ingreso, y puede ser viejo. No se le cree: vale `usuario` (más `ADMIN_EMAILS`) y `normalizarLegados()` lo pasa a `usuario`, sin bloquear y con `accesos` en 0 al ingresar o al abrir el panel de usuarios. Idempotente, sin script ni migración aparte.
+Un documento de antes de #49 no tiene `bloqueado`: su `rol` se había calculado con `ADMIN_EMAILS` y `OPERADOR_EMAILS` en el último ingreso, y puede ser viejo. No se le cree: vale `usuario` (más `ADMIN_EMAILS`) y `normalizarLegados()` lo pasa a `usuario`, sin bloquear y con `accesos` en 0 al ingresar (y en seguida el ingreso le suma 1) o al abrir el panel de usuarios. Idempotente, sin script ni migración aparte.
 
 ## Contenido administrable: `proyectos`, `demos` y `servicios`
 
