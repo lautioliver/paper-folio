@@ -4,6 +4,7 @@ import nodemailer, { type SendMailOptions } from "nodemailer-10";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { conectar, desconectar } from "./db";
 import { responderConsulta, type TransporteEmail } from "./respuestas";
+import { RESERVA_VENCE_MS } from "./seguimiento";
 import { Consulta } from "@/models/Consulta";
 
 // Credenciales falsas: el entorno de Vitest las vacía (vitest.config.ts) y ningún test usa Gmail real.
@@ -149,7 +150,7 @@ describe("responderConsulta: envío fallido", () => {
     expect(logueado).not.toContain("ada@example.com");
   });
 
-  it("si el transporte se cuelga, corta por timeout, no cambia el estado, deja emailEnviado false y avisa que puede llegar", async () => {
+  it("si el transporte se cuelga, corta por timeout, no cambia el estado, deja la entrada pendiente y avisa que puede llegar", async () => {
     const id = await insertar();
     vi.spyOn(console, "error").mockImplementation(() => {});
     const t: TransporteEmail = { sendMail: () => new Promise(() => {}) };
@@ -159,7 +160,9 @@ describe("responderConsulta: envío fallido", () => {
     if (!r.ok) expect(r.mensaje).toMatch(/puede haber llegado/);
     const doc = await leer(id);
     expect(doc?.estado).toBe("en_curso");
-    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
+    // Pendiente (sin `emailEnviado`): la reserva sigue bloqueando otro envío hasta vencer (#66).
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", texto: "Hola" });
+    expect(doc?.seguimiento[0]).not.toHaveProperty("emailEnviado");
   });
 
   it("sin las credenciales de Gmail no intenta enviar ni ensucia el seguimiento", async () => {
@@ -257,6 +260,72 @@ describe("responderConsulta: la reserva desaparece mientras se envía (hallazgo 
     const r = await responderConsulta(id, "Hola", AUTOR, t);
     expect(r).toMatchObject({ ok: false, error: "registro-fallido" });
     if (!r.ok) expect(r.mensaje).toMatch(/se envió/);
+  });
+});
+
+describe("responderConsulta: reintento después de un timeout (#66)", () => {
+  // Gmail tarda más que el timeout, pero el envío no se cancela y termina saliendo.
+  function transporteLento(demoraMs: number) {
+    const enviados: SendMailOptions[] = [];
+    const terminados: Promise<unknown>[] = [];
+    const t: TransporteEmail = {
+      sendMail: (m) => {
+        enviados.push(m);
+        const p = new Promise((r) => setTimeout(() => r({ messageId: "tarde" }), demoraMs));
+        terminados.push(p);
+        return p;
+      },
+    };
+    return { t, enviados, terminados };
+  }
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("antes de que venza la reserva, un segundo intento recibe en-envio y no manda otro email", async () => {
+    const id = await insertar();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { t, enviados, terminados } = transporteLento(300);
+    const primera = await responderConsulta(id, "Primera", AUTOR, t, { timeoutMs: 50 });
+    expect(primera).toMatchObject({ ok: false, error: "envio-fallido" });
+    if (!primera.ok) expect(primera.mensaje).toMatch(/puede haber llegado/);
+
+    const segunda = await responderConsulta(id, "Segunda", AUTOR, t, { timeoutMs: 50 });
+    expect(segunda).toMatchObject({ ok: false, error: "en-envio" });
+    await Promise.all(terminados);
+    // El primer envío salió tarde: el visitante recibe un solo email.
+    expect(enviados).toHaveLength(1);
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("en_curso");
+    const respuestas = doc?.seguimiento.filter((e: { tipo: string }) => e.tipo === "respuesta");
+    expect(respuestas).toHaveLength(1);
+    expect(respuestas?.[0]).toMatchObject({ texto: "Primera" });
+    expect(respuestas?.[0]).not.toHaveProperty("emailEnviado");
+  });
+
+  it("vencida la reserva, se puede volver a responder", async () => {
+    const id = await insertar();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const lento = transporteLento(100);
+    const primera = await responderConsulta(id, "Primera", AUTOR, lento.t, { timeoutMs: 20 });
+    expect(primera).toMatchObject({ ok: false, error: "envio-fallido" });
+    await Promise.all(lento.terminados);
+
+    // Solo el reloj de `Date`: los timers reales siguen andando para Mongo y el transporte.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + RESERVA_VENCE_MS + 1_000);
+    const { t, enviados } = transporteOk();
+    const segunda = await responderConsulta(id, "Segunda", AUTOR, t);
+    expect(segunda).toMatchObject({ ok: true, estadoCambiado: true });
+    expect(enviados).toHaveLength(1);
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("respondida");
+    const respuestas = doc?.seguimiento.filter((e: { tipo: string }) => e.tipo === "respuesta");
+    expect(respuestas).toHaveLength(2);
+    // La vencida queda sin confirmar (puede haber llegado); la nueva, enviada.
+    expect(respuestas?.[0]).not.toHaveProperty("emailEnviado");
+    expect(respuestas?.[1]).toMatchObject({ texto: "Segunda", emailEnviado: true });
   });
 });
 
