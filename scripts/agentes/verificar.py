@@ -105,24 +105,25 @@ def main():
         return
 
     resultados = []
+    fallo_npm = False  # para el recordatorio final: solo si falló algo que usa npm
     for nombre, motivo, cmd in plan:
         if cmd.startswith("TODO"):
-            resultados.append((nombre, "sin configurar", 0, cmd))
+            resultados.append((nombre, "sin configurar", 0))
             continue
         print(f"▶ {nombre} ({motivo})\n  $ {cmd}", flush=True)
         t0 = time.time()
         ok = subprocess.run(cmd, shell=True).returncode == 0
-        resultados.append((nombre, "ok" if ok else "FALLÓ", time.time() - t0, cmd))
+        resultados.append((nombre, "ok" if ok else "FALLÓ", time.time() - t0))
+        fallo_npm = fallo_npm or (not ok and usa_npm(cmd))
         print(flush=True)
 
     print("Resultado:")
-    for nombre, estado, seg, _ in resultados:
+    for nombre, estado, seg in resultados:
         print(f"  {estado:15} {nombre}" + (f" ({seg:.0f}s)" if seg else ""))
-    sin_config = [n for n, e, _, _ in resultados if e == "sin configurar"]
-    fallaron = [cmd for _, e, _, cmd in resultados if e == "FALLÓ"]
-    if fallaron:
+    sin_config = [n for n, e, _ in resultados if e == "sin configurar"]
+    if any(e == "FALLÓ" for _, e, _ in resultados):
         print("\nHay verificaciones que fallan: corregilas antes de abrir el PR. No las desactives.")
-        if aviso and any(usa_npm(cmd) for cmd in fallaron):
+        if aviso and fallo_npm:
             print(f"Las dependencias estaban viejas: corré {REINSTALAR} y volvé a verificar antes de buscar la causa.")
         sys.exit(1)
     if sin_config:
