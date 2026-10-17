@@ -187,6 +187,7 @@ export async function responderConsulta(
   const timeoutMs = opciones.timeoutMs ?? TIMEOUT_MS;
   let envio: Promise<unknown> | undefined;
   let codigo: string | null = null;
+  let vencio = false; // ganó el timeout propio: el envío sigue en curso
   try {
     const t = transporte ?? transporteGmail(config.GMAIL_USER, config.GMAIL_APP_PASSWORD);
     envio = t.sendMail({
@@ -199,13 +200,19 @@ export async function responderConsulta(
     await esperarConTimeout(envio, timeoutMs);
   } catch (e) {
     codigo = codigoDe(e);
-    console.error(`responderConsulta: no se pudo enviar el email (${codigo})`);
+    // Por la instancia, no por el código: un error del transporte también puede llamarse `timeout`.
+    vencio = e instanceof EnvioError && e.codigo === "timeout";
+    console.error(
+      vencio
+        ? "responderConsulta: Gmail no confirmó el envío a tiempo (timeout); se registra cuando termine"
+        : `responderConsulta: no se pudo enviar el email (${codigo})`,
+    );
   }
 
   // Tras un timeout el envío sigue en curso y puede salir: la entrada queda pendiente, así la reserva bloquea
   // otro envío (#66), y se completa cuando el envío termina. Si el proceso no llega a completarla (se cayó,
   // o la plataforma lo congeló), queda sin confirmar y la reserva vence a los `RESERVA_VENCE_MS`.
-  if (codigo === "timeout" && envio) {
+  if (vencio && envio) {
     const tarea = envio
       .then(
         () => true,
@@ -214,7 +221,13 @@ export async function responderConsulta(
           return false;
         },
       )
-      .then((enviado) => completarRespuesta(id, autor, reserva.fecha, enviado))
+      .then(async (enviado) => {
+        const r = await completarRespuesta(id, autor, reserva.fecha, enviado);
+        if (r.resultado !== "completada") {
+          const que = enviado ? "salió" : "falló";
+          console.error(`responderConsulta: el envío tardío ${que} y no quedó registrado (${r.resultado})`);
+        }
+      })
       .then(
         () => {},
         (e: unknown) =>
