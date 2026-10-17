@@ -79,7 +79,7 @@ export async function consultasPorTipo(entrada: Rango): Promise<TotalTipo[]> {
   await conectar();
   // El `$match` por `creadaEn` usa el índice `{ creadaEn: -1, _id: -1 }` de la bandeja.
   const grupos = await Consulta.aggregate<Grupo<ContactType>>([
-    { $match: { creadaEn: entreFechas(rango) } },
+    { $match: { creadaEn: entreFechas(rango), tipo: { $in: [...CONTACT_TYPES] } } },
     { $group: { _id: "$tipo", total: { $sum: 1 } } },
   ]);
   const porTipo = new Map(grupos.map((g) => [g._id, g.total]));
@@ -91,7 +91,8 @@ export async function consultasPorDia(entrada: FiltroConsultas): Promise<PuntoDi
   const { tipo, ...rango } = esquemaFiltroConsultas.parse(entrada);
   await conectar();
   const grupos = await Consulta.aggregate<Grupo<string>>([
-    { $match: { creadaEn: entreFechas(rango), ...(tipo ? { tipo } : {}) } },
+    // Sin tipo, solo los de la lista: igual que `consultasPorTipo`, así la tarjeta y la serie suman lo mismo.
+    { $match: { creadaEn: entreFechas(rango), tipo: tipo ?? { $in: [...CONTACT_TYPES] } } },
     porDiaDe("creadaEn"),
   ]);
   return rellenar(rango, grupos);
@@ -133,8 +134,8 @@ export async function accesosPorDia(entrada: Rango): Promise<PuntoAccesos[]> {
     { fecha: { $gte: rango.desde, $lte: rango.hasta } },
     { _id: 0, fecha: 1, tipo: 1, total: 1 },
   ).lean<{ fecha: string; tipo: TipoAcceso; total: number }[]>();
-  const valor = (fecha: string, tipo: TipoAcceso) =>
-    docs.find((d) => d.fecha === fecha && d.tipo === tipo)?.total ?? 0;
+  const porClave = new Map(docs.map((d) => [`${d.fecha}|${d.tipo}`, d.total]));
+  const valor = (fecha: string, tipo: TipoAcceso) => porClave.get(`${fecha}|${tipo}`) ?? 0;
   return diasEntre(rango.desde, rango.hasta).map((fecha) => ({
     fecha,
     ...(Object.fromEntries(TIPOS_ACCESO.map((tipo) => [tipo, valor(fecha, tipo)])) as Record<TipoAcceso, number>),

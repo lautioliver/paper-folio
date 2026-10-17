@@ -3,6 +3,7 @@
 import { useSyncExternalStore, type ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 import type { ContactType } from "@/lib/contact";
+import { diaCorto, diaLargo } from "@/lib/fecha-metricas";
 import type { PuntoAccesos, PuntoDia, PuntoVisitas, TotalTipo } from "@/lib/metricas";
 
 // Gráficos de Recharts del tablero (épica #53, decisión 4). Los datos llegan del servidor ya leídos (la página
@@ -41,14 +42,9 @@ function useAnimar(): boolean {
   );
 }
 
-/** `2026-10-16` → `16/10`. */
-const diaCorto = (fecha: string) => `${fecha.slice(8, 10)}/${fecha.slice(5, 7)}`;
-/** `2026-10-16` → `16/10/2026`. */
-const diaLargo = (fecha: string) => `${diaCorto(fecha)}/${fecha.slice(0, 4)}`;
-
 const ALTO = 260;
 const estiloGrafico = { width: "100%", height: ALTO };
-const margen = { top: 8, right: 8, bottom: 0, left: -16 };
+const margen = { top: 8, right: 8, bottom: 0, left: 0 };
 const tooltip = {
   contentStyle: {
     background: COLOR.papel,
@@ -80,7 +76,7 @@ export function GraficoConsultasPorTipo({ datos }: { datos: TotalTipo[] }) {
       <BarChart data={filas} responsive style={estiloGrafico} margin={margen} accessibilityLayer={false}>
         <CartesianGrid stroke={COLOR.superficie} vertical={false} />
         <XAxis dataKey="tipo" interval={0} {...eje} />
-        <YAxis allowDecimals={false} {...eje} />
+        <YAxis allowDecimals={false} width="auto" {...eje} />
         <Tooltip {...tooltip} cursor={{ fill: COLOR.superficie }} />
         <Legend formatter={leyenda} />
         <Bar dataKey="total" name="Consultas" fill={COLOR.secundario} stroke={COLOR.tinta} strokeWidth={2} isAnimationActive={animar} />
@@ -89,53 +85,54 @@ export function GraficoConsultasPorTipo({ datos }: { datos: TotalTipo[] }) {
   );
 }
 
-function GraficoLineaPorDia({ datos, nombre, color }: { datos: PuntoDia[]; nombre: string; color: string }) {
+type Serie = { clave: string; nombre: string; color: string; punteada?: boolean };
+
+/** Una o más series por día en líneas, con las fechas cortas en el eje y la larga en el tooltip. */
+function GraficoLineasPorDia<T extends { fecha: string }>({ datos, series }: { datos: T[]; series: Serie[] }) {
   const animar = useAnimar();
   return (
     <Marco>
       <LineChart data={datos} responsive style={estiloGrafico} margin={margen} accessibilityLayer={false}>
         <CartesianGrid stroke={COLOR.superficie} vertical={false} />
         <XAxis dataKey="fecha" tickFormatter={diaCorto} minTickGap={16} {...eje} />
-        <YAxis allowDecimals={false} {...eje} />
+        <YAxis allowDecimals={false} width="auto" {...eje} />
         <Tooltip {...tooltip} labelFormatter={(f) => diaLargo(String(f))} />
         <Legend formatter={leyenda} />
-        <Line type="linear" dataKey="total" name={nombre} stroke={color} strokeWidth={3} dot={false} isAnimationActive={animar} />
+        {series.map((s) => (
+          <Line
+            key={s.clave}
+            type="linear"
+            dataKey={s.clave}
+            name={s.nombre}
+            stroke={s.color}
+            strokeWidth={3}
+            strokeDasharray={s.punteada ? "6 4" : undefined}
+            dot={false}
+            isAnimationActive={animar}
+          />
+        ))}
       </LineChart>
     </Marco>
   );
 }
 
 export function GraficoConsultasPorDia({ datos }: { datos: PuntoDia[] }) {
-  return <GraficoLineaPorDia datos={datos} nombre="Consultas" color={COLOR.secundario} />;
+  return <GraficoLineasPorDia datos={datos} series={[{ clave: "total", nombre: "Consultas", color: COLOR.secundario }]} />;
 }
 
 export function GraficoRegistrosPorDia({ datos }: { datos: PuntoDia[] }) {
-  return <GraficoLineaPorDia datos={datos} nombre="Usuarios nuevos" color={COLOR.terciario} />;
+  return <GraficoLineasPorDia datos={datos} series={[{ clave: "total", nombre: "Usuarios nuevos", color: COLOR.terciario }]} />;
 }
 
 export function GraficoVisitasPorDia({ datos }: { datos: PuntoVisitas[] }) {
-  const animar = useAnimar();
   return (
-    <Marco>
-      <LineChart data={datos} responsive style={estiloGrafico} margin={margen} accessibilityLayer={false}>
-        <CartesianGrid stroke={COLOR.superficie} vertical={false} />
-        <XAxis dataKey="fecha" tickFormatter={diaCorto} minTickGap={16} {...eje} />
-        <YAxis allowDecimals={false} {...eje} />
-        <Tooltip {...tooltip} labelFormatter={(f) => diaLargo(String(f))} />
-        <Legend formatter={leyenda} />
-        <Line type="linear" dataKey="visitas" name="Visitas" stroke={COLOR.secundario} strokeWidth={3} dot={false} isAnimationActive={animar} />
-        <Line
-          type="linear"
-          dataKey="unicos"
-          name="Visitantes únicos"
-          stroke={COLOR.acento}
-          strokeWidth={3}
-          strokeDasharray="6 4"
-          dot={false}
-          isAnimationActive={animar}
-        />
-      </LineChart>
-    </Marco>
+    <GraficoLineasPorDia
+      datos={datos}
+      series={[
+        { clave: "visitas", nombre: "Visitas", color: COLOR.secundario },
+        { clave: "unicos", nombre: "Visitantes únicos", color: COLOR.acento, punteada: true },
+      ]}
+    />
   );
 }
 
@@ -146,7 +143,7 @@ export function GraficoAccesosPorDia({ datos }: { datos: PuntoAccesos[] }) {
       <BarChart data={datos} responsive style={estiloGrafico} margin={margen} accessibilityLayer={false}>
         <CartesianGrid stroke={COLOR.superficie} vertical={false} />
         <XAxis dataKey="fecha" tickFormatter={diaCorto} minTickGap={16} {...eje} />
-        <YAxis allowDecimals={false} {...eje} />
+        <YAxis allowDecimals={false} width="auto" {...eje} />
         <Tooltip {...tooltip} labelFormatter={(f) => diaLargo(String(f))} cursor={{ fill: COLOR.superficie }} />
         <Legend formatter={leyenda} />
         <Bar dataKey="ingreso" name="Ingresos" stackId="accesos" fill={COLOR.primario} stroke={COLOR.tinta} isAnimationActive={animar} />

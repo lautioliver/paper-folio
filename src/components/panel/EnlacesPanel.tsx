@@ -13,7 +13,8 @@ export function EnlacesPanel({ enlaces, vertical }: { enlaces: EnlacePanel[]; ve
   const pathname = usePathname();
   return (
     // Abajo, en celular: centrada si entra y con scroll horizontal si no (el admin tiene más secciones que ancho).
-    <ul className={vertical ? "flex flex-col gap-3" : "mx-auto flex w-max max-w-full items-center gap-2 overflow-x-auto"}>
+    // El padding deja lugar a la sombra y al corrimiento de `apretable`, que el overflow recortaría.
+    <ul className={vertical ? "flex flex-col gap-3" : "mx-auto flex w-max max-w-full items-center gap-2 overflow-x-auto pr-1 pb-1"}>
       {enlaces.map((e) => {
         const actual = esActual(pathname, e.href);
         return (

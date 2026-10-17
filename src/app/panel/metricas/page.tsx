@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { CONTACT_TYPE_LABELS, CONTACT_TYPES } from "@/lib/contact";
+import { diaLargo } from "@/lib/fecha-metricas";
 import {
   accesosPorDia,
   consultasPorDia,
@@ -24,9 +25,6 @@ import {
 import { filtrosDe, RUTA_METRICAS, rutaMetricas } from "./ruta";
 
 export const metadata: Metadata = { title: "Métricas" };
-
-/** `2026-10-16` → `16/10/2026`, sin pasar por `Date` (la fecha ya es el día de Salta). */
-const diaLargo = (fecha: string) => `${fecha.slice(8, 10)}/${fecha.slice(5, 7)}/${fecha.slice(0, 4)}`;
 
 const chip = "apretable contorno px-3 py-1 text-pequeno font-bold";
 
