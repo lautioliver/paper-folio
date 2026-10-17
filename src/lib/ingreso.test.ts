@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comprobarSesion, decidirIngreso, puedeVerPanel, rutaDeCookieDeVuelta } from "./ingreso";
+import { AVISOS_SIN_SESION, comprobarSesion, decidirIngreso, puedeVerPanel, rutaDeCookieDeVuelta } from "./ingreso";
 
 describe("decidirIngreso", () => {
   it("sin sesión muestra la pantalla con el callbackUrl interno", () => {
@@ -218,5 +218,55 @@ describe("rutaDeCookieDeVuelta (la cookie callback-url de Auth.js, #45)", () => 
     for (const valor of [undefined, null, 42, "", "no es una url", "javascript:alert(1)", "https://otro.sitio//x.com", "//otro.sitio", "/\\otro.sitio", "data:text/html,hola"]) {
       expect(rutaDeCookieDeVuelta(valor), String(valor)).toBeUndefined();
     }
+  });
+});
+
+describe("ningún destino vuelve a /ingresar (revisión del PR #73: bucle de redirecciones)", () => {
+  // Variantes de /ingresar: Next redirige la barra final y resuelve "." y los %XX, así que todas terminan ahí.
+  const aIngresar = [
+    "/ingresar",
+    "/ingresar?error=AccessDenied",
+    "/ingresar?error=bloqueado&callbackUrl=%2Fcuenta",
+    "/ingresar/",
+    "/ingresar/?error=AccessDenied",
+    "/INGRESAR?error=AccessDenied",
+    "/Ingresar",
+    "/ingresar%2F?error=AccessDenied",
+    "/%69ngresar?error=AccessDenied",
+    "/./ingresar?error=AccessDenied",
+    "/proyectos/../ingresar?error=AccessDenied",
+    "/ingresar#x",
+  ];
+
+  it("con sesión válida, una ruta guardada que apunta a /ingresar redirige a / (no a sí misma)", () => {
+    for (const vuelta of aIngresar) {
+      expect(decidirIngreso({ sesion: "valida", error: "AccessDenied", vueltaGuardada: vuelta }), vuelta).toEqual({ accion: "redirigir", destino: "/" });
+    }
+  });
+
+  it("un callbackUrl de la query que apunta a /ingresar también lleva a /", () => {
+    for (const callbackUrl of aIngresar) {
+      expect(decidirIngreso({ sesion: "valida", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
+      expect(decidirIngreso({ sesion: "ninguna", error: "AccessDenied", callbackUrl }), callbackUrl).toMatchObject({ callbackUrl: "/" });
+    }
+  });
+
+  it("la cookie de Auth.js con /ingresar no da ruta de vuelta", () => {
+    expect(rutaDeCookieDeVuelta("https://paperfolio.vercel.app/ingresar?error=AccessDenied")).toBeUndefined();
+    expect(rutaDeCookieDeVuelta("https://paperfolio.vercel.app/ingresar/")).toBeUndefined();
+    expect(rutaDeCookieDeVuelta("/ingresar?error=bloqueado")).toBeUndefined();
+  });
+
+  it("rutas que solo se parecen siguen valiendo", () => {
+    for (const ruta of ["/ingresarx", "/proyectos/ingresar", "/cuenta?volver=/ingresar"]) {
+      expect(decidirIngreso({ sesion: "valida", callbackUrl: ruta }), ruta).toEqual({ accion: "redirigir", destino: ruta });
+    }
+  });
+});
+
+describe("aviso de Configuration (decisión de @lautioliver en el PR #73)", () => {
+  it("ofrece reintentar y no culpa a la persona: el problema es del sitio", () => {
+    expect(AVISOS_SIN_SESION.configuracion.boton).toBe("google");
+    expect(AVISOS_SIN_SESION.configuracion.texto).toBe("Hubo un problema de nuestro lado al iniciar sesión. Probá de nuevo en un rato.");
   });
 });

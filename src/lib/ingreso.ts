@@ -41,6 +41,42 @@ export type AvisoIngreso =
   | "configuracion"
   | null;
 
+// Los avisos con sesión tienen su propia pantalla; todos los demás tienen que estar en AVISOS_SIN_SESION.
+export type AvisoSinSesion = Exclude<AvisoIngreso, "sesion" | "bloqueada" | "verificacion" | null>;
+
+// Avisos sin sesión, según el `error` de la URL (`decidirIngreso`): el texto es siempre uno de estos, nunca el de
+// la URL. `boton`: "google" reintenta con la misma cuenta; "otra-cuenta" abre el selector de cuentas de Google;
+// null no ofrece reintentar (Configuration: una falla del sitio, que reintentar en seguida no tiene por qué arreglar).
+export const AVISOS_SIN_SESION = {
+  "ingreso-bloqueado": {
+    texto:
+      "Esa cuenta está bloqueada: no puede ingresar al sitio. Si creés que es un error, escribinos por el formulario de contacto.",
+    boton: "otra-cuenta",
+  },
+  denegado: {
+    texto:
+      "No pudimos dejarte ingresar: la cuenta de Google tiene que tener el email verificado. Si creés que es un error, escribinos por el formulario de contacto.",
+    boton: "otra-cuenta",
+  },
+  reintentar: { texto: "No pudimos verificar tu cuenta. Probá de nuevo en un rato.", boton: "google" },
+  google: { texto: "No se completó el ingreso con Google. Si lo cancelaste, podés probar de nuevo.", boton: "google" },
+  "cuenta-no-vinculada": {
+    texto: "Ese email ya se usó para ingresar de otra forma. Probá con otra cuenta de Google.",
+    boton: "otra-cuenta",
+  },
+  vencido: { texto: "El ingreso venció antes de terminar. Probá de nuevo.", boton: "google" },
+  configuracion: {
+    texto:
+      "El ingreso no está disponible por un problema del sitio. Probá más tarde y, si sigue pasando, escribinos por el formulario de contacto.",
+    boton: null,
+  },
+  generico: { texto: "No pudimos completar el ingreso. Probá de nuevo.", boton: "google" },
+} as const satisfies Record<AvisoSinSesion, { texto: string; boton: "google" | "otra-cuenta" | null }>;
+
+export function esAvisoSinSesion(aviso: AvisoIngreso): aviso is AvisoSinSesion {
+  return aviso !== null && Object.hasOwn(AVISOS_SIN_SESION, aviso);
+}
+
 /**
  * Los `error` que /ingresar conoce: los de la app (`urlDeIngreso`, `permiteIngreso`) y los de Auth.js que pueden
  * llegar con Google (`ErrorPageParam`, `SignInPageErrorParam` y los errores "seguros para el cliente" de

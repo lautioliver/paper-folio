@@ -7,7 +7,9 @@ const buscarRol = vi.fn();
 vi.mock("@/auth", () => ({ auth: (...a: unknown[]) => auth(...a) }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
 const galletas = new Map<string, string>();
+const cabeceras = new Map<string, string>();
 vi.mock("next/headers", () => ({
+  headers: async () => ({ get: (nombre: string) => cabeceras.get(nombre.toLowerCase()) ?? null }),
   cookies: async () => ({ get: (nombre: string) => (galletas.has(nombre) ? { name: nombre, value: galletas.get(nombre) } : undefined) }),
 }));
 vi.mock("./usuarios", () => ({ buscarRol: (...a: unknown[]) => buscarRol(...a) }));
@@ -67,19 +69,29 @@ describe("esAdminLaSesion (para no contar las visitas de los admin)", () => {
 });
 
 describe("vueltaDeAuthJs (la ruta que Auth.js guardó al empezar el ingreso, #45)", () => {
-  beforeEach(() => galletas.clear());
+  beforeEach(() => {
+    galletas.clear();
+    cabeceras.clear();
+  });
 
-  it("lee la cookie callback-url de Auth.js (con o sin el prefijo __Secure-) y devuelve solo la ruta interna", async () => {
+  it("en http lee authjs.callback-url y devuelve solo la ruta interna", async () => {
+    cabeceras.set("x-forwarded-proto", "http");
     galletas.set("authjs.callback-url", "http://localhost:3000/proyectos/a");
     expect(await vueltaDeAuthJs()).toBe("/proyectos/a");
+  });
+
+  it("en https lee solo la cookie __Secure-, como Auth.js (revisión del PR #73)", async () => {
+    cabeceras.set("x-forwarded-proto", "https");
+    galletas.set("authjs.callback-url", "https://paperfolio.vercel.app/cuenta");
+    expect(await vueltaDeAuthJs()).toBeUndefined();
     galletas.set("__Secure-authjs.callback-url", "https://paperfolio.vercel.app/panel/consultas");
     expect(await vueltaDeAuthJs()).toBe("/panel/consultas");
   });
 
-  it("si la cookie __Secure- no sirve, prueba la otra (code-review)", async () => {
-    galletas.set("__Secure-authjs.callback-url", "https://otro.sitio//x.com");
-    galletas.set("authjs.callback-url", "http://localhost:3000/proyectos/a");
-    expect(await vueltaDeAuthJs()).toBe("/proyectos/a");
+  it("en http ignora la cookie __Secure-", async () => {
+    cabeceras.set("x-forwarded-proto", "http");
+    galletas.set("__Secure-authjs.callback-url", "https://paperfolio.vercel.app/panel/consultas");
+    expect(await vueltaDeAuthJs()).toBeUndefined();
   });
 
   it("sin cookie o con una que lleva a otro sitio, undefined", async () => {
