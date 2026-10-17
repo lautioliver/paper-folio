@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Rol } from "@/models/Usuario";
 import { respuestaError } from "./api-error";
 
@@ -37,6 +38,9 @@ export function rutaInterna(ruta: string): string {
   // Sin espacios ni caracteres de control: el navegador descarta tabs y saltos ("/\t/host" → "//host").
   return /^\/(?![/\\])[^\s\u0000-\u001f\u007f]*$/.test(ruta) ? ruta : "/";
 }
+
+/** Zod: un string que ya es una ruta interna (`rutaInterna`). Lo usan /ingresar y sus server actions (#45). */
+export const esquemaRutaInterna = z.string().refine((ruta) => rutaInterna(ruta) === ruta);
 
 /** Página de ingreso (la arma #35). */
 export const RUTA_INGRESO = "/ingresar";

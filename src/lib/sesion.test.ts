@@ -61,3 +61,9 @@ describe("esAdminLaSesion (para no contar las visitas de los admin)", () => {
     await expect(esAdminLaSesion()).rejects.toThrow();
   });
 });
+
+describe("la cookie de Auth.js ya no se lee (decisión de @lautioliver en el PR #73)", () => {
+  it("sesion no expone vueltaDeAuthJs", async () => {
+    expect(Object.keys(await import("./sesion"))).not.toContain("vueltaDeAuthJs");
+  });
+});

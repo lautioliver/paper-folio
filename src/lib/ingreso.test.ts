@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { comprobarSesion, decidirIngreso, puedeVerPanel } from "./ingreso";
+import { AVISOS_SIN_SESION, comprobarSesion, decidirIngreso, puedeVerPanel } from "./ingreso";
 
 describe("decidirIngreso", () => {
   it("sin sesión muestra la pantalla con el callbackUrl interno", () => {
@@ -121,15 +121,140 @@ describe("errores del ingreso en /ingresar (revisión del PR #69)", () => {
     expect(mostrar("reintentar")).toEqual({ accion: "mostrar", aviso: "reintentar", callbackUrl: "/cuenta" });
   });
 
-  it("cualquier otro código de Auth.js muestra un aviso genérico (nunca el texto crudo)", () => {
-    for (const codigo of ["Configuration", "OAuthCallbackError", "<script>", "toString"]) {
+  it("un código desconocido muestra un aviso genérico (nunca el texto crudo)", () => {
+    for (const codigo of ["CredentialsSignin", "<script>", "toString", "__proto__"]) {
       expect(mostrar(codigo)).toEqual({ accion: "mostrar", aviso: "generico", callbackUrl: "/cuenta" });
     }
   });
 
-  it("sin error, con error=sesion o repetido, la pantalla normal", () => {
+  it("sin error o con error=sesion, la pantalla normal", () => {
     expect(mostrar(undefined)).toMatchObject({ aviso: null });
     expect(mostrar("sesion")).toMatchObject({ aviso: null });
-    expect(mostrar(["Configuration", "x"])).toMatchObject({ aviso: null });
+  });
+});
+
+describe("errores de Auth.js en /ingresar (#45)", () => {
+  const mostrar = (error: string | string[] | undefined) => decidirIngreso({ sesion: "ninguna", error, callbackUrl: "/cuenta" });
+
+  it("cada código conocido de Auth.js tiene su aviso", () => {
+    const esperado: Record<string, string | null> = {
+      AccessDenied: "denegado",
+      OAuthCallbackError: "google",
+      OAuthSignin: "google",
+      Callback: "google",
+      Signin: "google",
+      OAuthCreateAccount: "google",
+      Configuration: "configuracion",
+      Verification: "vencido",
+      MissingCSRF: "vencido",
+      OAuthAccountNotLinked: "cuenta-no-vinculada",
+      AccountNotLinked: "cuenta-no-vinculada",
+      SessionRequired: null,
+    };
+    for (const [codigo, aviso] of Object.entries(esperado)) {
+      expect(mostrar(codigo), codigo).toEqual({ accion: "mostrar", aviso, callbackUrl: "/cuenta" });
+    }
+  });
+
+  it("un error repetido en la query (?error=a&error=b) muestra el genérico, no la pantalla sin aviso", () => {
+    expect(mostrar(["Configuration", "x"])).toMatchObject({ aviso: "generico" });
+    expect(mostrar(["sesion", "sesion"])).toMatchObject({ aviso: "generico" });
+  });
+
+  it("un callbackUrl que no es string o es externo lleva a /", () => {
+    for (const callbackUrl of [["/cuenta"], 42, { a: 1 }, null, "https://otro.sitio/x", "//otro.sitio"]) {
+      const entrada = { sesion: "ninguna" as const, error: "AccessDenied", callbackUrl: callbackUrl as unknown as string };
+      expect(decidirIngreso(entrada), JSON.stringify(callbackUrl)).toMatchObject({ callbackUrl: "/" });
+      expect(decidirIngreso({ ...entrada, sesion: "valida", error: undefined })).toEqual({ accion: "redirigir", destino: "/" });
+    }
+  });
+
+  it("ya no vuelve a la ruta de la cookie de Auth.js: con o sin sesión, el destino es el callbackUrl o / (decisión de @lautioliver en el PR #73)", () => {
+    // decidirIngreso ya no recibe la ruta guardada: si alguien la pasa, se ignora.
+    const conVuelta = (entrada: Parameters<typeof decidirIngreso>[0], vuelta: string) =>
+      decidirIngreso({ ...entrada, vueltaGuardada: vuelta } as Parameters<typeof decidirIngreso>[0]);
+    for (const error of ["bloqueado", "reintentar", "AccessDenied", "Configuration", "OAuthCallbackError"]) {
+      expect(conVuelta({ sesion: "ninguna", error }, "/proyectos/a"), error).toMatchObject({ accion: "mostrar", callbackUrl: "/" });
+      expect(conVuelta({ sesion: "valida", error }, "/api/auth/error?error=AccessDenied"), error).toEqual({ accion: "redirigir", destino: "/" });
+    }
+  });
+});
+
+describe("ningún destino vuelve a /ingresar (revisión del PR #73: bucle de redirecciones)", () => {
+  // Variantes de /ingresar: Next redirige la barra final y resuelve "." y los %XX, así que todas terminan ahí.
+  const aIngresar = [
+    "/ingresar",
+    "/ingresar?error=AccessDenied",
+    "/ingresar?error=bloqueado&callbackUrl=%2Fcuenta",
+    "/ingresar/",
+    "/ingresar/?error=AccessDenied",
+    "/INGRESAR?error=AccessDenied",
+    "/Ingresar",
+    "/ingresar%2F?error=AccessDenied",
+    "/%69ngresar?error=AccessDenied",
+    "/./ingresar?error=AccessDenied",
+    "/proyectos/../ingresar?error=AccessDenied",
+    "/ingresar#x",
+  ];
+
+  it("un callbackUrl de la query que apunta a /ingresar también lleva a /", () => {
+    for (const callbackUrl of aIngresar) {
+      expect(decidirIngreso({ sesion: "valida", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
+      expect(decidirIngreso({ sesion: "ninguna", error: "AccessDenied", callbackUrl }), callbackUrl).toMatchObject({ callbackUrl: "/" });
+    }
+  });
+
+  it("rutas que solo se parecen siguen valiendo", () => {
+    for (const ruta of ["/ingresarx", "/proyectos/ingresar", "/cuenta?volver=/ingresar", "/apix", "/proyectos/api", "/cuenta?desde=/api/x"]) {
+      expect(decidirIngreso({ sesion: "valida", callbackUrl: ruta }), ruta).toEqual({ accion: "redirigir", destino: ruta });
+    }
+  });
+});
+
+describe("aviso de Configuration (decisión de @lautioliver en el PR #73)", () => {
+  it("ofrece reintentar y no culpa a la persona: el problema es del sitio", () => {
+    expect(AVISOS_SIN_SESION.configuracion.boton).toBe("google");
+    expect(AVISOS_SIN_SESION.configuracion.texto).toBe("Hubo un problema de nuestro lado al iniciar sesión. Probá de nuevo en un rato.");
+  });
+});
+
+describe("ningún destino bajo /api/ (segunda revisión del PR #73: bucle por las rutas de Auth.js)", () => {
+  // /api/auth/error, /api/auth/callback/google y /api/auth/signin/google vuelven a /ingresar?error=… sin callbackUrl.
+  const aApi = [
+    "/api/auth/error?error=AccessDenied",
+    "/api/auth/callback/google",
+    "/api/auth/signin/google",
+    "/api",
+    "/api/",
+    "/API/auth/error",
+    "/%61pi/auth/error",
+    "/./api/auth/error",
+    "/.//api/auth/error",
+    "/x/..//api/auth/error",
+  ];
+
+  it("un callbackUrl a /api/… lleva a /, con o sin sesión", () => {
+    for (const callbackUrl of aApi) {
+      expect(decidirIngreso({ sesion: "valida", error: "AccessDenied", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
+      expect(decidirIngreso({ sesion: "ninguna", error: "Configuration", callbackUrl }), callbackUrl).toMatchObject({ callbackUrl: "/" });
+    }
+  });
+});
+
+describe("un destino con ?, # o \\ codificados en el camino no sirve (code-review del PR #73)", () => {
+  it("no se puede esconder /ingresar ni /api/ detrás de un %3F, %23 o %5C", () => {
+    for (const callbackUrl of ["/x%3F/..%2Fingresar", "/x%23/..%2Fapi/auth/signout", "/%5Cingresar", "/proyectos%5C..%5Capi"]) {
+      expect(decidirIngreso({ sesion: "valida", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
+    }
+  });
+
+  it("una query con esos caracteres sigue valiendo", () => {
+    expect(decidirIngreso({ sesion: "valida", callbackUrl: "/proyectos?q=a%3Fb%23c" })).toEqual({ accion: "redirigir", destino: "/proyectos?q=a%3Fb%23c" });
+  });
+});
+
+describe("la cookie de Auth.js ya no se lee (decisión de @lautioliver en el PR #73)", () => {
+  it("ingreso no expone nada para leerla", async () => {
+    expect(Object.keys(await import("./ingreso"))).not.toContain("rutaDeCookieDeVuelta");
   });
 });
