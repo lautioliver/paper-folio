@@ -4,25 +4,50 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Container } from "@/components/Container";
 import { decidirIngreso } from "@/lib/ingreso";
-import { estadoDeSesion } from "@/lib/sesion";
-import { ingresarConGoogle, salir, salirEIngresarDeNuevo } from "@/lib/sesion-acciones";
+import { estadoDeSesion, vueltaDeAuthJs } from "@/lib/sesion";
+import { ingresarConGoogle, ingresarConOtraCuenta, salir, salirEIngresarDeNuevo } from "@/lib/sesion-acciones";
 
 export const metadata: Metadata = { title: "Ingresar", robots: { index: false } };
 
-// Avisos sin sesión que dejan volver a ingresar (con la misma cuenta o con otra).
-const AVISOS_CON_REINTENTO = {
-  reintentar: "No pudimos verificar tu cuenta. Probá de nuevo en un rato.",
-  generico: "No pudimos completar el ingreso. Probá de nuevo.",
-  "ingreso-bloqueado":
-    "Esa cuenta está bloqueada: no puede ingresar al sitio. Si creés que es un error, escribinos por el formulario de contacto.",
-} as const;
+// Avisos sin sesión, según el `error` de la URL (`decidirIngreso`): el texto es siempre uno de estos, nunca el de
+// la URL. `boton`: "google" reintenta con la misma cuenta; "otra-cuenta" abre el selector de cuentas de Google;
+// null no ofrece reintentar (Configuration es una falla del sitio: reintentar no la arregla).
+const AVISOS_SIN_SESION = {
+  "ingreso-bloqueado": {
+    texto:
+      "Esa cuenta está bloqueada: no puede ingresar al sitio. Si creés que es un error, escribinos por el formulario de contacto.",
+    boton: "otra-cuenta",
+  },
+  denegado: {
+    texto:
+      "No pudimos dejarte ingresar: la cuenta de Google tiene que tener el email verificado. Si creés que es un error, escribinos por el formulario de contacto.",
+    boton: "otra-cuenta",
+  },
+  reintentar: { texto: "No pudimos verificar tu cuenta. Probá de nuevo en un rato.", boton: "google" },
+  google: { texto: "No se completó el ingreso con Google. Si lo cancelaste, podés probar de nuevo.", boton: "google" },
+  "cuenta-no-vinculada": {
+    texto: "Ese email ya se usó para ingresar de otra forma. Probá con otra cuenta de Google.",
+    boton: "otra-cuenta",
+  },
+  vencido: { texto: "El ingreso venció antes de terminar. Probá de nuevo.", boton: "google" },
+  configuracion: {
+    texto:
+      "El ingreso no está disponible por un problema del sitio. Probá más tarde y, si sigue pasando, escribinos por el formulario de contacto.",
+    boton: null,
+  },
+  generico: { texto: "No pudimos completar el ingreso. Probá de nuevo.", boton: "google" },
+} as const satisfies Record<string, { texto: string; boton: "google" | "otra-cuenta" | null }>;
+
+function esAvisoSinSesion(aviso: string | null): aviso is keyof typeof AVISOS_SIN_SESION {
+  return aviso !== null && Object.hasOwn(AVISOS_SIN_SESION, aviso);
+}
 
 const BOTON = "marca apretable inline-flex min-h-11 items-center justify-center bg-tinta px-5 py-3 font-bold text-papel";
 
 async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParams"] }) {
   const { error, callbackUrl } = await params;
-  const { estado, configurado } = await estadoDeSesion();
-  const decision = decidirIngreso({ sesion: estado, error, callbackUrl });
+  const [{ estado, configurado }, vueltaGuardada] = await Promise.all([estadoDeSesion(), vueltaDeAuthJs()]);
+  const decision = decidirIngreso({ sesion: estado, error, callbackUrl, vueltaGuardada });
   if (decision.accion === "redirigir") redirect(decision.destino);
 
   if (!configurado) {
@@ -64,35 +89,21 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
     );
   }
 
-  if (decision.aviso === "denegado") {
+  if (esAvisoSinSesion(decision.aviso)) {
+    const { texto, boton } = AVISOS_SIN_SESION[decision.aviso];
     return (
       <>
         <p role="alert" className="mt-6 text-cuerpo">
-          No pudimos dejarte ingresar: la cuenta de Google tiene que tener el email verificado. Si creés que es un
-          error, escribinos por el formulario de contacto.
+          {texto}
         </p>
-        <form action={ingresarConGoogle} className="mt-8">
-          <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
-          <button type="submit" className={BOTON}>
-            Probar con otra cuenta
-          </button>
-        </form>
-      </>
-    );
-  }
-
-  if (decision.aviso === "reintentar" || decision.aviso === "generico" || decision.aviso === "ingreso-bloqueado") {
-    return (
-      <>
-        <p role="alert" className="mt-6 text-cuerpo">
-          {AVISOS_CON_REINTENTO[decision.aviso]}
-        </p>
-        <form action={ingresarConGoogle} className="mt-8">
-          <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
-          <button type="submit" className={BOTON}>
-            Continuar con Google
-          </button>
-        </form>
+        {boton && (
+          <form action={boton === "otra-cuenta" ? ingresarConOtraCuenta : ingresarConGoogle} className="mt-8">
+            <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
+            <button type="submit" className={BOTON}>
+              {boton === "otra-cuenta" ? "Probar con otra cuenta" : "Continuar con Google"}
+            </button>
+          </form>
+        )}
       </>
     );
   }

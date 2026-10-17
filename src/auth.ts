@@ -17,9 +17,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
     secret: AUTH_SECRET,
     providers: [Google({ clientId: AUTH_GOOGLE_ID, clientSecret: AUTH_GOOGLE_SECRET })],
     session: { strategy: "jwt" },
-    // Los errores de Auth.js (AccessDenied cuando `signIn` da false, Configuration, etc.) van a /ingresar, que
-    // muestra un aviso en español por código conocido y uno genérico para el resto (`decidirIngreso`).
-    pages: { error: "/ingresar" },
+    // El ingreso y los errores de Auth.js (AccessDenied cuando `signIn` da false, OAuthCallbackError si se cancela
+    // en Google, Configuration…) van a /ingresar, que muestra un aviso en español por código conocido y uno
+    // genérico para el resto (`decidirIngreso`), y vuelve a la ruta de la cookie callback-url (`vueltaDeAuthJs`).
+    pages: { signIn: "/ingresar", error: "/ingresar" },
     callbacks: {
       // Solo cuentas de Google con el email verificado y sin bloquear (#49). Una bloqueada va a
       // /ingresar?error=bloqueado y, si la base no responde, a /ingresar?error=reintentar (ver `permiteIngreso`).

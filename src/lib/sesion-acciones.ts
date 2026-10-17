@@ -1,17 +1,30 @@
 "use server";
 
+import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { rutaInterna, urlDeIngreso } from "./acceso";
 
-/** Server action del botón "Continuar con Google". El destino sale siempre de `rutaInterna`: nunca un sitio externo. */
-export async function ingresarConGoogle(formData: FormData): Promise<void> {
-  const destino = formData.get("callbackUrl");
-  await signIn("google", { redirectTo: rutaInterna(typeof destino === "string" ? destino : "/") });
+// El formulario de /ingresar: solo `callbackUrl`, un string con una ruta interna. Cualquier otra cosa (un sitio
+// externo, un archivo, nada) vuelve al inicio.
+const formularioIngreso = z.object({
+  callbackUrl: z
+    .string()
+    .refine((ruta) => rutaInterna(ruta) === ruta)
+    .catch("/"),
+});
+
+function destinoDelFormulario(formData: FormData): string {
+  return formularioIngreso.parse({ callbackUrl: formData.get("callbackUrl") }).callbackUrl;
 }
 
-/** Stub (#45). */
+/** Server action del botón "Continuar con Google". El destino es siempre una ruta interna: nunca un sitio externo. */
+export async function ingresarConGoogle(formData: FormData): Promise<void> {
+  await signIn("google", { redirectTo: destinoDelFormulario(formData) });
+}
+
+/** "Probar con otra cuenta": como `ingresarConGoogle`, pero Google muestra el selector de cuentas. */
 export async function ingresarConOtraCuenta(formData: FormData): Promise<void> {
-  await ingresarConGoogle(formData);
+  await signIn("google", { redirectTo: destinoDelFormulario(formData) }, { prompt: "select_account" });
 }
 
 /** Server action de "Salir": cierra la sesión y vuelve al inicio. */
@@ -21,6 +34,5 @@ export async function salir(): Promise<void> {
 
 /** Para la sesión huérfana: cierra la sesión y deja a la persona en /ingresar para empezar de nuevo. */
 export async function salirEIngresarDeNuevo(formData: FormData): Promise<void> {
-  const destino = formData.get("callbackUrl");
-  await signOut({ redirectTo: urlDeIngreso(typeof destino === "string" ? destino : "/", "sin-sesion") });
+  await signOut({ redirectTo: urlDeIngreso(destinoDelFormulario(formData), "sin-sesion") });
 }

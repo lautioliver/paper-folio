@@ -1,9 +1,10 @@
+import { cookies } from "next/headers";
 import { connection } from "next/server";
 import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { evaluarAcceso } from "./acceso";
 import { EnvInvalidoError } from "./env";
-import { comprobarSesion, type EstadoSesion } from "./ingreso";
+import { comprobarSesion, rutaDeCookieDeVuelta, type EstadoSesion } from "./ingreso";
 import { buscarRol } from "./usuarios";
 
 export type SesionDeLaApp = Session | null;
@@ -46,8 +47,19 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
   return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
 }
 
-/** Stub (#45). */
+// La cookie donde Auth.js guarda a dónde volver al empezar el ingreso. Con https lleva el prefijo __Secure-.
+const COOKIES_DE_VUELTA = ["__Secure-authjs.callback-url", "authjs.callback-url"] as const;
+
+/**
+ * La ruta a la que volver según la cookie callback-url de Auth.js, solo si es interna (`rutaDeCookieDeVuelta`).
+ * /ingresar la usa cuando llega un error sin `callbackUrl`: ni `signIn` ni Auth.js lo pasan al mandar ahí.
+ */
 export async function vueltaDeAuthJs(): Promise<string | undefined> {
+  const galletas = await cookies();
+  for (const nombre of COOKIES_DE_VUELTA) {
+    const valor = galletas.get(nombre)?.value;
+    if (valor !== undefined) return rutaDeCookieDeVuelta(valor);
+  }
   return undefined;
 }
 
