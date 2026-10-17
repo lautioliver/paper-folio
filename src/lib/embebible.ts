@@ -7,9 +7,10 @@ import { TAG_CONTENIDO } from "./contenido";
 //
 // Es un pedido del servidor a una URL que carga un admin, así que se acota: solo https al puerto por defecto,
 // sin credenciales en la URL, sin IPs, localhost ni nombres sin punto, GET sin leer el cuerpo con un límite de
-// tiempo y redirects seguidos a mano, con las mismas reglas en cada salto. Lo único que sale del pedido es si/no.
-// Límite: no se resuelve el DNS, así que un nombre público que apunta a una IP interna pasa. Lo acota que la URL
-// la carga un admin y que la respuesta no se muestra.
+// tiempo y redirects seguidos a mano, con las mismas reglas en cada salto. Del pedido solo se guardan (en la
+// caché, por URL) el origen final y las dos cabeceras de embebido; el usuario solo ve si/no. Límite: no se
+// resuelve el DNS, así que un nombre público que apunta a una IP interna pasa. Lo acota que la URL la carga un
+// admin y que la respuesta no se muestra.
 
 /** `si`/`no`: lo dicen las cabeceras. `desconocido`: no se pudo consultar (se muestra el iframe con el aviso). */
 export type Embebible = "si" | "no" | "desconocido";
@@ -42,7 +43,7 @@ export function origenDelPedido(cabeceras: Headers, env: Record<string, string |
   if (!host || !HOST.test(host)) return origenDelSitio(env);
   const reenviado = cabeceras.get("x-forwarded-proto")?.split(",")[0].trim().toLowerCase();
   const protocolo = reenviado === "http" || reenviado === "https" ? reenviado : LOCAL.test(host) ? "http" : "https";
-  return new URL(`${protocolo}://${host}`).origin;
+  return URL.parse(`${protocolo}://${host}`)?.origin ?? origenDelSitio(env); // un puerto fuera de rango
 }
 
 function puertoEfectivo(url: URL): string {
@@ -66,8 +67,9 @@ function fuenteCoincide(fuente: string, sitio: URL, demo: URL): boolean {
   const partes = FUENTE_HOST.exec(fuente);
   if (!partes) return false; // 'none', nonces y lo que no aplica a frame-ancestors
   const [, esquema, host, puerto, ruta] = partes;
-  // El navegador compara la ruta de la fuente contra el origen del sitio, cuya ruta es `/`: cualquier otra
-  // ruta no coincide (Chromium bloquea `https://sitio/proyectos/` aunque la página esté en /proyectos/x).
+  // Chromium compara la ruta de la fuente contra el origen del sitio, cuya ruta es `/`: cualquier otra ruta no
+  // coincide (bloquea `https://sitio/proyectos/` aunque la página esté en /proyectos/x). Firefox ignora la ruta;
+  // seguir a Chromium es el lado seguro: a lo sumo se ve el botón donde el iframe habría andado en Firefox.
   if (ruta !== undefined && ruta !== "/") return false;
   // Sin esquema vale el de la demo (y una demo http también acepta un sitio https).
   if (!esquemaCoincide(esquema ?? demo.protocol, sitio)) return false;
@@ -160,7 +162,7 @@ async function pedirCabeceras(f: typeof fetch, url: URL, signal: AbortSignal): P
   return respuesta;
 }
 
-/** Lo que hace falta para decidir, en datos planos (lo guarda `use cache`): la URL final y las dos cabeceras. */
+/** Lo que hace falta para decidir, en datos planos (lo guarda `use cache`): el origen final y las dos cabeceras. */
 export type CabecerasDemo = { url: string; xFrameOptions: string | null; contentSecurityPolicy: string | null };
 
 /**
@@ -182,7 +184,8 @@ export async function consultarCabeceras(
       const respuesta = await pedirCabeceras(f, actual, signal);
       if (respuesta.status >= 200 && respuesta.status < 300) {
         return {
-          url: actual.href,
+          // Solo el origen: alcanza para decidir y no guarda la ruta ni la query de un redirect.
+          url: actual.origin,
           xFrameOptions: respuesta.headers.get("x-frame-options"),
           contentSecurityPolicy: respuesta.headers.get("content-security-policy"),
         };
@@ -235,5 +238,6 @@ export async function cabecerasDeDemo(url: string): Promise<CabecerasDemo | null
 
 /** ¿La demo se deja embeber desde `origenSitio`? Las cabeceras salen de la caché; la decisión, afuera. */
 export async function demoEmbebible(url: string, origenSitio: string): Promise<Embebible> {
-  return evaluar(await cabecerasDeDemo(url), origenSitio);
+  // La URL normalizada como clave: `https://x.app` y `https://X.app/` son la misma entrada y el mismo pedido.
+  return evaluar(await cabecerasDeDemo(URL.parse(url)?.href ?? url), origenSitio);
 }
