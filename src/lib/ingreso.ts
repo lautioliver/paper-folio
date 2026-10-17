@@ -122,18 +122,27 @@ const errorDeLaUrl = z.string().optional();
  * Si una ruta no sirve para volver después de ingresar: /ingresar (con sesión válida se redirigiría a sí misma) o
  * algo bajo /api/ (no son páginas, y las de Auth.js vuelven a /ingresar?error=… sin `callbackUrl`). Normaliza como
  * lo haría el pedido: "." y "..", los %XX del camino (también una "/" codificada), mayúsculas, barras repetidas y
- * la final (Next la redirige). La query no cuenta.
+ * la final (Next la redirige). La query no cuenta; un "?", "#" o "\\" codificado en el camino, sí (se rechaza).
  */
 function destinoProhibido(ruta: string): boolean {
+  let camino: string;
   try {
-    const base = "http://ruta.invalid";
-    const camino = new URL(decodeURIComponent(new URL(ruta, base).pathname), base).pathname;
-    const normal = camino.toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "");
-    return normal === RUTA_INGRESO || normal === "/api" || normal.startsWith("/api/");
+    camino = decodeURIComponent(new URL(ruta, "http://ruta.invalid").pathname);
   } catch {
     // Un %XX inválido en el camino: no se sabe a dónde va, así que no sirve de destino.
     return true;
   }
+  // Decodificado, un "?", "#" o "\\" cambiaría cómo se lee la ruta: no sirve de destino.
+  if (/[?#\\]/.test(camino)) return true;
+  // Sin volver a parsear (un "//" al principio se leería como otro host): segmentos, "." y "..", vacíos afuera.
+  const partes: string[] = [];
+  for (const segmento of camino.split("/")) {
+    if (segmento === "" || segmento === ".") continue;
+    if (segmento === "..") partes.pop();
+    else partes.push(segmento.toLowerCase());
+  }
+  const normal = `/${partes.join("/")}`;
+  return normal === RUTA_INGRESO || normal === "/api" || normal.startsWith("/api/");
 }
 
 /**
