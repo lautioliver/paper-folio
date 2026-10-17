@@ -20,6 +20,7 @@
     "nodemailer-10": "npm:nodemailer@^10.1.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "recharts": "3.10.1",
     "resend": "^6.33.0",
     "zod": "^4.6.7"
   },
