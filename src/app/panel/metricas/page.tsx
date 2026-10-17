@@ -123,7 +123,7 @@ export default async function MetricasPage({ searchParams }: PageProps<"/panel/m
     { titulo: "Consultas", valor: t.consultas },
     { titulo: "Usuarios nuevos", valor: t.registros },
     { titulo: "Visitas", valor: t.visitas },
-    { titulo: "Visitantes únicos", valor: t.unicos, nota: "Suma de los únicos de cada día." },
+    { titulo: "Visitantes únicos (suma diaria)", valor: t.unicos, nota: "Cada día cuenta a sus únicos: alguien que vino dos días suma dos." },
     { titulo: "Accesos de registrados", valor: t.accesos },
   ];
 
