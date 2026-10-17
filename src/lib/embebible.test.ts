@@ -5,7 +5,7 @@ vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 
 import { cacheLife, cacheTag } from "next/cache";
 import { TAG_CONTENIDO } from "./contenido";
-import { consultarEmbebible, demoEmbebible, origenDelSitio, permiteEmbeber } from "./embebible";
+import { consultarEmbebible, demoEmbebible, origenDelPedido, origenDelSitio, permiteEmbeber } from "./embebible";
 
 const SITIO = "https://paper-folio.vercel.app";
 const DEMO = "https://ucanode.app/";
@@ -125,6 +125,30 @@ describe("permiteEmbeber: CSP frame-ancestors", () => {
   });
 });
 
+describe("origenDelPedido", () => {
+  const pedido = (pares: [string, string][]) => origenDelPedido(cabeceras(pares), {});
+
+  it("usa el host con que llegó el pedido (un preview, otro dominio, otro puerto)", () => {
+    expect(pedido([["host", "paper-folio-git-x.vercel.app"], ["x-forwarded-proto", "https"]])).toBe(
+      "https://paper-folio-git-x.vercel.app",
+    );
+    expect(pedido([["x-forwarded-host", "paper-folio.vercel.app"], ["host", "interno:3000"]])).toBe(SITIO);
+    expect(pedido([["host", "localhost:3486"]])).toBe("http://localhost:3486");
+  });
+
+  it("sin protocolo reenviado, https salvo en localhost", () => {
+    expect(pedido([["host", "paper-folio.vercel.app"]])).toBe(SITIO);
+  });
+
+  it("un host que no es un host, o ninguno, cae en el origen configurado", () => {
+    expect(pedido([["host", "evil.example/ruta"]])).toBe("http://localhost:3000");
+    expect(pedido([["host", "a b"]])).toBe("http://localhost:3000");
+    expect(pedido([])).toBe("http://localhost:3000");
+    expect(origenDelPedido(cabeceras([]), { VERCEL_PROJECT_PRODUCTION_URL: "paper-folio.vercel.app" })).toBe(SITIO);
+    expect(pedido([["host", "paper-folio.vercel.app"], ["x-forwarded-proto", "javascript"]])).toBe(SITIO);
+  });
+});
+
 describe("origenDelSitio", () => {
   it("usa el dominio de producción de Vercel", () => {
     expect(origenDelSitio({ VERCEL_PROJECT_PRODUCTION_URL: "paper-folio.vercel.app" })).toBe(SITIO);
@@ -159,23 +183,7 @@ describe("consultarEmbebible", () => {
     vi.restoreAllMocks();
   });
 
-  it("pide solo las cabeceras (HEAD), sin seguir redirects solo y con un límite de tiempo", async () => {
-    const f = fetchFalso({ headers: [["X-Frame-Options", "DENY"]] });
-    expect(await consultarEmbebible(DEMO, SITIO, { fetch: f })).toBe("no");
-    expect(f).toHaveBeenCalledTimes(1);
-    const [url, init] = f.mock.calls[0];
-    expect(String(url)).toBe(DEMO);
-    expect(init?.method).toBe("HEAD");
-    expect(init?.redirect).toBe("manual");
-    expect(init?.signal).toBeInstanceOf(AbortSignal);
-    expect(init?.credentials).toBe("omit");
-  });
-
-  it("sin cabeceras que lo impidan, se deja embeber", async () => {
-    expect(await consultarEmbebible(DEMO, SITIO, { fetch: fetchFalso({}) })).toBe("si");
-  });
-
-  it("si el servidor no acepta HEAD, prueba con GET y no lee el cuerpo", async () => {
+  it("pide la página como el iframe (GET de HTML), sin leer el cuerpo, sin seguir redirects solo y con un límite de tiempo", async () => {
     let leido = false;
     const cancel = vi.fn();
     // highWaterMark 0: el stream no se llena solo, así `pull` marca una lectura de verdad.
@@ -188,11 +196,30 @@ describe("consultarEmbebible", () => {
       },
       { highWaterMark: 0 },
     );
-    const f = fetchFalso({ status: 405 }, { headers: [["Content-Security-Policy", "frame-ancestors 'none'"]], body });
+    const f = fetchFalso({ headers: [["X-Frame-Options", "DENY"]], body });
     expect(await consultarEmbebible(DEMO, SITIO, { fetch: f })).toBe("no");
-    expect(f.mock.calls[1][1]?.method).toBe("GET");
+    expect(f).toHaveBeenCalledTimes(1);
+    const [url, init] = f.mock.calls[0];
+    expect(String(url)).toBe(DEMO);
+    // GET y no HEAD: hay servidores que solo mandan la CSP en las respuestas GET de HTML.
+    expect(init?.method).toBe("GET");
+    expect(new Headers(init?.headers).get("accept")).toContain("text/html");
+    expect(init?.redirect).toBe("manual");
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
+    expect(init?.credentials).toBe("omit");
     expect(cancel).toHaveBeenCalled();
     expect(leido).toBe(false);
+  });
+
+  it("sin cabeceras que lo impidan, se deja embeber", async () => {
+    expect(await consultarEmbebible(DEMO, SITIO, { fetch: fetchFalso({}) })).toBe("si");
+  });
+
+  it("una respuesta final que no es 2xx (un desafío anti-bots, un error) no decide: no sabe", async () => {
+    for (const status of [403, 404, 500, 503]) {
+      const f = fetchFalso({ status, headers: [["X-Frame-Options", "DENY"]] });
+      expect(await consultarEmbebible(DEMO, SITIO, { fetch: f })).toBe("desconocido");
+    }
   });
 
   it("sigue redirects https (relativos o a otro host) y mira la respuesta final", async () => {
@@ -229,6 +256,7 @@ describe("consultarEmbebible", () => {
       "https://169.254.169.254/latest",
       "https://[::1]/",
       "https://localhost",
+      "https://metadata/",
       "https://algo.localhost",
       "https://ucanode.app:8443",
       "no es una url",

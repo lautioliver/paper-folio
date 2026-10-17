@@ -27,6 +27,10 @@ export function origenDelSitio(env: Record<string, string | undefined> = process
   }
 }
 
+export function origenDelPedido(_cabeceras: Headers, env: Record<string, string | undefined> = process.env): string {
+  return origenDelSitio(env);
+}
+
 function puertoEfectivo(url: URL): string {
   if (url.port) return url.port;
   return url.protocol === "https:" ? "443" : url.protocol === "http:" ? "80" : "";
