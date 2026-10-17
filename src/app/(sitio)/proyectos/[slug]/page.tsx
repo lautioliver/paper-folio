@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { Container } from "@/components/Container";
 import { Footer } from "@/components/sitio/Contact";
 import { CuentaBarra } from "@/components/sitio/CuentaBarra";
@@ -12,7 +13,7 @@ import { TONE_BG } from "@/components/sitio/tones";
 import { cn } from "@/lib/cn";
 import { detalleProyecto, type Demo } from "@/lib/contenido";
 import { esUrlHttps } from "@/lib/contenido-esquemas";
-import { demoEmbebible, origenDelSitio } from "@/lib/embebible";
+import { demoEmbebible, origenDelPedido } from "@/lib/embebible";
 import { requerirSesion } from "@/lib/permisos";
 import { RUTA_PROYECTOS, rutaDetalle } from "@/lib/proyectos";
 
@@ -143,7 +144,13 @@ function VistaDemo({ demo, conTitulo }: { demo: Demo; conTitulo: boolean }) {
       {demo.descripcion && <p className="mt-2 text-cuerpo">{demo.descripcion}</p>}
       {/* Una demo http no se embebe: el navegador la bloquea como contenido mixto. Queda el enlace. */}
       {esUrlHttps(demo.url) ? (
-        <Suspense fallback={<p className="mt-2 text-pequeno">Cargando la demo…</p>}>
+        <Suspense
+          fallback={
+            <p className="mt-2 text-pequeno">
+              Cargando la demo… <EnlaceDemo url={demo.url} />.
+            </p>
+          }
+        >
           <MarcoDemo demo={demo} />
         </Suspense>
       ) : (
@@ -155,10 +162,18 @@ function VistaDemo({ demo, conTitulo }: { demo: Demo; conTitulo: boolean }) {
   );
 }
 
-function EnlaceDemo({ url }: { url: string }) {
+function EnlaceDemo({
+  url,
+  className = "font-bold underline decoration-2 underline-offset-4",
+  children = "Abrir en otra pestaña",
+}: {
+  url: string;
+  className?: string;
+  children?: ReactNode;
+}) {
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="font-bold underline decoration-2 underline-offset-4">
-      Abrir en otra pestaña
+    <a href={url} target="_blank" rel="noreferrer" className={className}>
+      {children}
     </a>
   );
 }
@@ -168,14 +183,15 @@ function EnlaceDemo({ url }: { url: string }) {
  * (la demo no respondió a tiempo), se muestra el iframe con el aviso, como antes de #61.
  */
 async function MarcoDemo({ demo }: { demo: Demo }) {
-  const embebible = await demoEmbebible(demo.url, origenDelSitio());
+  // El origen del pedido: es el que el navegador usa para el iframe (producción, un preview, localhost).
+  const embebible = await demoEmbebible(demo.url, origenDelPedido(await headers()));
   if (embebible === "no") {
     return (
       <div className="mt-2">
         <p className="text-pequeno">Este sitio no permite mostrarse dentro de otra página.</p>
-        <a href={demo.url} target="_blank" rel="noreferrer" className={cn(BUTTON, "mt-4 bg-tinta text-papel")}>
+        <EnlaceDemo url={demo.url} className={cn(BUTTON, "mt-4 bg-tinta text-papel")}>
           Abrir demo
-        </a>
+        </EnlaceDemo>
       </div>
     );
   }

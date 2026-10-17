@@ -6,8 +6,10 @@ import { TAG_CONTENIDO } from "./contenido";
 // el detalle muestra solo el botón "Abrir demo" en vez de un recuadro vacío.
 //
 // Es un pedido del servidor a una URL que carga un admin, así que se acota: solo https al puerto por defecto,
-// sin credenciales en la URL, sin IPs ni localhost, HEAD (o GET sin leer el cuerpo) con un límite de tiempo y
-// redirects seguidos a mano, con las mismas reglas en cada salto. Lo único que sale del pedido es si/no.
+// sin credenciales en la URL, sin IPs, localhost ni nombres sin punto, GET sin leer el cuerpo con un límite de
+// tiempo y redirects seguidos a mano, con las mismas reglas en cada salto. Lo único que sale del pedido es si/no.
+// Límite: no se resuelve el DNS, así que un nombre público que apunta a una IP interna pasa. Lo acota que la URL
+// la carga un admin y que la respuesta no se muestra.
 
 /** `si`/`no`: lo dicen las cabeceras. `desconocido`: no se pudo consultar (se muestra el iframe con el aviso). */
 export type Embebible = "si" | "no" | "desconocido";
@@ -16,7 +18,7 @@ const TIMEOUT_MS = 3000;
 const MAX_REDIRECTS = 3;
 const ORIGEN_DESARROLLO = "http://localhost:3000";
 
-/** Origen con que el navegador va a pedir el iframe: el dominio de producción en Vercel, o el de desarrollo. */
+/** Origen configurado del sitio: el dominio de producción en Vercel, o el de desarrollo. */
 export function origenDelSitio(env: Record<string, string | undefined> = process.env): string {
   const dominio = env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
   if (!dominio) return ORIGEN_DESARROLLO;
@@ -27,8 +29,20 @@ export function origenDelSitio(env: Record<string, string | undefined> = process
   }
 }
 
-export function origenDelPedido(_cabeceras: Headers, env: Record<string, string | undefined> = process.env): string {
-  return origenDelSitio(env);
+const HOST = /^[a-z0-9.-]+(?::\d{1,5})?$/i;
+const LOCAL = /^(?:localhost|127\.0\.0\.1)(?::\d+)?$/i;
+
+/**
+ * Origen con que llegó el pedido (un preview, otro dominio, otro puerto): es el que el navegador va a usar para
+ * el iframe. En Vercel, `x-forwarded-host` y `x-forwarded-proto` los pone la plataforma. Un host que no es un
+ * host cae en `origenDelSitio`. Un host falseado solo cambia lo que ve quien lo manda.
+ */
+export function origenDelPedido(cabeceras: Headers, env: Record<string, string | undefined> = process.env): string {
+  const host = (cabeceras.get("x-forwarded-host") ?? cabeceras.get("host"))?.split(",")[0].trim();
+  if (!host || !HOST.test(host)) return origenDelSitio(env);
+  const reenviado = cabeceras.get("x-forwarded-proto")?.split(",")[0].trim().toLowerCase();
+  const protocolo = reenviado === "http" || reenviado === "https" ? reenviado : LOCAL.test(host) ? "http" : "https";
+  return new URL(`${protocolo}://${host}`).origin;
 }
 
 function puertoEfectivo(url: URL): string {
@@ -118,7 +132,8 @@ function urlConsultable(valor: string | URL): URL | null {
   if (!url) return null;
   if (url.protocol !== "https:" || url.port !== "" || url.username !== "" || url.password !== "") return null;
   const host = url.hostname.replace(/\.$/, "");
-  if (host.startsWith("[") || IPV4.test(host) || HOSTS_LOCALES.test(host)) return null;
+  // Sin punto (`metadata`, `intranet`): un nombre de red interna, no un sitio público.
+  if (!host.includes(".") || host.startsWith("[") || IPV4.test(host) || HOSTS_LOCALES.test(host)) return null;
   return url;
 }
 
@@ -126,15 +141,20 @@ function nombreDe(error: unknown): string {
   return error instanceof Error ? error.name : "error";
 }
 
+/**
+ * Pide la página como la va a pedir el iframe (GET de HTML: hay servidores que solo mandan la CSP ahí) y corta
+ * el cuerpo sin leerlo: alcanza con las cabeceras.
+ */
 async function pedirCabeceras(f: typeof fetch, url: URL, signal: AbortSignal): Promise<Response> {
-  const init = { redirect: "manual", credentials: "omit", signal } as const;
-  const head = await f(url.href, { ...init, method: "HEAD" });
-  await head.body?.cancel();
-  if (head.status !== 405 && head.status !== 501) return head;
-  // Hay servidores que no aceptan HEAD: GET, pero sin leer el cuerpo.
-  const get = await f(url.href, { ...init, method: "GET" });
-  await get.body?.cancel();
-  return get;
+  const respuesta = await f(url.href, {
+    method: "GET",
+    headers: { accept: "text/html" },
+    redirect: "manual",
+    credentials: "omit",
+    signal,
+  });
+  await respuesta.body?.cancel();
+  return respuesta;
 }
 
 /**
@@ -154,9 +174,11 @@ export async function consultarEmbebible(
   try {
     for (let saltos = 0; saltos <= MAX_REDIRECTS; saltos++) {
       const respuesta = await pedirCabeceras(f, actual, signal);
-      if (respuesta.status < 300 || respuesta.status >= 400) {
+      if (respuesta.status >= 200 && respuesta.status < 300) {
         return permiteEmbeber(respuesta.headers, origenSitio, actual.href) ? "si" : "no";
       }
+      // Un error o un desafío anti-bots no dice qué recibe el navegador: no se decide con eso.
+      if (respuesta.status < 300 || respuesta.status >= 400) return "desconocido";
       const destino = respuesta.headers.get("location");
       const siguiente: URL | null = destino === null ? null : URL.parse(destino, actual);
       actual = siguiente && urlConsultable(siguiente);
