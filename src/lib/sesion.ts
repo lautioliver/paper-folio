@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import type { Session } from "next-auth";
 import { auth } from "@/auth";
+import { evaluarAcceso } from "./acceso";
 import { EnvInvalidoError } from "./env";
 import { comprobarSesion, type EstadoSesion } from "./ingreso";
 import { buscarRol } from "./usuarios";
@@ -43,4 +44,30 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
     return { estado: "ninguna", configurado: true };
   }
   return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
+}
+
+/**
+ * Si quien hace el pedido es `admin`, con la misma decisión que los permisos (`evaluarAcceso` con el rol que
+ * relee `buscarRol`, que ya suma `ADMIN_EMAILS`). Lo usa `POST /api/visitas` para no contar a los admin: no es
+ * un permiso. `false` sin sesión, con una sesión ilegible, sin `AUTH_*` o con `ADMIN_EMAILS` inválida, y con la
+ * cuenta bloqueada o borrada: una cuenta bloqueada no tiene permisos (domain.md), así que su visita cuenta como
+ * la de cualquiera. Si la base falla, tira (quien llama decide).
+ */
+export async function esAdminLaSesion(): Promise<boolean> {
+  await connection(); // ver `estadoDeSesion`
+  let sesion: SesionDeLaApp;
+  try {
+    sesion = (await auth()) as SesionDeLaApp;
+  } catch (error) {
+    if (error instanceof EnvInvalidoError) return false;
+    console.error("sesion: no se pudo leer la sesión", error instanceof Error ? error.name : "desconocido");
+    return false;
+  }
+  try {
+    return (await evaluarAcceso(sesion, ["admin"], (id) => buscarRol(id))).ok;
+  } catch (error) {
+    // `ADMIN_EMAILS` inválida (`buscarRol` la lee): es configuración, no la base, y la visita se cuenta igual.
+    if (error instanceof EnvInvalidoError) return false;
+    throw error;
+  }
 }

@@ -24,6 +24,17 @@ Las notas (`agregarNota`) tienen de 1 a 2000 caracteres (`LARGO_MAXIMO_NOTA`), s
 
 TODO: completar el resto de las entidades.
 
+## Visitas del sitio: `visitas_diarias` y `visitantes_diarios` (#55, épica #53)
+
+Las cargas de las páginas del grupo `(sitio)` (`/`, `/proyectos`, `/proyectos/<slug>` y `/cuenta`), contadas desde el navegador (`ContadorVisitas` → `POST /api/visitas` → `registrarVisita()` en `src/lib/visitas.ts`). No cuentan los bots (por user-agent; un user-agent vacío también), el panel (`/panel/**`), la API (`/api/**`) ni las cargas de un `admin` (rol releído de la base). `fecha` es el día en America/Argentina/Salta, como `YYYY-MM-DD`.
+
+| Colección | Modelo | Campos | Índice |
+|---|---|---|---|
+| `visitas_diarias` | `src/models/VisitaDiaria.ts` | `fecha`, `ruta`, `total`. La ruta va sin query, hash ni barra final, y solo puede ser una de las fijas (`/`, `/proyectos`, `/cuenta`) o `/proyectos/<slug>` de un proyecto publicado (`listarProyectos`, cacheado). Cualquier otra, incluido un slug inexistente o un 404, va a la clave `otra` (`RUTA_OTRA`): a lo sumo una ruta por página real por día. Una página pública nueva se suma a `RUTAS_FIJAS` en `src/lib/visitas.ts` | Único `{ fecha, ruta }`. `total` se suma con `$inc` y upsert: nunca se lee y escribe |
+| `visitantes_diarios` | `src/models/VisitanteDiario.ts` | `fecha`, `idHash` = `sha256(id + fecha)` del id de la cookie `pf_v` | Único `{ fecha, idHash }`. El insert de un visitante que ya vino ese día choca con la clave y se ignora |
+
+No se guarda la IP ni el id de la cookie: solo su hash por día, así no se puede seguir a un visitante entre días. Los índices los crea `asegurarIndicesDe` en `registrarVisita()`; si no se pueden crear, la visita no se cuenta (sin el índice único el upsert podría duplicar el contador).
+
 ## Usuario (`usuarios`)
 
 Modelo: `src/models/Usuario.ts`. Se crea o actualiza en cada ingreso con Google (`registrarIngreso`, `src/lib/usuarios.ts`) y lo administra el admin en `/panel/usuarios` (#49). Ver [ADR-002](../decisions/ADR-002-auth.md) y su enmienda.
