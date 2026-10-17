@@ -92,7 +92,7 @@ describe("registrarIngreso cuenta el acceso (#54)", () => {
     const r = await registrarIngreso({ email: "ana@example.com" }, ADMINS);
     await registrarIngreso({ email: "ana@example.com" }, ADMINS);
     // Si el test cruzó la medianoche de Salta, cada ingreso cayó en un día distinto: se suman los dos.
-    const docs = await AccesoDiario.find({ tipo: "ingreso" }, { _id: 0, total: 1, fecha: 1 }).lean();
+    const docs = await AccesoDiario.find({ tipo: "ingreso" }, { _id: 0, total: 1, fecha: 1 }).sort({ fecha: 1 }).lean();
     expect(docs.reduce((suma, d) => suma + d.total, 0)).toBe(2);
     expect(docs[0].fecha).toBe(fecha);
     if (docs.length === 1) expect(docs[0].total).toBe(2);

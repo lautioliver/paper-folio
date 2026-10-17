@@ -4,10 +4,7 @@ import { VisitaDiaria } from "@/models/VisitaDiaria";
 import { VisitanteDiario } from "@/models/VisitanteDiario";
 import { listarProyectos } from "./contenido";
 import { asegurarIndicesDe, conectar } from "./db";
-import { fechaDeMetrica, ZONA_METRICAS } from "./fecha-metricas";
-
-/** Zona de las fechas de las métricas (épica #53, decisión 1). */
-export const ZONA_VISITAS = ZONA_METRICAS;
+import { fechaDeMetrica } from "./fecha-metricas";
 
 export type DatosVisita = {
   /** Ruta de la página, como la manda el navegador (se normaliza acá). */
