@@ -129,7 +129,7 @@ export async function responderConsulta(
   texto: unknown,
   autor: string,
   transporte?: TransporteEmail,
-  opciones: { timeoutMs?: number } = {},
+  opciones: { timeoutMs?: number; seguir?: (tarea: Promise<void>) => void } = {},
 ): Promise<ResultadoRespuesta> {
   exigirAutor(autor, "responderConsulta");
   // El navegador manda los saltos de línea como CRLF, pero el `maxLength` del textarea los cuenta como uno.

@@ -264,19 +264,18 @@ describe("responderConsulta: la reserva desaparece mientras se envía (hallazgo 
 });
 
 describe("responderConsulta: reintento después de un timeout (#66)", () => {
-  // Gmail tarda más que el timeout, pero el envío no se cancela y termina saliendo.
-  function transporteLento(demoraMs: number) {
+  // Gmail tarda más que el timeout, pero el envío no se cancela y termina (sale o falla) después.
+  function transporteLento(demoraMs: number, falla?: Error) {
     const enviados: SendMailOptions[] = [];
-    const terminados: Promise<unknown>[] = [];
     const t: TransporteEmail = {
       sendMail: (m) => {
         enviados.push(m);
-        const p = new Promise((r) => setTimeout(() => r({ messageId: "tarde" }), demoraMs));
-        terminados.push(p);
-        return p;
+        return new Promise((ok, mal) =>
+          setTimeout(() => (falla ? mal(falla) : ok({ messageId: "tarde" })), demoraMs),
+        );
       },
     };
-    return { t, enviados, terminados };
+    return { t, enviados };
   }
 
   afterEach(() => {
@@ -286,31 +285,68 @@ describe("responderConsulta: reintento después de un timeout (#66)", () => {
   it("antes de que venza la reserva, un segundo intento recibe en-envio y no manda otro email", async () => {
     const id = await insertar();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const { t, enviados, terminados } = transporteLento(300);
-    const primera = await responderConsulta(id, "Primera", AUTOR, t, { timeoutMs: 50 });
+    const { t, enviados } = transporteLento(300);
+    let tarea: Promise<void> | undefined;
+    const seguir = (p: Promise<void>) => {
+      tarea = p;
+    };
+    const primera = await responderConsulta(id, "Primera", AUTOR, t, { timeoutMs: 50, seguir });
     expect(primera).toMatchObject({ ok: false, error: "envio-fallido" });
     if (!primera.ok) expect(primera.mensaje).toMatch(/puede haber llegado/);
+    // Mientras el envío sigue, la entrada queda pendiente: la reserva bloquea el reintento.
+    const enVuelo = await leer(id);
+    expect(enVuelo?.seguimiento[0]).toMatchObject({ tipo: "respuesta", texto: "Primera" });
+    expect(enVuelo?.seguimiento[0]).not.toHaveProperty("emailEnviado");
 
     const segunda = await responderConsulta(id, "Segunda", AUTOR, t, { timeoutMs: 50 });
     expect(segunda).toMatchObject({ ok: false, error: "en-envio" });
-    await Promise.all(terminados);
+    expect(tarea).toBeDefined();
+    await tarea;
     // El primer envío salió tarde: el visitante recibe un solo email.
     expect(enviados).toHaveLength(1);
     const doc = await leer(id);
+    expect(doc?.seguimiento.filter((e: { tipo: string }) => e.tipo === "respuesta")).toHaveLength(1);
+  });
+
+  it("si el envío sale después del timeout, lo registra como enviado y pasa la consulta a respondida", async () => {
+    const id = await insertar();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { t } = transporteLento(100);
+    let tarea: Promise<void> | undefined;
+    await responderConsulta(id, "Hola", AUTOR, t, { timeoutMs: 20, seguir: (p) => (tarea = p) });
+    expect(tarea).toBeDefined();
+    await tarea;
+    const doc = await leer(id);
+    expect(doc?.estado).toBe("respondida");
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: true });
+  });
+
+  it("si el envío falla después del timeout, lo registra como no enviado y se puede volver a responder", async () => {
+    const id = await insertar();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const error = Object.assign(new Error(`Invalid login: ${GMAIL_APP_PASSWORD}`), { code: "EAUTH" });
+    const { t } = transporteLento(100, error);
+    let tarea: Promise<void> | undefined;
+    await responderConsulta(id, "Hola", AUTOR, t, { timeoutMs: 20, seguir: (p) => (tarea = p) });
+    expect(tarea).toBeDefined();
+    await tarea;
+    const doc = await leer(id);
     expect(doc?.estado).toBe("en_curso");
-    const respuestas = doc?.seguimiento.filter((e: { tipo: string }) => e.tipo === "respuesta");
-    expect(respuestas).toHaveLength(1);
-    expect(respuestas?.[0]).toMatchObject({ texto: "Primera" });
-    expect(respuestas?.[0]).not.toHaveProperty("emailEnviado");
+    expect(doc?.seguimiento[0]).toMatchObject({ tipo: "respuesta", emailEnviado: false });
+    const logueado = log.mock.calls.flat().map(String).join(" ");
+    expect(logueado).toContain("EAUTH");
+    expect(logueado).not.toContain(GMAIL_APP_PASSWORD);
+    const otra = await responderConsulta(id, "Otra", AUTOR, transporteOk().t);
+    expect(otra).toMatchObject({ ok: true });
   });
 
   it("vencida la reserva, se puede volver a responder", async () => {
     const id = await insertar();
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const lento = transporteLento(100);
-    const primera = await responderConsulta(id, "Primera", AUTOR, lento.t, { timeoutMs: 20 });
+    // El envío no termina nunca (el proceso se cayó o quedó colgado): solo el vencimiento libera la reserva.
+    const colgado: TransporteEmail = { sendMail: () => new Promise(() => {}) };
+    const primera = await responderConsulta(id, "Primera", AUTOR, colgado, { timeoutMs: 20 });
     expect(primera).toMatchObject({ ok: false, error: "envio-fallido" });
-    await Promise.all(lento.terminados);
 
     // Solo el reloj de `Date`: los timers reales siguen andando para Mongo y el transporte.
     vi.useFakeTimers({ toFake: ["Date"] });
