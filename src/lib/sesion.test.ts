@@ -72,6 +72,9 @@ describe("vueltaDeAuthJs (la ruta que Auth.js guardó al empezar el ingreso, #45
   beforeEach(() => {
     galletas.clear();
     cabeceras.clear();
+    vi.unstubAllEnvs();
+    vi.stubEnv("AUTH_URL", undefined);
+    vi.stubEnv("NEXTAUTH_URL", undefined);
   });
 
   it("en http lee authjs.callback-url y devuelve solo la ruta interna", async () => {
@@ -92,6 +95,18 @@ describe("vueltaDeAuthJs (la ruta que Auth.js guardó al empezar el ingreso, #45
     cabeceras.set("x-forwarded-proto", "http");
     galletas.set("__Secure-authjs.callback-url", "https://paperfolio.vercel.app/panel/consultas");
     expect(await vueltaDeAuthJs()).toBeUndefined();
+  });
+
+  it("con AUTH_URL manda su protocolo, como en Auth.js (code-review)", async () => {
+    vi.stubEnv("AUTH_URL", "https://paperfolio.example");
+    cabeceras.set("x-forwarded-proto", "http");
+    galletas.set("authjs.callback-url", "http://localhost:3000/cuenta");
+    galletas.set("__Secure-authjs.callback-url", "https://paperfolio.example/proyectos/a");
+    expect(await vueltaDeAuthJs()).toBe("/proyectos/a");
+    vi.stubEnv("AUTH_URL", "http://localhost:3000");
+    cabeceras.set("x-forwarded-proto", "https");
+    expect(await vueltaDeAuthJs()).toBe("/cuenta");
+    vi.unstubAllEnvs();
   });
 
   it("sin cookie o con una que lleva a otro sitio, undefined", async () => {
