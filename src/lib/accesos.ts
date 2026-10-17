@@ -8,10 +8,11 @@ export type { TipoAcceso };
 
 /**
  * Cuenta un acceso de un usuario registrado (épica #53, decisión 3): `ingreso` en cada ingreso con Google
- * (`registrarIngreso`) y `detalle` en cada vista de un caso de estudio (`verCasoDeEstudio`). Hace `$inc`
+ * (`registrarIngreso`) y `detalle` en cada vista de un caso de estudio (`/proyectos/[slug]`, con `after`). Hace `$inc`
  * atómico con upsert en `accesos_diarios` (un documento por día de Salta y tipo) y `$inc` de `usuarios.accesos`.
  *
- * Nunca lanza: si la base falla, loguea solo el nombre del error (el mensaje puede traer la URI) y devuelve
+ * Cuentan todos los roles, también `admin` (decisión de @lautioliver en #54; las visitas, en cambio, no cuentan a
+ * los admin). Nunca lanza: si la base falla, loguea solo el nombre del error (el mensaje puede traer la URI) y devuelve
  * `false`, así el ingreso o la página siguen. Con un id que no es de Mongo o un tipo desconocido no cuenta nada.
  */
 export async function registrarAcceso(usuarioId: string, tipo: TipoAcceso, ahora: Date = new Date()): Promise<boolean> {

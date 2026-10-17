@@ -99,6 +99,19 @@ describe("registrarIngreso cuenta el acceso (#54)", () => {
     expect((await Usuario.findById(r.id).lean())?.accesos).toBe(2);
   });
 
+  it("un admin que ingresa también suma un acceso, a diferencia de las visitas (decisión de @lautioliver en #54)", async () => {
+    // Admin por ADMIN_EMAILS y admin guardado en la base: los dos cuentan.
+    const porEntorno = await registrarIngreso({ email: "admin@example.com" }, ADMINS);
+    expect(porEntorno.rol).toBe("admin");
+    const guardado = await registrarIngreso({ email: "jefa@example.com" }, ADMINS);
+    await Usuario.updateOne({ _id: guardado.id }, { $set: { rol: "admin" } });
+    expect((await registrarIngreso({ email: "jefa@example.com" }, ADMINS)).rol).toBe("admin");
+    expect((await Usuario.findById(porEntorno.id).lean())?.accesos).toBe(1);
+    expect((await Usuario.findById(guardado.id).lean())?.accesos).toBe(2);
+    const docs = await AccesoDiario.find({ tipo: "ingreso" }, { _id: 0, total: 1 }).lean();
+    expect(docs.reduce((suma, d) => suma + d.total, 0)).toBe(3);
+  });
+
   it("una cuenta bloqueada no cuenta un acceso", async () => {
     const r = await registrarIngreso({ email: "ana@example.com" }, ADMINS);
     await Usuario.updateOne({ _id: r.id }, { $set: { bloqueado: true } });
