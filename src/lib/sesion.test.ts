@@ -14,7 +14,7 @@ vi.mock("next/headers", () => ({
 }));
 vi.mock("./usuarios", () => ({ buscarRol: (...a: unknown[]) => buscarRol(...a) }));
 
-import { esAdminLaSesion, vueltaDeAuthJs } from "./sesion";
+import { esAdminLaSesion } from "./sesion";
 
 beforeEach(() => {
   auth.mockReset();
@@ -68,50 +68,8 @@ describe("esAdminLaSesion (para no contar las visitas de los admin)", () => {
   });
 });
 
-describe("vueltaDeAuthJs (la ruta que Auth.js guardó al empezar el ingreso, #45)", () => {
-  beforeEach(() => {
-    galletas.clear();
-    cabeceras.clear();
-    vi.unstubAllEnvs();
-    vi.stubEnv("AUTH_URL", undefined);
-    vi.stubEnv("NEXTAUTH_URL", undefined);
-  });
-
-  it("en http lee authjs.callback-url y devuelve solo la ruta interna", async () => {
-    cabeceras.set("x-forwarded-proto", "http");
-    galletas.set("authjs.callback-url", "http://localhost:3000/proyectos/a");
-    expect(await vueltaDeAuthJs()).toBe("/proyectos/a");
-  });
-
-  it("en https lee solo la cookie __Secure-, como Auth.js (revisión del PR #73)", async () => {
-    cabeceras.set("x-forwarded-proto", "https");
-    galletas.set("authjs.callback-url", "https://paperfolio.vercel.app/cuenta");
-    expect(await vueltaDeAuthJs()).toBeUndefined();
-    galletas.set("__Secure-authjs.callback-url", "https://paperfolio.vercel.app/panel/consultas");
-    expect(await vueltaDeAuthJs()).toBe("/panel/consultas");
-  });
-
-  it("en http ignora la cookie __Secure-", async () => {
-    cabeceras.set("x-forwarded-proto", "http");
-    galletas.set("__Secure-authjs.callback-url", "https://paperfolio.vercel.app/panel/consultas");
-    expect(await vueltaDeAuthJs()).toBeUndefined();
-  });
-
-  it("con AUTH_URL manda su protocolo, como en Auth.js (code-review)", async () => {
-    vi.stubEnv("AUTH_URL", "https://paperfolio.example");
-    cabeceras.set("x-forwarded-proto", "http");
-    galletas.set("authjs.callback-url", "http://localhost:3000/cuenta");
-    galletas.set("__Secure-authjs.callback-url", "https://paperfolio.example/proyectos/a");
-    expect(await vueltaDeAuthJs()).toBe("/proyectos/a");
-    vi.stubEnv("AUTH_URL", "http://localhost:3000");
-    cabeceras.set("x-forwarded-proto", "https");
-    expect(await vueltaDeAuthJs()).toBe("/cuenta");
-    vi.unstubAllEnvs();
-  });
-
-  it("sin cookie o con una que lleva a otro sitio, undefined", async () => {
-    expect(await vueltaDeAuthJs()).toBeUndefined();
-    galletas.set("authjs.callback-url", "https://otro.sitio//x.com");
-    expect(await vueltaDeAuthJs()).toBeUndefined();
+describe("la cookie de Auth.js ya no se lee (decisión de @lautioliver en el PR #73)", () => {
+  it("sesion no expone vueltaDeAuthJs", async () => {
+    expect(Object.keys(await import("./sesion"))).not.toContain("vueltaDeAuthJs");
   });
 });

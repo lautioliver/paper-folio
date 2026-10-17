@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AVISOS_SIN_SESION, comprobarSesion, decidirIngreso, puedeVerPanel, rutaDeCookieDeVuelta } from "./ingreso";
+import { AVISOS_SIN_SESION, comprobarSesion, decidirIngreso, puedeVerPanel } from "./ingreso";
 
 describe("decidirIngreso", () => {
   it("sin sesión muestra la pantalla con el callbackUrl interno", () => {
@@ -169,54 +169,13 @@ describe("errores de Auth.js en /ingresar (#45)", () => {
     }
   });
 
-  it("con un error y sin callbackUrl en la query, vuelve a la ruta que Auth.js guardó al empezar el ingreso", () => {
-    // signIn (bloqueado, reintentar) y Auth.js (AccessDenied, Configuration…) mandan a /ingresar sin el callbackUrl.
+  it("ya no vuelve a la ruta de la cookie de Auth.js: con o sin sesión, el destino es el callbackUrl o / (decisión de @lautioliver en el PR #73)", () => {
+    // decidirIngreso ya no recibe la ruta guardada: si alguien la pasa, se ignora.
+    const conVuelta = (entrada: Parameters<typeof decidirIngreso>[0], vuelta: string) =>
+      decidirIngreso({ ...entrada, vueltaGuardada: vuelta } as Parameters<typeof decidirIngreso>[0]);
     for (const error of ["bloqueado", "reintentar", "AccessDenied", "Configuration", "OAuthCallbackError"]) {
-      expect(decidirIngreso({ sesion: "ninguna", error, vueltaGuardada: "/proyectos/a" }), error).toMatchObject({
-        accion: "mostrar",
-        callbackUrl: "/proyectos/a",
-      });
-    }
-    // Si en el medio quedó con sesión (la desbloquearon), redirige ahí.
-    expect(decidirIngreso({ sesion: "valida", error: "bloqueado", vueltaGuardada: "/proyectos/a" })).toEqual({
-      accion: "redirigir",
-      destino: "/proyectos/a",
-    });
-  });
-
-  it("la ruta guardada no pisa un callbackUrl de la query (ni uno inválido) y sin error no se usa", () => {
-    expect(decidirIngreso({ sesion: "ninguna", error: "AccessDenied", callbackUrl: "/cuenta", vueltaGuardada: "/proyectos/a" })).toMatchObject({
-      callbackUrl: "/cuenta",
-    });
-    expect(
-      decidirIngreso({ sesion: "ninguna", error: "AccessDenied", callbackUrl: "https://otro.sitio", vueltaGuardada: "/proyectos/a" }),
-    ).toMatchObject({ callbackUrl: "/" });
-    expect(decidirIngreso({ sesion: "ninguna", vueltaGuardada: "/proyectos/a" })).toMatchObject({ callbackUrl: "/" });
-    expect(decidirIngreso({ sesion: "valida", vueltaGuardada: "/proyectos/a" })).toEqual({ accion: "redirigir", destino: "/" });
-  });
-
-  it("la ruta guardada solo se usa con los errores que llegan en medio del ingreso, no con uno desconocido, repetido o error=sesion (code-review)", () => {
-    // La cookie de Auth.js no se borra al terminar: con un link armado no tiene que aparecer una ruta de otra vez.
-    for (const error of ["inventado", ["AccessDenied", "x"], "sesion", "SessionRequired"]) {
-      expect(decidirIngreso({ sesion: "ninguna", error, vueltaGuardada: "/panel/consultas" }), String(error)).toMatchObject({ callbackUrl: "/" });
-    }
-  });
-
-  it("una ruta guardada externa se ignora aunque llegue a decidirIngreso", () => {
-    expect(decidirIngreso({ sesion: "ninguna", error: "AccessDenied", vueltaGuardada: "//otro.sitio" })).toMatchObject({ callbackUrl: "/" });
-  });
-});
-
-describe("rutaDeCookieDeVuelta (la cookie callback-url de Auth.js, #45)", () => {
-  it("de la URL absoluta que guarda Auth.js se queda con la ruta interna, con su query", () => {
-    expect(rutaDeCookieDeVuelta("http://localhost:3000/proyectos/a?b=1#c")).toBe("/proyectos/a?b=1#c");
-    expect(rutaDeCookieDeVuelta("https://paperfolio.vercel.app/panel/consultas")).toBe("/panel/consultas");
-    expect(rutaDeCookieDeVuelta("/cuenta")).toBe("/cuenta");
-  });
-
-  it("nunca devuelve algo que lleve a otro sitio, ni lo que no es una URL http", () => {
-    for (const valor of [undefined, null, 42, "", "no es una url", "javascript:alert(1)", "https://otro.sitio//x.com", "//otro.sitio", "/\\otro.sitio", "data:text/html,hola"]) {
-      expect(rutaDeCookieDeVuelta(valor), String(valor)).toBeUndefined();
+      expect(conVuelta({ sesion: "ninguna", error }, "/proyectos/a"), error).toMatchObject({ accion: "mostrar", callbackUrl: "/" });
+      expect(conVuelta({ sesion: "valida", error }, "/api/auth/error?error=AccessDenied"), error).toEqual({ accion: "redirigir", destino: "/" });
     }
   });
 });
@@ -238,12 +197,6 @@ describe("ningún destino vuelve a /ingresar (revisión del PR #73: bucle de red
     "/ingresar#x",
   ];
 
-  it("con sesión válida, una ruta guardada que apunta a /ingresar redirige a / (no a sí misma)", () => {
-    for (const vuelta of aIngresar) {
-      expect(decidirIngreso({ sesion: "valida", error: "AccessDenied", vueltaGuardada: vuelta }), vuelta).toEqual({ accion: "redirigir", destino: "/" });
-    }
-  });
-
   it("un callbackUrl de la query que apunta a /ingresar también lleva a /", () => {
     for (const callbackUrl of aIngresar) {
       expect(decidirIngreso({ sesion: "valida", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
@@ -251,14 +204,8 @@ describe("ningún destino vuelve a /ingresar (revisión del PR #73: bucle de red
     }
   });
 
-  it("la cookie de Auth.js con /ingresar no da ruta de vuelta", () => {
-    expect(rutaDeCookieDeVuelta("https://paperfolio.vercel.app/ingresar?error=AccessDenied")).toBeUndefined();
-    expect(rutaDeCookieDeVuelta("https://paperfolio.vercel.app/ingresar/")).toBeUndefined();
-    expect(rutaDeCookieDeVuelta("/ingresar?error=bloqueado")).toBeUndefined();
-  });
-
   it("rutas que solo se parecen siguen valiendo", () => {
-    for (const ruta of ["/ingresarx", "/proyectos/ingresar", "/cuenta?volver=/ingresar"]) {
+    for (const ruta of ["/ingresarx", "/proyectos/ingresar", "/cuenta?volver=/ingresar", "/apix", "/proyectos/api", "/cuenta?desde=/api/x"]) {
       expect(decidirIngreso({ sesion: "valida", callbackUrl: ruta }), ruta).toEqual({ accion: "redirigir", destino: ruta });
     }
   });
@@ -268,5 +215,33 @@ describe("aviso de Configuration (decisión de @lautioliver en el PR #73)", () =
   it("ofrece reintentar y no culpa a la persona: el problema es del sitio", () => {
     expect(AVISOS_SIN_SESION.configuracion.boton).toBe("google");
     expect(AVISOS_SIN_SESION.configuracion.texto).toBe("Hubo un problema de nuestro lado al iniciar sesión. Probá de nuevo en un rato.");
+  });
+});
+
+describe("ningún destino bajo /api/ (segunda revisión del PR #73: bucle por las rutas de Auth.js)", () => {
+  // /api/auth/error, /api/auth/callback/google y /api/auth/signin/google vuelven a /ingresar?error=… sin callbackUrl.
+  const aApi = [
+    "/api/auth/error?error=AccessDenied",
+    "/api/auth/callback/google",
+    "/api/auth/signin/google",
+    "/api",
+    "/api/",
+    "/API/auth/error",
+    "/%61pi/auth/error",
+    "/./api/auth/error",
+    "//api/auth/error",
+  ];
+
+  it("un callbackUrl a /api/… lleva a /, con o sin sesión", () => {
+    for (const callbackUrl of aApi) {
+      expect(decidirIngreso({ sesion: "valida", error: "AccessDenied", callbackUrl }), callbackUrl).toEqual({ accion: "redirigir", destino: "/" });
+      expect(decidirIngreso({ sesion: "ninguna", error: "Configuration", callbackUrl }), callbackUrl).toMatchObject({ callbackUrl: "/" });
+    }
+  });
+});
+
+describe("la cookie de Auth.js ya no se lee (decisión de @lautioliver en el PR #73)", () => {
+  it("ingreso no expone nada para leerla", async () => {
+    expect(Object.keys(await import("./ingreso"))).not.toContain("rutaDeCookieDeVuelta");
   });
 });

@@ -28,7 +28,7 @@ describe("ingresarConGoogle (#45)", () => {
   });
 
   it("un callbackUrl externo, a /ingresar, un archivo o ninguno vuelven a /", async () => {
-    for (const valor of ["https://otro.sitio", "//otro.sitio", "/ingresar?error=AccessDenied", "/ingresar/", new File(["x"], "a.txt"), undefined]) {
+    for (const valor of ["https://otro.sitio", "//otro.sitio", "/ingresar?error=AccessDenied", "/ingresar/", "/api/auth/error?error=AccessDenied", new File(["x"], "a.txt"), undefined]) {
       signIn.mockReset();
       await ingresarConGoogle(formulario(valor));
       expect(signIn).toHaveBeenCalledWith("google", { redirectTo: "/" });
