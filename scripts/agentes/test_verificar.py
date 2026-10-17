@@ -13,7 +13,7 @@ import unittest
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)
-from verificar import dependencias_viejas  # noqa: E402
+from verificar import dependencias_viejas, usa_npm  # noqa: E402
 
 COMANDO = "npm ci --ignore-scripts"
 GIT_ENV = {
@@ -81,6 +81,20 @@ def entorno(**extra):
 def mapa(*reglas):
     return {"docs": [], "sensibles": [], "verificar": [
         {"nombre": nombre, "siempre": True, "correr": correr} for nombre, correr in reglas]}
+
+
+class UsaNpm(unittest.TestCase):
+    """Decide si el aviso importa: solo con verificaciones que corren npm o npx."""
+
+    def test_reconoce_npm_y_npx(self):
+        for cmd in ("npm run lint", "npx vitest related a.ts --run", "cd x && npm test"):
+            with self.subTest(cmd=cmd):
+                self.assertTrue(usa_npm(cmd))
+
+    def test_ignora_otros_comandos_y_los_sin_configurar(self):
+        for cmd in ("pnpm test", "npm-run-all", "TODO: npm run lint", "python3 scripts/agentes/check-docs.py"):
+            with self.subTest(cmd=cmd):
+                self.assertFalse(usa_npm(cmd))
 
 
 class VerificarDePunta(unittest.TestCase):
