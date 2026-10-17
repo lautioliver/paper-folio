@@ -76,6 +76,12 @@ describe("vueltaDeAuthJs (la ruta que Auth.js guardó al empezar el ingreso, #45
     expect(await vueltaDeAuthJs()).toBe("/panel/consultas");
   });
 
+  it("si la cookie __Secure- no sirve, prueba la otra (code-review)", async () => {
+    galletas.set("__Secure-authjs.callback-url", "https://otro.sitio//x.com");
+    galletas.set("authjs.callback-url", "http://localhost:3000/proyectos/a");
+    expect(await vueltaDeAuthJs()).toBe("/proyectos/a");
+  });
+
   it("sin cookie o con una que lleva a otro sitio, undefined", async () => {
     expect(await vueltaDeAuthJs()).toBeUndefined();
     galletas.set("authjs.callback-url", "https://otro.sitio//x.com");

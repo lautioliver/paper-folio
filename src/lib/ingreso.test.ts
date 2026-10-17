@@ -195,6 +195,13 @@ describe("errores de Auth.js en /ingresar (#45)", () => {
     expect(decidirIngreso({ sesion: "valida", vueltaGuardada: "/proyectos/a" })).toEqual({ accion: "redirigir", destino: "/" });
   });
 
+  it("la ruta guardada solo se usa con los errores que llegan en medio del ingreso, no con uno desconocido, repetido o error=sesion (code-review)", () => {
+    // La cookie de Auth.js no se borra al terminar: con un link armado no tiene que aparecer una ruta de otra vez.
+    for (const error of ["inventado", ["AccessDenied", "x"], "sesion", "SessionRequired"]) {
+      expect(decidirIngreso({ sesion: "ninguna", error, vueltaGuardada: "/panel/consultas" }), String(error)).toMatchObject({ callbackUrl: "/" });
+    }
+  });
+
   it("una ruta guardada externa se ignora aunque llegue a decidirIngreso", () => {
     expect(decidirIngreso({ sesion: "ninguna", error: "AccessDenied", vueltaGuardada: "//otro.sitio" })).toMatchObject({ callbackUrl: "/" });
   });
