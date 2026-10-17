@@ -37,7 +37,7 @@ afterAll(async () => {
 });
 
 async function crearUsuario(email = "ana@example.com"): Promise<string> {
-  const doc = await Usuario.create({ email, ultimoAcceso: new Date(), bloqueado: false });
+  const doc = await new Usuario({ email, ultimoAcceso: new Date() }).save();
   return String(doc._id);
 }
 
