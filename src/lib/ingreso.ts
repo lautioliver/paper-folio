@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Rol } from "@/models/Usuario";
-import { evaluarAcceso, rutaInterna, type EstadoRol, type SesionMinima } from "./acceso";
+import { esquemaRutaInterna, evaluarAcceso, rutaInterna, type EstadoRol, type SesionMinima } from "./acceso";
 
 /** Estado de la sesión visto desde /ingresar: sin token, token con usuario en la base, o token huérfano. */
 // "error": hay token pero no se pudo comprobar contra la base (no responde).
@@ -23,7 +23,8 @@ export type DecisionIngreso =
  * - "google": Google no completó el ingreso (la persona lo canceló, o falló el intercambio con Google).
  * - "cuenta-no-vinculada": el email ya está vinculado a otra forma de ingreso.
  * - "vencido": el ingreso venció antes de terminar (CSRF o link vencido).
- * - "configuracion": falla del sitio; reintentar no lo arregla.
+ * - "configuracion": Auth.js manda así todo lo que no muestra al cliente (configuración, la base caída en el
+ *   callback `jwt`, el intercambio con Google): no se promete que reintentar lo arregle.
  * - "generico": cualquier otro código, o un `error` repetido. Nunca se muestra el texto de la URL.
  */
 export type AvisoIngreso =
@@ -85,7 +86,15 @@ const AVISO_DE_ERROR = {
 // Un solo `error`, string. Repetido (?error=a&error=b) llega como array: no es un pedido normal y va al genérico.
 const errorDeLaUrl = z.string().optional();
 // El `callbackUrl` de la URL: un solo string y ruta interna; si no, "/".
-const rutaDeLaUrl = z.string().refine((ruta) => rutaInterna(ruta) === ruta);
+const rutaDeLaUrl = esquemaRutaInterna.catch("/");
+// Los errores que llegan en medio de un ingreso (de `signIn` o de Auth.js), sin `callbackUrl`. Solo con ellos se
+// usa la ruta guardada: la cookie de Auth.js no se borra al terminar, y un link armado (un código inventado, uno
+// repetido, `error=sesion`) no tiene que llevar a la ruta de otro ingreso.
+const SIN_VUELTA_GUARDADA: ReadonlySet<string> = new Set(["sesion", "SessionRequired"]);
+function esErrorDelIngreso(error: unknown): boolean {
+  const conocido = errorConocido.safeParse(error);
+  return conocido.success && !SIN_VUELTA_GUARDADA.has(conocido.data);
+}
 
 /** Aviso para el `error` de la URL sin sesión: uno por código conocido, "generico" para el resto. */
 function avisoDeError(error: unknown): AvisoIngreso {
@@ -97,12 +106,12 @@ function avisoDeError(error: unknown): AvisoIngreso {
 }
 
 /**
- * A dónde volver después de ingresar. Manda el `callbackUrl` de la query; si no hay y vino un `error`, la ruta
- * que Auth.js guardó al empezar el ingreso (`vueltaGuardada`): ni `signIn` ni Auth.js lo pasan al mandar acá.
+ * A dónde volver después de ingresar. Manda el `callbackUrl` de la query; si no hay y vino un error del ingreso,
+ * la ruta que Auth.js guardó al empezar (`vueltaGuardada`): ni `signIn` ni Auth.js la pasan al mandar acá.
  */
-function destinoDeVuelta(callbackUrl: unknown, vueltaGuardada: unknown, conError: boolean): string {
-  if (callbackUrl === undefined && conError) return rutaDeLaUrl.catch("/").parse(vueltaGuardada);
-  return rutaDeLaUrl.catch("/").parse(callbackUrl);
+function destinoDeVuelta(callbackUrl: unknown, vueltaGuardada: unknown, error: unknown): string {
+  if (callbackUrl === undefined && esErrorDelIngreso(error)) return rutaDeLaUrl.parse(vueltaGuardada);
+  return rutaDeLaUrl.parse(callbackUrl);
 }
 
 /**
@@ -117,8 +126,7 @@ export function decidirIngreso(entrada: {
   /** La ruta de la cookie callback-url de Auth.js (`rutaDeCookieDeVuelta`). */
   vueltaGuardada?: string;
 }): DecisionIngreso {
-  const conError = entrada.error !== undefined && entrada.error !== "";
-  const callbackUrl = destinoDeVuelta(entrada.callbackUrl, entrada.vueltaGuardada, conError);
+  const callbackUrl = destinoDeVuelta(entrada.callbackUrl, entrada.vueltaGuardada, entrada.error);
   const errorDeSesion = entrada.error === "sesion";
   // Sin poder comprobar la base no se sabe si la sesión sirve: no se redirige (podría rebotar).
   if (entrada.sesion === "error") return { accion: "mostrar", aviso: "verificacion", callbackUrl };

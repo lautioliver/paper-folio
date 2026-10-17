@@ -57,8 +57,8 @@ const COOKIES_DE_VUELTA = ["__Secure-authjs.callback-url", "authjs.callback-url"
 export async function vueltaDeAuthJs(): Promise<string | undefined> {
   const galletas = await cookies();
   for (const nombre of COOKIES_DE_VUELTA) {
-    const valor = galletas.get(nombre)?.value;
-    if (valor !== undefined) return rutaDeCookieDeVuelta(valor);
+    const ruta = rutaDeCookieDeVuelta(galletas.get(nombre)?.value);
+    if (ruta !== undefined) return ruta;
   }
   return undefined;
 }

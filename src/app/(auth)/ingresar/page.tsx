@@ -3,15 +3,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Container } from "@/components/Container";
-import { decidirIngreso } from "@/lib/ingreso";
+import { decidirIngreso, type AvisoIngreso } from "@/lib/ingreso";
 import { estadoDeSesion, vueltaDeAuthJs } from "@/lib/sesion";
 import { ingresarConGoogle, ingresarConOtraCuenta, salir, salirEIngresarDeNuevo } from "@/lib/sesion-acciones";
 
 export const metadata: Metadata = { title: "Ingresar", robots: { index: false } };
 
+// Los avisos con sesión tienen su propia pantalla; todos los demás tienen que estar en AVISOS_SIN_SESION.
+type AvisoSinSesion = Exclude<AvisoIngreso, "sesion" | "bloqueada" | "verificacion" | null>;
+
 // Avisos sin sesión, según el `error` de la URL (`decidirIngreso`): el texto es siempre uno de estos, nunca el de
 // la URL. `boton`: "google" reintenta con la misma cuenta; "otra-cuenta" abre el selector de cuentas de Google;
-// null no ofrece reintentar (Configuration es una falla del sitio: reintentar no la arregla).
+// null no ofrece reintentar (Configuration: una falla del sitio, que reintentar en seguida no tiene por qué arreglar).
 const AVISOS_SIN_SESION = {
   "ingreso-bloqueado": {
     texto:
@@ -36,9 +39,9 @@ const AVISOS_SIN_SESION = {
     boton: null,
   },
   generico: { texto: "No pudimos completar el ingreso. Probá de nuevo.", boton: "google" },
-} as const satisfies Record<string, { texto: string; boton: "google" | "otra-cuenta" | null }>;
+} as const satisfies Record<AvisoSinSesion, { texto: string; boton: "google" | "otra-cuenta" | null }>;
 
-function esAvisoSinSesion(aviso: string | null): aviso is keyof typeof AVISOS_SIN_SESION {
+function esAvisoSinSesion(aviso: AvisoIngreso): aviso is AvisoSinSesion {
   return aviso !== null && Object.hasOwn(AVISOS_SIN_SESION, aviso);
 }
 
