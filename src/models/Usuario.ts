@@ -12,7 +12,7 @@ const usuarioSchema = new Schema(
     ultimoAcceso: { type: Date, required: true },
     // #49. Sin `required`: los documentos de antes no los tienen (ver `normalizarLegados` en src/lib/usuarios.ts).
     bloqueado: { type: Boolean, default: false },
-    // Ingresos contados con `$inc` (hito 6, D2). Acá solo se muestra.
+    // Ingresos y vistas de casos de estudio, contados con `$inc` por `registrarAcceso` (#54, src/lib/accesos.ts).
     accesos: { type: Number, default: 0, min: 0 },
   },
   // Igual que Consulta: sin autoIndex ni autoCreate (ver `conectar()`); el índice lo crea `asegurarIndices()`
