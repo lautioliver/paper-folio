@@ -1,7 +1,9 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { conectar, desconectar } from "./db";
+import { fechaDeMetrica } from "./fecha-metricas";
 import { buscarRol, CuentaBloqueadaError, normalizarLegados, registrarIngreso, usuarioBloqueado } from "./usuarios";
+import { AccesoDiario } from "@/models/AccesoDiario";
 import { Usuario } from "@/models/Usuario";
 
 const ADMINS = " Admin@Example.com , otra@example.com";
@@ -18,6 +20,11 @@ beforeAll(async () => {
 beforeEach(async () => {
   await conectar();
   await Usuario.deleteMany({});
+  await AccesoDiario.deleteMany({});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -36,9 +43,9 @@ describe("registrarIngreso", () => {
     expect(doc?.ultimoAcceso).toBeInstanceOf(Date);
   });
 
-  it("un usuario nuevo queda con bloqueado false y accesos 0 (#49)", async () => {
+  it("un usuario nuevo queda con bloqueado false y su primer ingreso contado (#49, #54)", async () => {
     const r = await registrarIngreso({ email: "nuevo@example.com" }, ADMINS);
-    expect(await Usuario.findById(r.id).lean()).toMatchObject({ rol: "usuario", bloqueado: false, accesos: 0 });
+    expect(await Usuario.findById(r.id).lean()).toMatchObject({ rol: "usuario", bloqueado: false, accesos: 1 });
   });
 
   it("un email de ADMIN_EMAILS ingresa como admin, sin guardar admin en la base (así sacarlo de la lista lo revoca)", async () => {
@@ -76,6 +83,39 @@ describe("registrarIngreso", () => {
   it("el índice de email es único", async () => {
     await registrarIngreso({ email: "u@example.com" }, ADMINS);
     await expect(Usuario.create({ email: "u@example.com", ultimoAcceso: new Date() })).rejects.toThrow(/duplicate key/);
+  });
+});
+
+describe("registrarIngreso cuenta el acceso (#54)", () => {
+  it("dos ingresos del mismo usuario el mismo día dan accesos_diarios con total: 2 y usuarios.accesos en 2", async () => {
+    const fecha = fechaDeMetrica(new Date());
+    const r = await registrarIngreso({ email: "ana@example.com" }, ADMINS);
+    await registrarIngreso({ email: "ana@example.com" }, ADMINS);
+    // Si el test cruzó la medianoche de Salta, cada ingreso cayó en un día distinto: se suman los dos.
+    const docs = await AccesoDiario.find({ tipo: "ingreso" }, { _id: 0, total: 1, fecha: 1 }).lean();
+    expect(docs.reduce((suma, d) => suma + d.total, 0)).toBe(2);
+    expect(docs[0].fecha).toBe(fecha);
+    if (docs.length === 1) expect(docs[0].total).toBe(2);
+    expect((await Usuario.findById(r.id).lean())?.accesos).toBe(2);
+  });
+
+  it("una cuenta bloqueada no cuenta un acceso", async () => {
+    const r = await registrarIngreso({ email: "ana@example.com" }, ADMINS);
+    await Usuario.updateOne({ _id: r.id }, { $set: { bloqueado: true } });
+    await expect(registrarIngreso({ email: "ana@example.com" }, ADMINS)).rejects.toBeInstanceOf(CuentaBloqueadaError);
+    expect((await Usuario.findById(r.id).lean())?.accesos).toBe(1);
+    expect((await AccesoDiario.findOne({ tipo: "ingreso" }).lean())?.total).toBe(1);
+  });
+
+  it("si la base falla al contar, el ingreso no se corta", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(AccesoDiario, "updateOne").mockRejectedValue(
+      Object.assign(new Error("mongodb://usuario:secreto@host"), { name: "MongoServerError" }),
+    );
+    const r = await registrarIngreso({ email: "ana@example.com" }, ADMINS);
+    expect(r).toMatchObject({ email: "ana@example.com", rol: "usuario" });
+    expect(error).toHaveBeenCalled();
+    expect(JSON.stringify(error.mock.calls)).not.toContain("secreto");
   });
 });
 
@@ -140,7 +180,8 @@ describe("usuarios de antes de #49 (sin bloqueado ni accesos)", () => {
     const id = await legado("ex@example.com", "admin");
     const r = await registrarIngreso({ email: "ex@example.com" }, ADMINS);
     expect(r).toMatchObject({ id, rol: "usuario" });
-    expect(await Usuario.findById(id).lean()).toMatchObject({ rol: "usuario", bloqueado: false, accesos: 0 });
+    // Sin `accesos` guardado: el `$inc` del ingreso (#54) lo deja en 1.
+    expect(await Usuario.findById(id).lean()).toMatchObject({ rol: "usuario", bloqueado: false, accesos: 1 });
   });
 });
 
