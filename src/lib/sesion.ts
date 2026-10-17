@@ -1,10 +1,9 @@
-import { cookies, headers } from "next/headers";
 import { connection } from "next/server";
 import type { Session } from "next-auth";
 import { auth } from "@/auth";
 import { evaluarAcceso } from "./acceso";
 import { EnvInvalidoError } from "./env";
-import { comprobarSesion, rutaDeCookieDeVuelta, type EstadoSesion } from "./ingreso";
+import { comprobarSesion, type EstadoSesion } from "./ingreso";
 import { buscarRol } from "./usuarios";
 
 export type SesionDeLaApp = Session | null;
@@ -45,28 +44,6 @@ export async function estadoDeSesion(): Promise<{ estado: EstadoSesion; configur
     return { estado: "ninguna", configurado: true };
   }
   return { estado: await comprobarSesion(sesion, (id) => buscarRol(id)), configurado: true };
-}
-
-function protocoloDeAuthUrl(): string | undefined {
-  const url = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
-  if (!url) return undefined;
-  try {
-    return new URL(url).protocol.replace(":", "");
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * La ruta a la que volver según la cookie callback-url de Auth.js, solo si es interna (`rutaDeCookieDeVuelta`).
- * /ingresar la usa cuando llega un error sin `callbackUrl`: ni `signIn` ni Auth.js lo pasan al mandar ahí.
- * Lee solo la cookie que usa Auth.js según el protocolo (con https, la del prefijo __Secure-), y lo elige como
- * Auth.js: el de `AUTH_URL` (o `NEXTAUTH_URL`) si está, y si no el del pedido.
- */
-export async function vueltaDeAuthJs(): Promise<string | undefined> {
-  const protocolo = protocoloDeAuthUrl() ?? (await headers()).get("x-forwarded-proto")?.split(",")[0]?.trim();
-  const nombre = protocolo === "https" ? "__Secure-authjs.callback-url" : "authjs.callback-url";
-  return rutaDeCookieDeVuelta((await cookies()).get(nombre)?.value);
 }
 
 /**

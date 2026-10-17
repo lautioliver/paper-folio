@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Container } from "@/components/Container";
 import { AVISOS_SIN_SESION, decidirIngreso, esAvisoSinSesion } from "@/lib/ingreso";
-import { estadoDeSesion, vueltaDeAuthJs } from "@/lib/sesion";
+import { estadoDeSesion } from "@/lib/sesion";
 import { ingresarConGoogle, ingresarConOtraCuenta, salir, salirEIngresarDeNuevo } from "@/lib/sesion-acciones";
 
 export const metadata: Metadata = { title: "Ingresar", robots: { index: false } };
@@ -13,13 +13,8 @@ const BOTON = "marca apretable inline-flex min-h-11 items-center justify-center 
 
 async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParams"] }) {
   const { error, callbackUrl } = await params;
-  // La ruta guardada solo sirve si vino un error sin `callbackUrl` (`decidirIngreso`): si no, ni se lee.
-  const leerVuelta = error !== undefined && callbackUrl === undefined;
-  const [{ estado, configurado }, vueltaGuardada] = await Promise.all([
-    estadoDeSesion(),
-    leerVuelta ? vueltaDeAuthJs() : undefined,
-  ]);
-  const decision = decidirIngreso({ sesion: estado, error, callbackUrl, vueltaGuardada });
+  const { estado, configurado } = await estadoDeSesion();
+  const decision = decidirIngreso({ sesion: estado, error, callbackUrl });
   if (decision.accion === "redirigir") redirect(decision.destino);
 
   if (!configurado) {

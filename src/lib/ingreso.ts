@@ -119,37 +119,31 @@ const AVISO_DE_ERROR = {
 // Un solo `error`, string. Repetido (?error=a&error=b) llega como array: no es un pedido normal y va al genérico.
 const errorDeLaUrl = z.string().optional();
 /**
- * Si una ruta lleva a /ingresar. Normaliza como lo haría el pedido: "." y "..", los %XX (también una "/"
- * codificada), mayúsculas, barras repetidas y la final (Next la redirige).
+ * Si una ruta no sirve para volver después de ingresar: /ingresar (con sesión válida se redirigiría a sí misma) o
+ * algo bajo /api/ (no son páginas, y las de Auth.js vuelven a /ingresar?error=… sin `callbackUrl`). Normaliza como
+ * lo haría el pedido: "." y "..", los %XX del camino (también una "/" codificada), mayúsculas, barras repetidas y
+ * la final (Next la redirige). La query no cuenta.
  */
-function apuntaAIngreso(ruta: string): boolean {
+function destinoProhibido(ruta: string): boolean {
   try {
     const base = "http://ruta.invalid";
     const camino = new URL(decodeURIComponent(new URL(ruta, base).pathname), base).pathname;
-    return camino.toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "") === RUTA_INGRESO;
+    const normal = camino.toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+    return normal === RUTA_INGRESO || normal === "/api" || normal.startsWith("/api/");
   } catch {
-    // Un %XX inválido: no se sabe a dónde va, así que no sirve de destino.
+    // Un %XX inválido en el camino: no se sabe a dónde va, así que no sirve de destino.
     return true;
   }
 }
 
 /**
  * Zod: a dónde puede volver /ingresar después de ingresar. Una ruta interna (`esquemaRutaInterna`) que no sea
- * /ingresar: con sesión válida, /ingresar redirigiría a sí misma sin fin (revisión del PR #73).
+ * /ingresar ni esté bajo /api/ (revisión del PR #73: bucles de redirecciones con sesión válida).
  */
-export const esquemaDestinoDeIngreso = esquemaRutaInterna.refine((ruta) => !apuntaAIngreso(ruta));
+export const esquemaDestinoDeIngreso = esquemaRutaInterna.refine((ruta) => !destinoProhibido(ruta));
 
 // El `callbackUrl` de la URL: un solo string y destino válido; si no, "/".
 const rutaDeLaUrl = esquemaDestinoDeIngreso.catch("/");
-// Los errores que llegan en medio de un ingreso (de `signIn` o de Auth.js), sin `callbackUrl`. Solo con ellos se
-// usa la ruta guardada: la cookie de Auth.js no se borra al terminar, y un link armado (un código inventado, uno
-// repetido, `error=sesion`) no tiene que llevar a la ruta de otro ingreso.
-const SIN_VUELTA_GUARDADA: ReadonlySet<string> = new Set(["sesion", "SessionRequired"]);
-function esErrorDelIngreso(error: unknown): boolean {
-  const conocido = errorConocido.safeParse(error);
-  return conocido.success && !SIN_VUELTA_GUARDADA.has(conocido.data);
-}
-
 /** Aviso para el `error` de la URL sin sesión: uno por código conocido, "generico" para el resto. */
 function avisoDeError(error: unknown): AvisoIngreso {
   const leido = errorDeLaUrl.safeParse(error);
@@ -160,27 +154,18 @@ function avisoDeError(error: unknown): AvisoIngreso {
 }
 
 /**
- * A dónde volver después de ingresar. Manda el `callbackUrl` de la query; si no hay y vino un error del ingreso,
- * la ruta que Auth.js guardó al empezar (`vueltaGuardada`): ni `signIn` ni Auth.js la pasan al mandar acá.
- */
-function destinoDeVuelta(callbackUrl: unknown, vueltaGuardada: unknown, error: unknown): string {
-  if (callbackUrl === undefined && esErrorDelIngreso(error)) return rutaDeLaUrl.parse(vueltaGuardada);
-  return rutaDeLaUrl.parse(callbackUrl);
-}
-
-/**
  * A dónde lleva /ingresar según la sesión, `error` y `callbackUrl` (ADR-002 R-5). Los dos se validan con Zod:
- * el `callbackUrl` tiene que ser una ruta interna (`rutaInterna`); uno externo, o repetido en la query, vuelve
- * a "/". Con `error=sesion` o con sesión huérfana no se redirige: devolverlo a la página lo haría rebotar.
+ * el `callbackUrl` tiene que ser un destino válido (`esquemaDestinoDeIngreso`); uno externo, a /ingresar o a
+ * /api/, o repetido en la query, vuelve a "/". Con `error=sesion` o con sesión huérfana no se redirige: devolverlo a la página lo haría rebotar.
  */
 export function decidirIngreso(entrada: {
   sesion: EstadoSesion;
   error?: string | string[];
   callbackUrl?: string | string[];
-  /** La ruta de la cookie callback-url de Auth.js (`rutaDeCookieDeVuelta`). */
-  vueltaGuardada?: string;
 }): DecisionIngreso {
-  const callbackUrl = destinoDeVuelta(entrada.callbackUrl, entrada.vueltaGuardada, entrada.error);
+  // Solo el `callbackUrl` de la query, o "/". Ni `signIn` ni Auth.js lo pasan cuando mandan acá con un error:
+  // ahí se vuelve a "/" (decisión de @lautioliver en el PR #73: recuperarlo de la cookie de Auth.js armaba bucles).
+  const callbackUrl = rutaDeLaUrl.parse(entrada.callbackUrl);
   const errorDeSesion = entrada.error === "sesion";
   // Sin poder comprobar la base no se sabe si la sesión sirve: no se redirige (podría rebotar).
   if (entrada.sesion === "error") return { accion: "mostrar", aviso: "verificacion", callbackUrl };
@@ -193,30 +178,6 @@ export function decidirIngreso(entrada: {
   if (entrada.sesion === "valida") return { accion: "redirigir", destino: callbackUrl };
   // Auth.js manda acá sus errores (`pages` en src/auth.ts) y `signIn` sus URLs (`permiteIngreso`).
   return { accion: "mostrar", aviso: avisoDeError(entrada.error), callbackUrl };
-}
-
-// La cookie callback-url de Auth.js: la URL absoluta (ya validada por su callback `redirect`, del mismo sitio) o
-// una ruta. Solo http(s).
-const urlDeLaCookie = z.string().min(1);
-
-/**
- * La ruta interna de la cookie callback-url que Auth.js guarda al empezar el ingreso (ruta, query y hash, sin el
- * origen). `undefined` si no hay cookie o si la ruta no es interna: nunca devuelve algo que lleve a otro sitio.
- */
-export function rutaDeCookieDeVuelta(valor: unknown): string | undefined {
-  const leido = urlDeLaCookie.safeParse(valor);
-  if (!leido.success) return undefined;
-  // Una ruta suelta tiene que ser interna tal cual ("//host" o una barra invertida llevarían a otro sitio).
-  if (leido.data.startsWith("/")) return esquemaDestinoDeIngreso.safeParse(leido.data).success ? leido.data : undefined;
-  let url: URL;
-  try {
-    url = new URL(leido.data);
-  } catch {
-    return undefined;
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
-  const ruta = `${url.pathname}${url.search}${url.hash}`;
-  return esquemaDestinoDeIngreso.safeParse(ruta).success ? ruta : undefined;
 }
 
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */

@@ -6,12 +6,6 @@ const auth = vi.fn();
 const buscarRol = vi.fn();
 vi.mock("@/auth", () => ({ auth: (...a: unknown[]) => auth(...a) }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
-const galletas = new Map<string, string>();
-const cabeceras = new Map<string, string>();
-vi.mock("next/headers", () => ({
-  headers: async () => ({ get: (nombre: string) => cabeceras.get(nombre.toLowerCase()) ?? null }),
-  cookies: async () => ({ get: (nombre: string) => (galletas.has(nombre) ? { name: nombre, value: galletas.get(nombre) } : undefined) }),
-}));
 vi.mock("./usuarios", () => ({ buscarRol: (...a: unknown[]) => buscarRol(...a) }));
 
 import { esAdminLaSesion } from "./sesion";
