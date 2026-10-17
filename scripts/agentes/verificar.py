@@ -14,9 +14,13 @@ Uso:
   verificar.py --base develop
   verificar.py --listar        # muestra qué correría, sin correr nada
 Sale con 1 si alguna verificación falla.
+Antes de correr, si alguna verificación usa npm o npx, avisa (sin reinstalar ni cambiar el código
+de salida) si package-lock.json es más nuevo que node_modules/.package-lock.json o no hay nada
+instalado, con el comando para reinstalar. Mira el repo o worktree donde corre.
 """
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -24,6 +28,41 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mapa import RAIZ, archivos_cambiados, coincide, existe, rama_base  # noqa: E402
+
+
+REINSTALAR = "npm ci --ignore-scripts"
+
+
+def dependencias_viejas(raiz):
+    """Devuelve un aviso si las dependencias de npm de `raiz` no corresponden a package-lock.json.
+
+    npm escribe node_modules/.package-lock.json recién al terminar de instalar bien: si falta
+    (sin instalar o a medias) o es más viejo que package-lock.json (un rebase o un merge trajo
+    otro lock), lint, typecheck y tests correrían contra otras dependencias. Sin package-lock.json
+    no hay nada que comparar. Solo avisa: no reinstala (#11).
+    """
+    lock = os.path.join(raiz, "package-lock.json")
+    instalado = os.path.join(raiz, "node_modules", ".package-lock.json")
+    if not os.path.isfile(lock):
+        return None
+    if not os.path.isfile(instalado):
+        problema = "no hay dependencias instaladas (falta node_modules/.package-lock.json)"
+    elif os.path.getmtime(lock) > os.path.getmtime(instalado):
+        problema = "package-lock.json es más nuevo que lo instalado en node_modules"
+    else:
+        return None
+    return (f"⚠ Dependencias viejas: {problema}. Las verificaciones de npm pueden fallar con errores "
+            f"confusos (módulos que no se encuentran) o dar resultados engañosos.\n"
+            f"  Reinstalá antes de seguir: {REINSTALAR}")
+
+
+def usa_npm(cmd):
+    """Si la verificación corre algo de npm (npm, npx) y no está sin configurar (TODO).
+
+    Mira solo las palabras npm y npx sueltas: no ve rutas (node_modules/.bin/…, /usr/bin/npm) ni
+    comillas, y cuenta un npm mencionado en un echo. Alcanza para las reglas del mapa de hoy.
+    """
+    return not cmd.startswith("TODO") and re.search(r"(^|[\s;&|(])np[mx](\s|$)", cmd) is not None
 
 
 def referencia_base(args, base):
@@ -60,12 +99,17 @@ def main():
             plan.append((r["nombre"], motivo, cmd))
 
     print(f"Cambios contra {base}: {len(cambiados)} archivo(s). Verificaciones: {len(plan)}.\n")
+    # Solo importa si alguna verificación que va a correr usa npm.
+    aviso = dependencias_viejas(RAIZ) if any(usa_npm(cmd) for _, _, cmd in plan) else None
+    if aviso:
+        print(aviso + "\n", flush=True)
     if "--listar" in args:
         for nombre, motivo, cmd in plan:
             print(f"- {nombre} ({motivo})\n    {cmd}")
         return
 
     resultados = []
+    fallo_npm = False  # para el recordatorio final: solo si falló algo que usa npm
     for nombre, motivo, cmd in plan:
         if cmd.startswith("TODO"):
             resultados.append((nombre, "sin configurar", 0))
@@ -74,6 +118,7 @@ def main():
         t0 = time.time()
         ok = subprocess.run(cmd, shell=True).returncode == 0
         resultados.append((nombre, "ok" if ok else "FALLÓ", time.time() - t0))
+        fallo_npm = fallo_npm or (not ok and usa_npm(cmd))
         print(flush=True)
 
     print("Resultado:")
@@ -82,6 +127,8 @@ def main():
     sin_config = [n for n, e, _ in resultados if e == "sin configurar"]
     if any(e == "FALLÓ" for _, e, _ in resultados):
         print("\nHay verificaciones que fallan: corregilas antes de abrir el PR. No las desactives.")
+        if aviso and fallo_npm:
+            print(f"Las dependencias estaban viejas: corré {REINSTALAR} y volvé a verificar antes de buscar la causa.")
         sys.exit(1)
     if sin_config:
         print(f"\nPasó lo configurado, pero {', '.join(sin_config)} no se verificó: falta el comando en "
