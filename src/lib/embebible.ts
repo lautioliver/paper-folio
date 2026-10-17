@@ -191,6 +191,12 @@ export async function consultarEmbebible(
   }
 }
 
+export type CabecerasDemo = { url: string; xFrameOptions: string | null; contentSecurityPolicy: string | null };
+
+export async function cabecerasDeDemo(_url: string): Promise<CabecerasDemo | null> {
+  return null;
+}
+
 /**
  * `consultarEmbebible` cacheada: un pedido externo por URL, no por visita. El resultado dura horas; si no se
  * pudo saber, minutos. Va con el tag del contenido, así un cambio desde el panel también la recalcula (y una

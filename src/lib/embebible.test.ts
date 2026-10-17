@@ -5,7 +5,7 @@ vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 
 import { cacheLife, cacheTag } from "next/cache";
 import { TAG_CONTENIDO } from "./contenido";
-import { consultarEmbebible, demoEmbebible, origenDelPedido, origenDelSitio, permiteEmbeber } from "./embebible";
+import { cabecerasDeDemo, consultarEmbebible, demoEmbebible, origenDelPedido, origenDelSitio, permiteEmbeber } from "./embebible";
 
 const SITIO = "https://paper-folio.vercel.app";
 const DEMO = "https://ucanode.app/";
@@ -71,10 +71,19 @@ describe("permiteEmbeber: CSP frame-ancestors", () => {
     expect(csp("frame-ancestors paper-folio.vercel.app")).toBe(true);
     expect(csp("frame-ancestors https://*.vercel.app")).toBe(true);
     expect(csp("frame-ancestors https://*.paper-folio.vercel.app")).toBe(false);
-    expect(csp("frame-ancestors https://paper-folio.vercel.app:443/alguna/ruta")).toBe(true);
+    expect(csp("frame-ancestors https://paper-folio.vercel.app:443/")).toBe(true);
+    expect(csp("frame-ancestors https://paper-folio.vercel.app/")).toBe(true);
     expect(csp("frame-ancestors https://paper-folio.vercel.app:8443")).toBe(false);
     expect(csp("frame-ancestors https://paper-folio.vercel.app:*")).toBe(true);
     expect(csp("frame-ancestors http://paper-folio.vercel.app")).toBe(true);
+  });
+
+  it("una fuente con ruta (distinta de /) no coincide: el navegador compara contra el origen, cuya ruta es /", () => {
+    expect(csp("frame-ancestors https://paper-folio.vercel.app:443/alguna/ruta")).toBe(false);
+    expect(csp("frame-ancestors https://paper-folio.vercel.app/proyectos/")).toBe(false);
+    expect(csp("frame-ancestors paper-folio.vercel.app/proyectos")).toBe(false);
+    expect(csp("frame-ancestors https://*.vercel.app/x")).toBe(false);
+    expect(csp("frame-ancestors https://paper-folio.vercel.app/x https://paper-folio.vercel.app")).toBe(true);
   });
 
   it("un esquema solo deja embeber si coincide con el del sitio", () => {
@@ -289,7 +298,7 @@ describe("consultarEmbebible", () => {
   });
 });
 
-describe("demoEmbebible (cacheada)", () => {
+describe("cabecerasDeDemo (cacheada) y demoEmbebible", () => {
   beforeEach(() => {
     vi.mocked(cacheLife).mockClear();
     vi.mocked(cacheTag).mockClear();
@@ -300,14 +309,52 @@ describe("demoEmbebible (cacheada)", () => {
     vi.restoreAllMocks();
   });
 
-  it("se invalida con el contenido y guarda el resultado por horas", async () => {
-    vi.stubGlobal("fetch", fetchFalso({ headers: [["X-Frame-Options", "DENY"]] }));
-    expect(await demoEmbebible(DEMO, SITIO)).toBe("no");
+  it("la caché va por URL sola: guarda las cabeceras crudas y la URL final, sin el origen", async () => {
+    // Un solo argumento: la clave de `use cache` es la URL, así otro origen (un preview, un host falseado)
+    // no crea otra entrada ni vuelve a pedir la demo.
+    expect(cabecerasDeDemo.length).toBe(1);
+    vi.stubGlobal(
+      "fetch",
+      fetchFalso(
+        { status: 301, headers: [["Location", "https://www.ucanode.app/"]] },
+        {
+          headers: [
+            ["X-Frame-Options", "DENY"],
+            ["Content-Security-Policy", "default-src 'self'"],
+            ["Set-Cookie", "sesion=secreta"],
+          ],
+        },
+      ),
+    );
+    const cabeceras = await cabecerasDeDemo(DEMO);
+    expect(cabeceras).toEqual({
+      url: "https://www.ucanode.app/",
+      xFrameOptions: "DENY",
+      contentSecurityPolicy: "default-src 'self'",
+    });
+    // Datos planos: lo que guarda `use cache` tiene que poder serializarse.
+    expect(JSON.parse(JSON.stringify(cabeceras))).toEqual(cabeceras);
     expect(cacheTag).toHaveBeenCalledWith(TAG_CONTENIDO);
     expect(cacheLife).toHaveBeenLastCalledWith("hours");
   });
 
-  it("si no pudo saberlo, lo guarda por minutos", async () => {
+  it("si no pudo consultarla, null por minutos", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("fetch failed");
+      }),
+    );
+    expect(await cabecerasDeDemo(DEMO)).toBeNull();
+    expect(cacheTag).toHaveBeenCalledWith(TAG_CONTENIDO);
+    expect(cacheLife).toHaveBeenLastCalledWith("minutes");
+  });
+
+  it("demoEmbebible decide con el origen afuera de la caché", async () => {
+    const respuesta = { headers: [["Content-Security-Policy", "frame-ancestors https://paper-folio.vercel.app"]] as [string, string][] };
+    vi.stubGlobal("fetch", fetchFalso(respuesta, respuesta));
+    expect(await demoEmbebible(DEMO, SITIO)).toBe("si");
+    expect(await demoEmbebible(DEMO, "https://otro.example")).toBe("no");
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -315,7 +362,5 @@ describe("demoEmbebible (cacheada)", () => {
       }),
     );
     expect(await demoEmbebible(DEMO, SITIO)).toBe("desconocido");
-    expect(cacheTag).toHaveBeenCalledWith(TAG_CONTENIDO);
-    expect(cacheLife).toHaveBeenLastCalledWith("minutes");
   });
 });
