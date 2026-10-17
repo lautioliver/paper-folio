@@ -72,8 +72,19 @@ class DependenciasViejas(unittest.TestCase):
         self.assertIsNone(dependencias_viejas(self.raiz))
 
 
+def entorno(**extra):
+    """El entorno del proceso sin las variables de git que apuntarían al repo real (hooks, wrappers)."""
+    env = {k: v for k, v in os.environ.items() if k not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE")}
+    return {**env, **GIT_ENV, **extra}
+
+
+def mapa(*reglas):
+    return {"docs": [], "sensibles": [], "verificar": [
+        {"nombre": nombre, "siempre": True, "correr": correr} for nombre, correr in reglas]}
+
+
 class VerificarDePunta(unittest.TestCase):
-    """verificar.py entero, en un repo temporal con un mapa de verificaciones de prueba."""
+    """verificar.py entero, en un repo temporal con un mapa de prueba y un npm falso en el PATH."""
 
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="test-verificar-")
@@ -82,10 +93,12 @@ class VerificarDePunta(unittest.TestCase):
         os.makedirs(os.path.join(self.repo, "docs"))
         shutil.copytree(AQUI, os.path.join(self.repo, "scripts", "agentes"),
                         ignore=shutil.ignore_patterns("__pycache__"))
-        mapa = {"docs": [], "sensibles": [], "verificar": [
-            {"nombre": "lint", "siempre": True, "correr": "echo CORRIO-LINT"},
-        ]}
-        escribir(os.path.join(self.repo, "docs", "mapa-agentes.json"), json.dumps(mapa))
+        # npm falso: imprime lo que le pidieron y falla con "npm run falla".
+        self.bin = os.path.join(self.tmp, "bin")
+        npm = os.path.join(self.bin, "npm")
+        escribir(npm, '#!/bin/sh\necho "CORRIO-NPM $*"\n[ "$2" = falla ] && exit 1\nexit 0\n')
+        os.chmod(npm, 0o755)
+        escribir(os.path.join(self.repo, "docs", "mapa-agentes.json"), json.dumps(mapa(("lint", "npm run lint"))))
         escribir(os.path.join(self.repo, "package-lock.json"), mtime=1_000_000)
         escribir(os.path.join(self.repo, ".gitignore"), "node_modules/\n")
         self.git("init", "-q", "-b", "main")
@@ -97,52 +110,67 @@ class VerificarDePunta(unittest.TestCase):
         self.git("commit", "-qm", "x")
 
     def git(self, *args, cwd=None):
-        subprocess.run(["git", *args], cwd=cwd or self.repo, check=True, env={**os.environ, **GIT_ENV})
+        subprocess.run(["git", *args], cwd=cwd or self.repo, check=True, env=entorno())
 
-    def verificar(self, cwd=None, mapa=None):
+    def instalado(self, mtime, raiz=None):
+        escribir(os.path.join(raiz or self.repo, "node_modules", ".package-lock.json"), mtime=mtime)
+
+    def verificar(self, cwd=None, reglas=None):
         cwd = cwd or self.repo
-        if mapa is not None:
-            escribir(os.path.join(cwd, "docs", "mapa-agentes.json"), json.dumps(mapa))
-        env = {**os.environ, **GIT_ENV, "BASE": "main"}
+        if reglas is not None:
+            escribir(os.path.join(cwd, "docs", "mapa-agentes.json"), json.dumps(mapa(*reglas)))
+        env = entorno(BASE="main", PATH=self.bin + os.pathsep + os.environ.get("PATH", ""))
         return subprocess.run([sys.executable, os.path.join(cwd, "scripts", "agentes", "verificar.py")],
                               cwd=cwd, env=env, capture_output=True, text=True)
 
+    def assertCorrio(self, r, codigo=0):
+        self.assertEqual(r.returncode, codigo, r.stdout + r.stderr)
+        self.assertIn("CORRIO-NPM", r.stdout)
+
     def test_dependencias_viejas_avisa_antes_de_las_verificaciones_y_no_cambia_la_salida(self):
-        escribir(os.path.join(self.repo, "node_modules", ".package-lock.json"), mtime=500_000)
+        self.instalado(500_000)
         r = self.verificar()
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertCorrio(r)
         self.assertIn(COMANDO, r.stdout)
-        self.assertIn("CORRIO-LINT", r.stdout)
-        self.assertLess(r.stdout.index(COMANDO), r.stdout.index("CORRIO-LINT"))
+        self.assertLess(r.stdout.index(COMANDO), r.stdout.index("CORRIO-NPM"))
 
-    def test_con_una_verificacion_que_falla_sale_con_1_igual_que_sin_aviso(self):
-        mapa = {"docs": [], "sensibles": [], "verificar": [
-            {"nombre": "lint", "siempre": True, "correr": "exit 1"},
-        ]}
-        r = self.verificar(mapa=mapa)
-        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
-        self.assertIn(COMANDO, r.stdout)
+    def test_con_una_verificacion_de_npm_que_falla_sale_con_1_y_lo_recuerda_al_final(self):
+        r = self.verificar(reglas=[("lint", "npm run falla")])
+        self.assertCorrio(r, codigo=1)
+        resultado = r.stdout[r.stdout.index("Resultado:"):]
+        self.assertIn(COMANDO, resultado)
 
-    def test_al_dia_no_avisa(self):
-        escribir(os.path.join(self.repo, "node_modules", ".package-lock.json"), mtime=2_000_000)
-        r = self.verificar()
+    def test_si_falla_una_verificacion_sin_npm_no_culpa_a_las_dependencias(self):
+        r = self.verificar(reglas=[("lint", "npm run lint"), ("docs", "exit 1")])
+        self.assertCorrio(r, codigo=1)
+        resultado = r.stdout[r.stdout.index("Resultado:"):]
+        self.assertNotIn(COMANDO, resultado)
+
+    def test_sin_verificaciones_de_npm_que_corran_no_avisa(self):
+        r = self.verificar(reglas=[("docs", "echo DOCS"), ("lint", "TODO: npm run lint")])
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertNotIn(COMANDO, r.stdout)
-        self.assertIn("CORRIO-LINT", r.stdout)
+
+    def test_al_dia_no_avisa(self):
+        self.instalado(2_000_000)
+        r = self.verificar()
+        self.assertCorrio(r)
+        self.assertNotIn(COMANDO, r.stdout)
 
     def test_en_un_worktree_mira_las_dependencias_del_worktree(self):
         # El checkout principal está al día; el worktree no tiene node_modules.
-        escribir(os.path.join(self.repo, "node_modules", ".package-lock.json"), mtime=2_000_000)
+        self.instalado(2_000_000)
         wt = os.path.join(self.tmp, "wt")
         self.git("worktree", "add", "-q", "-b", "claude/2-otro", wt, "claude/1-algo")
         os.utime(os.path.join(wt, "package-lock.json"), (1_000_000, 1_000_000))
         r = self.verificar(cwd=wt)
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertCorrio(r)
         self.assertIn(COMANDO, r.stdout)
         # Y al revés: con el worktree al día, no lo confunde el checkout principal.
-        escribir(os.path.join(wt, "node_modules", ".package-lock.json"), mtime=3_000_000)
-        os.utime(os.path.join(self.repo, "node_modules", ".package-lock.json"), (1, 1))
+        self.instalado(3_000_000, raiz=wt)
+        self.instalado(1, raiz=self.repo)
         r = self.verificar(cwd=wt)
+        self.assertCorrio(r)
         self.assertNotIn(COMANDO, r.stdout)
 
 

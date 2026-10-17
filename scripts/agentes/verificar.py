@@ -51,7 +51,7 @@ def dependencias_viejas(raiz):
     else:
         return None
     return (f"⚠ Dependencias viejas: {problema}. Las verificaciones de npm pueden fallar con errores "
-            f"confusos (\"Cannot find module\") o dar resultados engañosos.\n"
+            f"confusos (módulos que no se encuentran) o dar resultados engañosos.\n"
             f"  Reinstalá antes de seguir: {REINSTALAR}")
 
 
