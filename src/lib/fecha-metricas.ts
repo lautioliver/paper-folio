@@ -16,21 +16,32 @@ export function fechaDeMetrica(ahora: Date): string {
   return formatoFecha.format(ahora);
 }
 
+const formatoOffset = new Intl.DateTimeFormat("en-US", { timeZone: ZONA_METRICAS, timeZoneName: "longOffset" });
+const DIA_MS = 86_400_000;
+
+/** Desfase de la zona respecto de UTC en `instante`, en ms (Salta: -3 h; `GMT` sin horas es 0). */
+function desfase(instante: Date): number {
+  const nombre = formatoOffset.formatToParts(instante).find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  const m = /GMT([+-])(\d{2}):(\d{2})/.exec(nombre);
+  if (!m) return 0;
+  const minutos = Number(m[2]) * 60 + Number(m[3]);
+  return (m[1] === "-" ? -1 : 1) * minutos * 60_000;
+}
+
 /** Instante (UTC) en que empieza el día `fecha` (`YYYY-MM-DD`) en America/Argentina/Salta. */
 export function inicioDelDia(fecha: string): Date {
-  void fecha;
-  return new Date(0);
+  const medianocheUtc = Date.parse(`${fecha}T00:00:00Z`);
+  return new Date(medianocheUtc - desfase(new Date(medianocheUtc)));
 }
 
-/** Suma `n` días (o resta, con `n` negativo) a `fecha` (`YYYY-MM-DD`). */
+/** Suma `n` días (o resta, con `n` negativo) a `fecha` (`YYYY-MM-DD`). Es aritmética de calendario, sin zona. */
 export function sumarDias(fecha: string, n: number): string {
-  void n;
-  return fecha;
+  return new Date(Date.parse(`${fecha}T00:00:00Z`) + n * DIA_MS).toISOString().slice(0, 10);
 }
 
-/** Los días de `desde` a `hasta` (inclusive), en orden. */
+/** Los días de `desde` a `hasta` (inclusive), en orden. Vacío si `desde` es posterior. */
 export function diasEntre(desde: string, hasta: string): string[] {
-  void desde;
-  void hasta;
-  return [];
+  const dias: string[] = [];
+  for (let dia = desde; dia <= hasta; dia = sumarDias(dia, 1)) dias.push(dia);
+  return dias;
 }

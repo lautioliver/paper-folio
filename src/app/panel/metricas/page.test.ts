@@ -1,21 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // La página no puede importar `@/auth` en Vitest: se mockean los permisos, el servicio y los gráficos (cliente).
-const requerirRol = vi.fn();
-const leidas: string[] = [];
-const serie = (nombre: string, valor: unknown) =>
-  vi.fn(async (...a: unknown[]) => {
-    leidas.push(nombre);
-    void a;
-    return valor;
-  });
-const metricas = {
-  consultasPorTipo: serie("consultasPorTipo", []),
-  consultasPorDia: serie("consultasPorDia", []),
-  registrosPorDia: serie("registrosPorDia", []),
-  visitasPorDia: serie("visitasPorDia", []),
-  accesosPorDia: serie("accesosPorDia", []),
-};
+// `vi.hoisted`: los mocks de `vi.mock` se evalúan antes que el resto del archivo.
+const { requerirRol, leidas, metricas } = vi.hoisted(() => {
+  const leidas: string[] = [];
+  const serie = (nombre: string) =>
+    vi.fn(async (...a: unknown[]) => {
+      leidas.push(nombre);
+      void a;
+      return [];
+    });
+  return {
+    requerirRol: vi.fn(),
+    leidas,
+    metricas: {
+      consultasPorTipo: serie("consultasPorTipo"),
+      consultasPorDia: serie("consultasPorDia"),
+      registrosPorDia: serie("registrosPorDia"),
+      visitasPorDia: serie("visitasPorDia"),
+      accesosPorDia: serie("accesosPorDia"),
+    },
+  };
+});
 vi.mock("@/lib/permisos", () => ({ requerirRol: (...a: unknown[]) => requerirRol(...a) }));
 vi.mock("@/lib/metricas", async (original) => ({ ...(await original<typeof import("@/lib/metricas")>()), ...metricas }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
