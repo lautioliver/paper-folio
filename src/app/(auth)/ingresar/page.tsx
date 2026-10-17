@@ -63,14 +63,12 @@ async function Ingreso({ params }: { params: PageProps<"/ingresar">["searchParam
         <p role="alert" className="mt-6 text-cuerpo">
           {texto}
         </p>
-        {boton && (
-          <form action={boton === "otra-cuenta" ? ingresarConOtraCuenta : ingresarConGoogle} className="mt-8">
-            <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
-            <button type="submit" className={BOTON}>
-              {boton === "otra-cuenta" ? "Probar con otra cuenta" : "Continuar con Google"}
-            </button>
-          </form>
-        )}
+        <form action={boton === "otra-cuenta" ? ingresarConOtraCuenta : ingresarConGoogle} className="mt-8">
+          <input type="hidden" name="callbackUrl" value={decision.callbackUrl} />
+          <button type="submit" className={BOTON}>
+            {boton === "otra-cuenta" ? "Probar con otra cuenta" : "Continuar con Google"}
+          </button>
+        </form>
       </>
     );
   }

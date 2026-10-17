@@ -2,11 +2,12 @@
 
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
-import { esquemaRutaInterna, urlDeIngreso } from "./acceso";
+import { urlDeIngreso } from "./acceso";
+import { esquemaDestinoDeIngreso } from "./ingreso";
 
 // El formulario de /ingresar: solo `callbackUrl`, un string con una ruta interna. Cualquier otra cosa (un sitio
 // externo, un archivo, nada) vuelve al inicio.
-const formularioIngreso = z.object({ callbackUrl: esquemaRutaInterna.catch("/") });
+const formularioIngreso = z.object({ callbackUrl: esquemaDestinoDeIngreso.catch("/") });
 
 function destinoDelFormulario(formData: FormData): string {
   return formularioIngreso.parse({ callbackUrl: formData.get("callbackUrl") }).callbackUrl;

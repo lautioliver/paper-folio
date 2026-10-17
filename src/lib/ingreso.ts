@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Rol } from "@/models/Usuario";
-import { esquemaRutaInterna, evaluarAcceso, rutaInterna, type EstadoRol, type SesionMinima } from "./acceso";
+import { esquemaRutaInterna, evaluarAcceso, RUTA_INGRESO, type EstadoRol, type SesionMinima } from "./acceso";
 
 /** Estado de la sesión visto desde /ingresar: sin token, token con usuario en la base, o token huérfano. */
 // "error": hay token pero no se pudo comprobar contra la base (no responde).
@@ -23,8 +23,8 @@ export type DecisionIngreso =
  * - "google": Google no completó el ingreso (la persona lo canceló, o falló el intercambio con Google).
  * - "cuenta-no-vinculada": el email ya está vinculado a otra forma de ingreso.
  * - "vencido": el ingreso venció antes de terminar (CSRF o link vencido).
- * - "configuracion": Auth.js manda así todo lo que no muestra al cliente (configuración, la base caída en el
- *   callback `jwt`, el intercambio con Google): no se promete que reintentar lo arregle.
+ * - "configuracion": Auth.js manda así todo lo que no muestra al cliente (configuración, InvalidCheck, la base
+ *   caída en el callback `jwt`): es del sitio, no de la persona, y se ofrece reintentar.
  * - "generico": cualquier otro código, o un `error` repetido. Nunca se muestra el texto de la URL.
  */
 export type AvisoIngreso =
@@ -45,8 +45,7 @@ export type AvisoIngreso =
 export type AvisoSinSesion = Exclude<AvisoIngreso, "sesion" | "bloqueada" | "verificacion" | null>;
 
 // Avisos sin sesión, según el `error` de la URL (`decidirIngreso`): el texto es siempre uno de estos, nunca el de
-// la URL. `boton`: "google" reintenta con la misma cuenta; "otra-cuenta" abre el selector de cuentas de Google;
-// null no ofrece reintentar (Configuration: una falla del sitio, que reintentar en seguida no tiene por qué arreglar).
+// la URL. `boton`: "google" reintenta con la misma cuenta; "otra-cuenta" abre el selector de cuentas de Google.
 export const AVISOS_SIN_SESION = {
   "ingreso-bloqueado": {
     texto:
@@ -65,13 +64,11 @@ export const AVISOS_SIN_SESION = {
     boton: "otra-cuenta",
   },
   vencido: { texto: "El ingreso venció antes de terminar. Probá de nuevo.", boton: "google" },
-  configuracion: {
-    texto:
-      "El ingreso no está disponible por un problema del sitio. Probá más tarde y, si sigue pasando, escribinos por el formulario de contacto.",
-    boton: null,
-  },
+  // Auth.js 0.41 manda Configuration también en fallas pasajeras (InvalidCheck, la base caída en `jwt`): se
+  // ofrece reintentar, sin culpar a la persona (decisión de @lautioliver en el PR #73).
+  configuracion: { texto: "Hubo un problema de nuestro lado al iniciar sesión. Probá de nuevo en un rato.", boton: "google" },
   generico: { texto: "No pudimos completar el ingreso. Probá de nuevo.", boton: "google" },
-} as const satisfies Record<AvisoSinSesion, { texto: string; boton: "google" | "otra-cuenta" | null }>;
+} as const satisfies Record<AvisoSinSesion, { texto: string; boton: "google" | "otra-cuenta" }>;
 
 export function esAvisoSinSesion(aviso: AvisoIngreso): aviso is AvisoSinSesion {
   return aviso !== null && Object.hasOwn(AVISOS_SIN_SESION, aviso);
@@ -121,8 +118,29 @@ const AVISO_DE_ERROR = {
 
 // Un solo `error`, string. Repetido (?error=a&error=b) llega como array: no es un pedido normal y va al genérico.
 const errorDeLaUrl = z.string().optional();
-// El `callbackUrl` de la URL: un solo string y ruta interna; si no, "/".
-const rutaDeLaUrl = esquemaRutaInterna.catch("/");
+/**
+ * Si una ruta lleva a /ingresar. Normaliza como lo haría el pedido: "." y "..", los %XX (también una "/"
+ * codificada), mayúsculas, barras repetidas y la final (Next la redirige).
+ */
+function apuntaAIngreso(ruta: string): boolean {
+  try {
+    const base = "http://ruta.invalid";
+    const camino = new URL(decodeURIComponent(new URL(ruta, base).pathname), base).pathname;
+    return camino.toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "") === RUTA_INGRESO;
+  } catch {
+    // Un %XX inválido: no se sabe a dónde va, así que no sirve de destino.
+    return true;
+  }
+}
+
+/**
+ * Zod: a dónde puede volver /ingresar después de ingresar. Una ruta interna (`esquemaRutaInterna`) que no sea
+ * /ingresar: con sesión válida, /ingresar redirigiría a sí misma sin fin (revisión del PR #73).
+ */
+export const esquemaDestinoDeIngreso = esquemaRutaInterna.refine((ruta) => !apuntaAIngreso(ruta));
+
+// El `callbackUrl` de la URL: un solo string y destino válido; si no, "/".
+const rutaDeLaUrl = esquemaDestinoDeIngreso.catch("/");
 // Los errores que llegan en medio de un ingreso (de `signIn` o de Auth.js), sin `callbackUrl`. Solo con ellos se
 // usa la ruta guardada: la cookie de Auth.js no se borra al terminar, y un link armado (un código inventado, uno
 // repetido, `error=sesion`) no tiene que llevar a la ruta de otro ingreso.
@@ -189,7 +207,7 @@ export function rutaDeCookieDeVuelta(valor: unknown): string | undefined {
   const leido = urlDeLaCookie.safeParse(valor);
   if (!leido.success) return undefined;
   // Una ruta suelta tiene que ser interna tal cual ("//host" o una barra invertida llevarían a otro sitio).
-  if (leido.data.startsWith("/")) return rutaInterna(leido.data) === leido.data ? leido.data : undefined;
+  if (leido.data.startsWith("/")) return esquemaDestinoDeIngreso.safeParse(leido.data).success ? leido.data : undefined;
   let url: URL;
   try {
     url = new URL(leido.data);
@@ -198,7 +216,7 @@ export function rutaDeCookieDeVuelta(valor: unknown): string | undefined {
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
   const ruta = `${url.pathname}${url.search}${url.hash}`;
-  return rutaInterna(ruta) === ruta ? ruta : undefined;
+  return esquemaDestinoDeIngreso.safeParse(ruta).success ? ruta : undefined;
 }
 
 /** Si el menú muestra "Panel". Es solo UI: el panel se protege en el servidor (`requerirRol`). */
