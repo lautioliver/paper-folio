@@ -70,6 +70,7 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 
 ### UX-TRANS-04 — El anillo de foco no contrasta sobre el amarillo
 
+- **Reemplaza a:** UX-SITIO-21 (`ui-ux-sitio.md`), el mismo botón "Escribime" visto desde la página. La gravedad que vale es la de acá.
 - **Página:** `/` (sección de servicios) y cualquier control futuro sobre `primario`, `acento`, `secundario` o `terciario`.
 - **Dónde:** `src/styles/globals.css:73-76` (`outline: 2px solid var(--color-secundario)`), con el caso concreto en `src/components/sitio/Sections.tsx:72` (tarjeta `bg-primario`) y `:77` (botón "Escribime").
 - **Qué pasa:** el anillo `secundario` da 3,78 sobre `papel`, 3,23 sobre `superficie` y 5,20 sobre `tinta`, pero 2,18 sobre `primario`, 1,33 sobre `acento` y 1,20 sobre `terciario`. Hoy el único control sobre un fondo de color es "Escribime"; en producción, a 360 px, es la séptima parada de Tab (después de logo, "Ingresar", menú, los dos botones del hero y la pausa de la banda).
@@ -107,7 +108,7 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 
 ### UX-TRANS-08 — Los botones se reescriben en cada archivo, con variantes que no coinciden
 
-- **Reemplaza a:** la parte de sistema de UX-SITIO-17 (`ui-ux-sitio.md`): el estilo de los botones de la barra sale del componente compartido.
+- **Reemplaza a:** la parte de sistema de UX-SITIO-17 (`ui-ux-sitio.md`): el estilo de los botones de la barra sale del componente compartido. También el deshabilitado `opacity-40`/`opacity-60` de UX-PANEL-10 (`ui-ux-panel.md`).
 - **Página:** todas.
 - **Dónde:** botón primario grande en `src/components/sitio/Sections.tsx:15`, `src/app/(auth)/ingresar/page.tsx:12`, `src/app/forbidden.tsx:11` y `src/app/(sitio)/cuenta/page.tsx:53`; primario chico en `src/app/panel/consultas/[id]/controles.tsx:16-17`, `src/app/panel/servicios/formulario.tsx:22`, `src/app/panel/proyectos/formulario.tsx:13`, `src/app/panel/demos/formulario.tsx:12`, `src/app/panel/usuarios/page.tsx:93` y `src/app/panel/demos/page.tsx:24`; secundario chico en `src/app/panel/servicios/page.tsx:10`, `src/app/panel/demos/page.tsx:12`, `src/app/panel/proyectos/lista.tsx:10`, `src/app/panel/usuarios/page.tsx:15`; y los chips de filtro, que son otra variante más, en `src/app/panel/metricas/page.tsx:29`.
 - **Qué pasa:** hay al menos cuatro variantes reales, copiadas en quince lugares, y ya divergen: el deshabilitado es `opacity-40` en `servicios/page.tsx:10` y `demos/page.tsx:12`, `opacity-60` en los formularios del panel y en `proyectos/lista.tsx:10`, y no existe en los demás (por ejemplo `Sections.tsx:15`, `ingresar/page.tsx:12`, `usuarios/page.tsx:15,93`); "Contactame" de la barra (`src/components/sitio/Navbar.tsx:88`) es `rounded-lg` sin borde ni sombra, mientras el "Contactame" del hero (`Sections.tsx:29`) es un botón de marca; unos llevan `min-h-11` (`ingresar/page.tsx:12`) y otros no.
@@ -141,11 +142,12 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 - **Dónde:** `src/app/layout.tsx:12-15` (`title: siteConfig.name`, sin `template`), y los títulos de cada página: `src/app/(sitio)/proyectos/page.tsx:12`, `src/app/(sitio)/proyectos/[slug]/page.tsx:23`, `src/app/(sitio)/cuenta/page.tsx:12`, `src/app/(auth)/ingresar/page.tsx:10`, `src/app/panel/layout.tsx:8`.
 - **Qué pasa:** en producción la pestaña de `/proyectos` dice solo "Proyectos" y la de `/ingresar`, "Ingresar", sin el nombre del sitio. No hay `openGraph` ni `twitter` (un link compartido sale sin imagen ni descripción armada, y el sitio tiene un botón "Compartir"), ni `themeColor`. El favicon sigue siendo el de Next: lo cubre #79 y no se repite acá.
 - **Por qué importa:** WCAG 2.4.2 se cumple, pero con varias pestañas abiertas no se distingue el sitio; y es un portfolio, que vive de que lo compartan.
-- **Propuesta:** `title: { default: siteConfig.name, template: "%s · Paperfolio" }` y un bloque `openGraph` con la imagen del hero en el layout raíz (con la convención `opengraph-image` de esta versión de Next).
+- **Propuesta:** en el layout raíz, `` title: { default: siteConfig.name, template: `%s · ${siteConfig.name}` } `` (sin escribir "Paperfolio" a mano). Next no encadena plantillas: un título usa la del segmento padre más cercano, así que si el panel define la suya (`src/app/panel/layout.tsx`) tiene que llevar el nombre, por ejemplo `` `%s · Panel · ${siteConfig.name}` ``. Además, un bloque `openGraph` con la imagen del hero en el layout raíz (con la convención `opengraph-image` de esta versión de Next).
 - **Gravedad:** media.
 
 ### UX-TRANS-12 — Radios y chips fuera del sistema
 
+- **Reemplaza a:** la parte del chip de estado del panel de UX-PANEL-10 (`ui-ux-panel.md`).
 - **Página:** sitio y panel.
 - **Dónde:** `rounded-lg` en `src/components/sitio/ContactForm.tsx:9`, `src/components/sitio/Navbar.tsx:88,96`, `src/components/sitio/MenuCuenta.tsx:12`, `src/components/sitio/StackBand.tsx:38`, `src/components/sitio/Sections.tsx:131` y `src/app/(sitio)/proyectos/[slug]/page.tsx:67`; `rounded-md` en `Sections.tsx:138` y `[slug]/page.tsx:74,117`; `rounded-sm` en `Sections.tsx:106,110`; y `borderRadius: 8` en el tooltip de los gráficos (`src/app/panel/metricas/graficos.tsx:52`). Chips de estado: `rounded-full` en `src/components/panel/ChipEstado.tsx:13` y `contorno` (radio de marca) en `src/app/panel/servicios/page.tsx:48`, `src/app/panel/demos/page.tsx:48` y `src/app/panel/usuarios/page.tsx:114-115`.
 - **Qué pasa:** hay un solo radio de marca (`--radius-marca`, `globals.css:29`), y además otros tres (`rounded-lg`, `rounded-md`, `rounded-sm`) y un valor en línea que nadie decidió. Los chips de estado tienen dos formas según la sección.
@@ -165,6 +167,7 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 
 ### UX-TRANS-14 — El botón de pausa de la banda sigue visible cuando no hay animación
 
+- **Reemplaza a:** la parte del botón de pausa de UX-SITIO-08 (`ui-ux-sitio.md`). La pista que se corta en el celular queda allá.
 - **Página:** `/`.
 - **Dónde:** `src/components/sitio/StackBand.tsx:33-41`, con `globals.css:99-101` (sin animación con `prefers-reduced-motion`).
 - **Qué pasa:** con movimiento reducido (verificado en producción: `animation-name: none`) el botón "Pausar animación" sigue ahí y no hace nada visible. Además combina `aria-pressed` con un texto que cambia ("Pausar"/"Reanudar"): el lector anuncia "Reanudar animación, presionado", que se contradice.
@@ -184,7 +187,7 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 ## 4. Lo que está bien y conviene mantener
 
 - `lang="es-AR"` en el `html` (`src/app/layout.tsx:20`) y Onest cargada con `next/font`.
-- Un anillo de foco global con `:focus-visible` (`globals.css:73-76`): en producción, todas las paradas de Tab medidas lo muestran. Falta extenderlo, no reemplazarlo (UX-TRANS-02 y 04).
+- Un anillo de foco global con `:focus-visible` (`globals.css:73-76`): en producción, todas las paradas de Tab medidas lo muestran. Falta extenderlo, no reemplazarlo (UX-PANEL-02 y UX-TRANS-04).
 - Movimiento: GSAP solo dentro de `gsap.matchMedia(MOTION_OK)` (`src/lib/gsap.ts:9`, `HeroMotion.tsx:17-26`, `Reveal.tsx:22-33`), los gráficos no se animan con movimiento reducido (`metricas/graficos.tsx:25-40`), y el CSS apaga la banda, el scroll suave y el "apretar" (`globals.css:95-108`). La banda tiene pausa (WCAG 2.2.2). Verificado en producción.
 - Menú móvil: deja `main` y `footer` inertes, toma el foco, cierra con Escape y devuelve el foco al botón (`Navbar.tsx:36-62`). En producción, el Tab queda dentro de la barra y el menú.
 - `scroll-pt-24` compensa la barra fija del sitio al saltar a una sección (`layout.tsx:22`).
@@ -201,15 +204,15 @@ Para pasarlos a issues con `crear-issue` después de revisar esta tabla: uno por
 | Título | Labels sugeridos | Hallazgo |
 |---|---|---|
 | Auditoría UI/UX transversal: evitar que la barra inferior del panel tape el foco | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-TRANS-03 |
-| Auditoría UI/UX transversal: hacer que el anillo de foco contraste sobre todos los fondos | `tipo:audit`, `area:diseno`, `prioridad:alta` | UX-TRANS-04 |
+| Auditoría UI/UX transversal: hacer que el anillo de foco contraste sobre todos los fondos | `tipo:audit`, `area:diseno`, `prioridad:alta` | UX-TRANS-04 (reemplaza a UX-SITIO-21) |
 | Auditoría UI/UX transversal: marcar la opción elegida con algo más que el color | `tipo:audit`, `area:diseno`, `prioridad:alta` | UX-TRANS-05 |
 | Auditoría UI/UX transversal: agregar un enlace para saltar al contenido | `tipo:audit`, `area:web`, `area:panel`, `prioridad:media` | UX-TRANS-06 (reemplaza a UX-PANEL-14 y UX-SITIO-13) |
 | Auditoría UI/UX transversal: usar letra de 16 px en los campos del panel | `tipo:audit`, `area:panel`, `prioridad:media` | UX-TRANS-07 |
-| Auditoría UI/UX transversal: unificar los botones en un componente | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-08 (reemplaza la parte de sistema de UX-SITIO-17) |
+| Auditoría UI/UX transversal: unificar los botones en un componente | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-08 (reemplaza la parte de sistema de UX-SITIO-17 y el deshabilitado de UX-PANEL-10) |
 | Auditoría UI/UX transversal: unificar los campos y los mensajes de formulario | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-09 |
 | Auditoría UI/UX transversal: completar la escala tipográfica con los tamaños que faltan | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-10 (reemplaza a UX-SITIO-16) |
 | Auditoría UI/UX transversal: agregar la plantilla de título y Open Graph a la metadata | `tipo:audit`, `area:web`, `prioridad:media` | UX-TRANS-11 (reemplaza la plantilla de UX-PANEL-12 y UX-SITIO-09) |
-| Auditoría UI/UX transversal: decidir los radios y unificar los chips | `tipo:audit`, `area:diseno`, `prioridad:baja` | UX-TRANS-12 |
+| Auditoría UI/UX transversal: decidir los radios y unificar los chips | `tipo:audit`, `area:diseno`, `prioridad:baja` | UX-TRANS-12 (reemplaza el chip de UX-PANEL-10) |
 | Auditoría UI/UX transversal: llevar la barra y el pie al layout del sitio | `tipo:audit`, `area:web`, `prioridad:baja` | UX-TRANS-13 (reemplaza la parte de sistema de UX-SITIO-05) |
-| Auditoría UI/UX transversal: ajustar el botón de pausa de la banda del stack | `tipo:audit`, `area:web`, `prioridad:baja` | UX-TRANS-14 |
+| Auditoría UI/UX transversal: ajustar el botón de pausa de la banda del stack | `tipo:audit`, `area:web`, `prioridad:baja` | UX-TRANS-14 (reemplaza la parte del botón de UX-SITIO-08) |
 | Auditoría UI/UX transversal: agrandar el área de toque de los enlaces de texto | `tipo:audit`, `area:diseno`, `prioridad:baja` | UX-TRANS-15 |
