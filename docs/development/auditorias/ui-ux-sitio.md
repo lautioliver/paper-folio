@@ -37,6 +37,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 | tinta sobre terciario | 4,33:1 | inicial de la tarjeta de proyecto (24 px negrita) | pasa como texto grande |
 | tinta/70 sobre papel | 7,57:1 | nombre en el menú de la cuenta (`MenuCuenta.tsx:103`) | pasa |
 | foco (secundario) sobre papel / sobre tinta | 3,78:1 / 5,20:1 | `globals.css:73-76` | pasa (1.4.11, mínimo 3:1) |
+| foco (secundario) sobre primario | 2,18:1 | botón "Escribime" en la tarjeta `bg-primario` (`Sections.tsx:72-79`) | no pasa (1.4.11): UX-SITIO-21 |
 | acento sobre papel | 2,84:1 | punto de los errores del formulario | decorativo: el texto del error lleva el mensaje |
 
 **Gravedad:** **alta**, impide una tarea o rompe la accesibilidad; **media**, confunde o es inconsistente con el manual; **baja**, pulido.
@@ -57,9 +58,9 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 
 #### UX-SITIO-02 — Un error inesperado muestra la pantalla genérica de Next, en inglés
 
-- **Página:** las que se renderizan en cada pedido: `/proyectos/[slug]` y la barra de sesión (`CuentaBarra`) en todas.
-- **Dónde:** faltan `error.tsx` y `global-error.tsx` en `src/app/`. `src/app/(sitio)/cuenta/page.tsx:22-31` y la rama `verificacion` de `src/app/(auth)/ingresar/page.tsx:28-41` manejan la base caída, pero `src/app/(sitio)/proyectos/[slug]/page.tsx:47-139` y `src/components/sitio/CuentaBarra.tsx:5-10` no tienen un límite de error. La landing y `/proyectos` leen el contenido con `"use cache"` (`src/lib/contenido.ts:144,154,178`, `cacheComponents` en `next.config.ts:4`): ahí un error rompe el build o deja servida la versión anterior, no llega a la persona.
-- **Qué pasa:** si un componente de servidor dinámico lanza (por ejemplo, un error de código en el detalle o en `sesionParaLaBarra`), Next muestra su pantalla genérica en inglés, sin barra ni forma de reintentar. Solo se revisó en código: no se puede provocar en producción.
+- **Página:** las que se renderizan en cada pedido: `/proyectos/[slug]` y `/cuenta`.
+- **Dónde:** faltan `error.tsx` y `global-error.tsx` en `src/app/`. `src/app/(sitio)/cuenta/page.tsx:22-31` y la rama `verificacion` de `src/app/(auth)/ingresar/page.tsx:28-41` manejan la base caída, pero el detalle no: `src/app/(sitio)/proyectos/[slug]/page.tsx:50` llama a `requerirSesion`, que lee el rol con `buscarRol` (`src/lib/permisos.ts:18`) sin try/catch. En `/cuenta`, el `auth()` de `src/app/(sitio)/cuenta/page.tsx:33` queda fuera del try. La barra no entra: `sesionParaLaBarra` ya atrapa sus errores y muestra "Ingresar" (`src/lib/sesion.ts:19-26`). La landing y `/proyectos` leen el contenido con `"use cache"` (`src/lib/contenido.ts:144,154,178`, `cacheComponents` en `next.config.ts:4`): ahí un error rompe el build o deja servida la versión anterior, no llega a la persona.
+- **Qué pasa:** si la base no responde cuando alguien con sesión abre un caso de estudio (o falla el `auth()` de `/cuenta`), Next muestra su pantalla genérica en inglés, sin barra ni forma de reintentar. Solo se revisó en código: no se puede provocar en producción.
 - **Por qué importa:** misma ruptura de idioma y de salida que UX-SITIO-01, en el peor momento.
 - **Propuesta:** un `error.tsx` en `src/app/` (componente de cliente con `reset()` y el texto "Algo salió mal. Probá de nuevo." más "Volver al inicio") y un `global-error.tsx` mínimo con su propio `<html lang="es-AR">`.
 
@@ -79,13 +80,13 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Por qué importa:** la navegación es el mapa del sitio; si no coincide con lo que se ve al scrollear, desorienta, y dos secciones quedan sin acceso directo.
 - **Propuesta:** enlaces en el orden de la página: Inicio, Servicios, Sobre mí, Proyectos, Trayectoria, Contacto. Sacar "Stack" (o dejarlo y darle un título visible a la banda). Si se quieren siete enlaces, verificar que entren en la barra de `max-w-3xl` (`Navbar.tsx:68`) a 1024 px.
 
-#### UX-SITIO-05 — Cada página arma su marco distinto: `/ingresar`, `/cuenta` y el 403 quedan sin barra o sin pie
+#### UX-SITIO-05 — `/ingresar` y el 403 no tienen el marco del sitio
 
-- **Página:** `/ingresar`, `/cuenta`, 403.
-- **Dónde:** `src/app/(auth)/ingresar/page.tsx:102-118` (sin `Navbar` ni `Footer`, tarjeta alineada a la izquierda), `src/app/(sitio)/cuenta/page.tsx:62-75` (con `Navbar`, sin `Footer`), `src/app/forbidden.tsx:5-16` (sin los dos).
-- **Qué pasa:** en 1440 px, `/ingresar` es una tarjeta de 448 px pegada al margen izquierdo con el resto de la pantalla en blanco: no hay marca, ni nombre del sitio, ni barra. `/cuenta` tiene barra pero termina sin pie, a diferencia de `/proyectos` y del detalle. Los tres repiten el marco a mano en cada página en vez de usar un layout.
-- **Por qué importa:** `/ingresar` es la puerta del contenido para registrados y hoy parece una página suelta, de otro sitio. La inconsistencia del marco se nota al pasar de una página a otra.
-- **Propuesta:** centrar la tarjeta de `/ingresar` (`mx-auto`) y sumarle la marca (la "L" y `Lauti.dev` de `Navbar.tsx:70-75`) enlazada al inicio; agregar `Footer` a `/cuenta`. Opcional: mover barra y pie a `src/app/(sitio)/layout.tsx` para que no se repitan en cada página (hoy están en `page.tsx`, `proyectos/page.tsx`, `proyectos/[slug]/page.tsx` y `cuenta/page.tsx`).
+- **Página:** `/ingresar`, 403.
+- **Dónde:** `src/app/(auth)/ingresar/page.tsx:102-118` (sin `Navbar` ni `Footer`, tarjeta alineada a la izquierda), `src/app/forbidden.tsx:5-16` (sin los dos).
+- **Qué pasa:** en 1440 px, `/ingresar` es una tarjeta de 448 px alineada a la izquierda dentro del `Container` centrado de `max-w-6xl` (empieza en x = 168), con unos 820 px vacíos a la derecha: no hay marca, ni nombre del sitio, ni barra. El 403 tampoco tiene barra ni pie.
+- **Por qué importa:** `/ingresar` es la puerta del contenido para registrados y hoy parece una página suelta, de otro sitio.
+- **Propuesta:** centrar la tarjeta de `/ingresar` (`mx-auto`) y sumarle la marca (la "L" y `Lauti.dev` de `Navbar.tsx:70-75`) enlazada al inicio; en el 403, al menos la marca y el enlace al inicio. Llevar barra y pie a `src/app/(sitio)/layout.tsx` (ya existe y monta `ContadorVisitas`) no alcanza a estas dos páginas: `forbidden.tsx` está en `src/app/` e `/ingresar` en `(auth)`. Lo de sistema (barra y pie repetidos en cada página, `/cuenta` sin pie): cubierto por UX-TRANS-13 (docs/development/auditorias/ui-ux-transversal.md).
 
 #### UX-SITIO-06 — El formulario de contacto no dice que todos los campos son obligatorios
 
@@ -113,11 +114,11 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 
 #### UX-SITIO-09 — Los títulos de pestaña no dicen de qué sitio ni de qué proyecto son
 
-- **Página:** `/proyectos`, `/proyectos/[slug]`, `/cuenta`, `/ingresar`.
+- **Página:** `/proyectos/[slug]` (lo propio de esta auditoría); la plantilla para `/proyectos`, `/cuenta` e `/ingresar` es de sistema.
 - **Dónde:** `src/app/layout.tsx:12-15` (`title: siteConfig.name`, sin `template`); `src/app/(sitio)/proyectos/[slug]/page.tsx:23` (`title: "Caso de estudio"` fijo).
 - **Qué pasa:** en producción las pestañas dicen "Proyectos" o "Ingresar", sin el nombre del sitio, y todos los casos de estudio se llaman "Caso de estudio".
 - **Por qué importa:** WCAG 2.4.2 (título descriptivo): con varias pestañas abiertas, o en el historial, no se distinguen. También es lo que se ve al compartir un link de `/proyectos`.
-- **Propuesta:** `` title: { default: siteConfig.name, template: `%s · ${siteConfig.name}` } `` en el layout raíz (o una constante corta en `src/lib/site.ts`, para no copiar el nombre a mano) y `generateMetadata` en el detalle con el nombre del proyecto. Ojo: `generateMetadata` no espera a `requerirSesion` (`[slug]/page.tsx:50`; con `cacheComponents` la metadata se resuelve aparte de la página), así que tiene que comprobar la sesión por su cuenta antes de leer el proyecto, o devolver el título genérico, para no revelar si el slug existe. Leer la sesión en la metadata la vuelve dinámica: revisar que el build no falle con `cacheComponents`. Toca sesiones: se consulta antes de implementar (`AGENTS.md`, Autonomía).
+- **Propuesta:** la plantilla de título en el layout raíz (`` template: `%s · ${siteConfig.name}` ``): cubierto por UX-TRANS-11 (docs/development/auditorias/ui-ux-transversal.md). Queda acá `generateMetadata` en el detalle con el nombre del proyecto. Ojo: `generateMetadata` no espera a `requerirSesion` (`[slug]/page.tsx:50`; con `cacheComponents` la metadata se resuelve aparte de la página), así que tiene que comprobar la sesión por su cuenta antes de leer el proyecto, o devolver el título genérico, para no revelar si el slug existe. Leer la sesión en la metadata la vuelve dinámica: revisar que el build no falle con `cacheComponents`. Toca sesiones: se consulta antes de implementar (`AGENTS.md`, Autonomía).
 
 #### UX-SITIO-10 — Los avisos de cuenta bloqueada mandan al formulario de contacto sin enlace, y cambian de voz
 
@@ -126,6 +127,14 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Qué pasa:** el texto dice "escribinos por el formulario de contacto", pero no enlaza a `/#contacto`, y `/ingresar` no tiene barra (UX-SITIO-05): hay que volver al inicio y buscarlo. Además, la voz está mezclada: los textos de presentación van en primera persona del singular ("Contactame", "Te respondo por email", `ContactForm.tsx:107`) y los de error, en plural ("escribinos", "No pudimos…" en `ContactForm.tsx:51,55`, `src/app/(sitio)/cuenta/page.tsx:29`, `src/app/(auth)/ingresar/page.tsx:32`, `src/lib/ingreso.ts:57,60,70` y los mensajes de `src/app/api/consultas/route.ts:14,38`, que el formulario muestra tal cual).
 - **Por qué importa:** a quien está bloqueado se le indica una salida que no puede tomar desde ahí. La voz que cambia hace que la página parezca de otro producto.
 - **Propuesta:** que "formulario de contacto" sea un enlace a `/#contacto` en los tres avisos y unificar la voz en todos los textos de arriba, no solo en `/ingresar` (decidir con el equipo si el sitio habla en singular o en plural). Los textos de `src/lib/ingreso.ts` son del flujo de ingreso: cambiarlos es tocar auth, se consulta antes (`AGENTS.md`, Autonomía).
+
+#### UX-SITIO-21 — El foco no se ve bien sobre la tarjeta amarilla de servicios
+
+- **Página:** `/` (sección de servicios, tarjeta "¿Necesitás otra cosa?").
+- **Dónde:** `src/components/sitio/Sections.tsx:72-79` (tarjeta `bg-primario` con el botón "Escribime") y el anillo global de `src/styles/globals.css:73-76`.
+- **Qué pasa:** el anillo de foco es secundario con `outline-offset: 2px`, así que se dibuja sobre el amarillo de la tarjeta: secundario sobre primario da 2,18:1.
+- **Por qué importa:** WCAG 1.4.11 (AA) pide 3:1 para el indicador de foco contra lo que lo rodea. Quien navega con teclado pierde de vista dónde está justo en la llamada a contactar.
+- **Propuesta:** la solución de sistema (un anillo en tinta, o una variable de color de foco que cada fondo redefine) es de la auditoría transversal. Cubierto por UX-TRANS-04 (docs/development/auditorias/ui-ux-transversal.md). Al arreglarlo, comprobar este botón.
 
 ### Baja
 
@@ -151,7 +160,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Dónde:** `src/components/sitio/Navbar.tsx:65`.
 - **Qué pasa:** con Tab, antes del primer botón del hero hay 8 paradas en la barra (logo, cinco enlaces, "Contactame" e "Ingresar"). El `<main>` existe, así que WCAG 2.4.1 se cumple por landmarks, pero quien usa teclado sin lector no tiene atajo.
 - **Por qué importa:** pulido de accesibilidad de teclado, barato.
-- **Propuesta:** un "Saltar al contenido" `sr-only focus:not-sr-only` como primer hijo del `header`, apuntando a un `id="contenido"` en cada `<main>`.
+- **Propuesta:** un "Saltar al contenido" `sr-only focus:not-sr-only` apuntando a un `id="contenido"` en cada `<main>`. Cubierto por UX-TRANS-06 (docs/development/auditorias/ui-ux-transversal.md).
 
 #### UX-SITIO-14 — Enlaces repetidos sin contexto y enlaces externos sin aviso
 
@@ -175,7 +184,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Dónde:** `src/components/sitio/Sections.tsx:23` (`text-[2.25rem]` y `lg:text-[3.75rem]`), `src/components/sitio/Highlight.tsx:22` y `src/app/(sitio)/proyectos/page.tsx:31` (`text-[1.75rem] leading-[1.15]`, repetido), `text-xs` en `Sections.tsx:138,143`, `Contact.tsx:57`, `ShareButton.tsx:34` y `proyectos/[slug]/page.tsx:74`.
 - **Qué pasa:** la escala de `globals.css:17-26` tiene h1 (48 px), h2 (36), h3 (24), cuerpo (16) y pequeño (14). El hero usa 36 y 60 px, los títulos de sección en celular 28 px y varias etiquetas 12 px, todo como valores sueltos. `/proyectos` copia a mano las clases de `SectionTitle` en vez de reusarlo.
 - **Por qué importa:** la convención es tipografía solo desde tokens (`AGENTS.md`); los valores sueltos se desalinean cuando el manual definitivo cambie la escala (`globals.css:3-6` dice que los tokens son provisorios).
-- **Propuesta:** sumar a `@theme` los tamaños que el manual usa de verdad (por ejemplo `--text-display`, `--text-h2-movil`, `--text-etiqueta`) y reemplazar los valores sueltos; en `/proyectos`, un `SectionTitle as="h1"`.
+- **Propuesta:** sumar a `@theme` los tamaños que el manual usa de verdad y reemplazar los valores sueltos: Cubierto por UX-TRANS-10 (docs/development/auditorias/ui-ux-transversal.md). Queda acá lo propio de la página: en `/proyectos`, reusar `SectionTitle` (con un `as="h1"`) en vez de copiar sus clases.
 
 #### UX-SITIO-17 — Los botones de la barra no siguen el mismo estilo
 
@@ -183,7 +192,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Dónde:** `src/components/sitio/Navbar.tsx:86-91` ("Contactame": `rounded-lg`, sin borde ni sombra) frente a `src/components/sitio/MenuCuenta.tsx:23-28` ("Ingresar": `marca apretable`).
 - **Qué pasa:** dos botones vecinos con estilos distintos: uno plano y otro con el contorno y la sombra dura del manual.
 - **Por qué importa:** inconsistencia con la pieza de marca, visible arriba de todo en cada página.
-- **Propuesta:** "Contactame" con `marca apretable` y `min-h-11`, igual que "Ingresar" (o los dos planos, pero iguales).
+- **Propuesta:** "Contactame" con `marca apretable` y `min-h-11`, igual que "Ingresar" (o los dos planos, pero iguales). Las variantes de botón como sistema (un componente con las variantes del manual): Cubierto por UX-TRANS-08 (docs/development/auditorias/ui-ux-transversal.md); acá queda igualar los dos botones de la barra.
 
 #### UX-SITIO-18 — "Copiar link del perfil" compite con el formulario
 
@@ -212,7 +221,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 ## 3. Lo que está bien y conviene mantener
 
 - **Movimiento:** GSAP solo anima con `(prefers-reduced-motion: no-preference)` (`src/lib/gsap.ts:9`), el hero no toca la opacidad para no parpadear al hidratar (`HeroMotion.tsx:7-9`), y el CSS apaga el scroll suave, la banda y el "apretar" (`globals.css:95-108`). La banda se puede pausar (WCAG 2.2.2, `StackBand.tsx:33-41`).
-- **Foco:** contorno global de 2 px en secundario (`globals.css:73-76`) con contraste suficiente sobre papel y sobre tinta; `scroll-pt-24` (`layout.tsx:22`) evita que la barra fija tape lo enfocado o el destino de un ancla (WCAG 2.4.11).
+- **Foco:** contorno global de 2 px en secundario (`globals.css:73-76`) con contraste suficiente sobre papel y sobre tinta (no sobre primario: UX-SITIO-21); `scroll-pt-24` (`layout.tsx:22`) evita que la barra fija tape lo enfocado o el destino de un ancla (WCAG 2.4.11).
 - **Menús:** el de celular deja inerte el resto de la página, se cierra con Escape y devuelve el foco (`Navbar.tsx:36-62`); el de la cuenta cierra con Escape, al salir con Tab y al hacer clic afuera, con el caso de Safari resuelto (`MenuCuenta.tsx:47-76`).
 - **Formulario:** labels reales, `aria-invalid` y `aria-describedby`, foco al primer error, regiones `role="status"` y `role="alert"` presentes desde el principio (así se anuncian), la misma validación de Zod que el servidor (`src/lib/contact.ts`), errores que no dependen solo del color y una trampa para bots que no llega al teclado (`ContactForm.tsx:71-74`).
 - **Responsive:** sin desborde horizontal en 360 px en ninguna página revisada; botones del hero a ancho completo en celular; el lugar de la sesión reserva su espacio mientras carga (`MenuCuenta.tsx:15-17`).
@@ -227,20 +236,23 @@ Títulos con el formato de auditoría de `docs/convencion-nombres-github.md` §4
 | # | Título | Labels sugeridos | Cubre |
 |---|---|---|---|
 | 1 | Auditoría UI sitio: agregar páginas de error 404 y 500 en español | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:alta` | UX-SITIO-01, UX-SITIO-02 |
-| 2 | Auditoría UI sitio: avisar en la landing que el caso de estudio y la demo piden ingresar | `tipo:audit`, `area:web`, `prioridad:alta` | UX-SITIO-03 |
-| 3 | Auditoría UI sitio: alinear la barra con las secciones de la landing | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-04, UX-SITIO-17 |
-| 4 | Auditoría UI sitio: unificar el marco de ingresar, cuenta y 403 | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-05, UX-SITIO-19 |
+| 2 | Auditoría UI sitio: avisar en la landing que el caso de estudio y la demo piden ingresar | `tipo:audit`, `area:web`, `prioridad:media` | UX-SITIO-03 |
+| 3 | Auditoría UI sitio: alinear la barra con las secciones de la landing | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-04, UX-SITIO-17 (lo propio de la barra) |
+| 4 | Auditoría UI sitio: dar el marco del sitio a ingresar y al 403 | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-05 (lo propio de las páginas) |
 | 5 | Auditoría UI sitio: mejorar la accesibilidad del formulario de contacto | `tipo:audit`, `area:web`, `prioridad:media` | UX-SITIO-06, UX-SITIO-07, UX-SITIO-11, UX-SITIO-12 |
 | 6 | Auditoría UI sitio: mostrar todo el stack con movimiento reducido | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-08 |
-| 7 | Auditoría UI sitio: dar títulos de pestaña con el sitio y el proyecto | `tipo:audit`, `area:web`, `area:auth`, `prioridad:media` | UX-SITIO-09 |
-| 8 | Auditoría UI sitio: enlazar el contacto en los avisos de ingreso y unificar la voz | `tipo:audit`, `area:web`, `area:auth`, `prioridad:media` | UX-SITIO-10, UX-SITIO-20 |
-| 9 | Auditoría UI sitio: sumar salto al contenido y contexto a los enlaces | `tipo:audit`, `area:web`, `prioridad:baja` | UX-SITIO-13, UX-SITIO-14, UX-SITIO-15 |
-| 10 | Auditoría UI sitio: pasar los tamaños de letra sueltos a tokens | `tipo:audit`, `area:diseno`, `prioridad:baja` | UX-SITIO-16 |
-| 11 | Auditoría UI sitio: bajar el peso de copiar el link en contacto | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:baja` | UX-SITIO-18 |
+| 7 | Auditoría UI sitio: dar al caso de estudio un título de pestaña con el proyecto | `tipo:audit`, `area:web`, `area:auth`, `prioridad:media` | UX-SITIO-09 (título del detalle) |
+| 8 | Auditoría UI sitio: enlazar el contacto en los avisos de ingreso y unificar la voz | `tipo:audit`, `area:web`, `area:auth`, `prioridad:media` | UX-SITIO-10 |
+| 9 | Auditoría UI sitio: dar contexto a los enlaces y ordenar los títulos de proyectos | `tipo:audit`, `area:web`, `prioridad:baja` | UX-SITIO-14, UX-SITIO-15, UX-SITIO-16 (`SectionTitle` en `/proyectos`) |
+| 10 | Auditoría UI sitio: bajar el peso de copiar el link en contacto | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:baja` | UX-SITIO-18 |
+| 11 | Auditoría UI sitio: aclarar el texto de ingresar y volver a donde estaba | `tipo:audit`, `area:web`, `area:auth`, `prioridad:baja` | UX-SITIO-19 |
+| 12 | Auditoría UI sitio: reescribir el título de la sección de servicios | `tipo:audit`, `area:web`, `prioridad:baja` | UX-SITIO-20 |
+
+Fuera de la tabla, porque los cubre la auditoría transversal (docs/development/auditorias/ui-ux-transversal.md): UX-SITIO-13 (UX-TRANS-06), UX-SITIO-21 (UX-TRANS-04) y las partes de sistema de UX-SITIO-05 (UX-TRANS-13), UX-SITIO-09 (UX-TRANS-11), UX-SITIO-16 (UX-TRANS-10) y UX-SITIO-17 (UX-TRANS-08).
 
 Notas para quien los abra:
 
-- Los issues 4 (por UX-SITIO-19), 7 y 8 tocan sesiones o el flujo de ingreso: según `AGENTS.md` (Autonomía), quien los implemente consulta a una persona antes de empezar, aunque el issue lo pida.
+- Los issues 7, 8 y 11 tocan sesiones o el flujo de ingreso: según `AGENTS.md` (Autonomía), quien los implemente consulta a una persona antes de empezar, aunque el issue lo pida.
 - El issue 7 toca `generateMetadata` en una ruta con sesión: revisar que no revele si un slug existe (ver UX-SITIO-09).
 - El issue 8 pide una decisión de voz (singular o plural) antes de tocar los textos, y los de `src/lib/ingreso.ts` tienen tests.
-- El issue 10 depende del manual de marca definitivo si llega antes que el arreglo (`globals.css:3-6`).
+- El issue 2 queda en media, como su hallazgo. Si se quiere subir por las exposiciones del 26/10 (es lo primero que prueba alguien sin sesión), que lo decida quien tría.
