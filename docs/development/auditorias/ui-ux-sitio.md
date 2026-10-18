@@ -57,9 +57,9 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 
 #### UX-SITIO-02 — Un error inesperado muestra la pantalla genérica de Next, en inglés
 
-- **Página:** todas.
-- **Dónde:** faltan `error.tsx` y `global-error.tsx` en `src/app/`. `src/app/(sitio)/cuenta/page.tsx:22-31` y `src/app/(auth)/ingresar/page.tsx:20-26` manejan sus propias fallas, pero la landing (`listarProyectos`, `listarServicios` en `src/components/sitio/Sections.tsx:47,91,179`) y `/proyectos` no.
-- **Qué pasa:** si un componente de servidor lanza (el respaldo estático de ADR-003 cubre la base caída, pero no un error de código), Next muestra "Application error: a server-side exception has occurred" en inglés, sin barra ni forma de reintentar. Solo se revisó en código: no se puede provocar en producción.
+- **Página:** las que se renderizan en cada pedido: `/proyectos/[slug]` y la barra de sesión (`CuentaBarra`) en todas.
+- **Dónde:** faltan `error.tsx` y `global-error.tsx` en `src/app/`. `src/app/(sitio)/cuenta/page.tsx:22-31` y la rama `verificacion` de `src/app/(auth)/ingresar/page.tsx:28-41` manejan la base caída, pero `src/app/(sitio)/proyectos/[slug]/page.tsx:47-139` y `src/components/sitio/CuentaBarra.tsx:5-10` no tienen un límite de error. La landing y `/proyectos` leen el contenido con `"use cache"` (`src/lib/contenido.ts:144,154,178`, `cacheComponents` en `next.config.ts:4`): ahí un error rompe el build o deja servida la versión anterior, no llega a la persona.
+- **Qué pasa:** si un componente de servidor dinámico lanza (por ejemplo, un error de código en el detalle o en `sesionParaLaBarra`), Next muestra su pantalla genérica en inglés, sin barra ni forma de reintentar. Solo se revisó en código: no se puede provocar en producción.
 - **Por qué importa:** misma ruptura de idioma y de salida que UX-SITIO-01, en el peor momento.
 - **Propuesta:** un `error.tsx` en `src/app/` (componente de cliente con `reset()` y el texto "Algo salió mal. Probá de nuevo." más "Volver al inicio") y un `global-error.tsx` mínimo con su propio `<html lang="es-AR">`.
 
@@ -117,15 +117,15 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Dónde:** `src/app/layout.tsx:12-15` (`title: siteConfig.name`, sin `template`); `src/app/(sitio)/proyectos/[slug]/page.tsx:23` (`title: "Caso de estudio"` fijo).
 - **Qué pasa:** en producción las pestañas dicen "Proyectos" o "Ingresar", sin el nombre del sitio, y todos los casos de estudio se llaman "Caso de estudio".
 - **Por qué importa:** WCAG 2.4.2 (título descriptivo): con varias pestañas abiertas, o en el historial, no se distinguen. También es lo que se ve al compartir un link de `/proyectos`.
-- **Propuesta:** `title: { default: siteConfig.name, template: "%s · Paperfolio" }` en el layout raíz y `generateMetadata` en el detalle con el nombre del proyecto. Ojo: `generateMetadata` corre antes que `requerirSesion` (`[slug]/page.tsx:50`); tiene que comprobar la sesión primero o devolver el título genérico, para no revelar si el slug existe.
+- **Propuesta:** `` title: { default: siteConfig.name, template: `%s · ${siteConfig.name}` } `` en el layout raíz (o una constante corta en `src/lib/site.ts`, para no copiar el nombre a mano) y `generateMetadata` en el detalle con el nombre del proyecto. Ojo: `generateMetadata` no espera a `requerirSesion` (`[slug]/page.tsx:50`; con `cacheComponents` la metadata se resuelve aparte de la página), así que tiene que comprobar la sesión por su cuenta antes de leer el proyecto, o devolver el título genérico, para no revelar si el slug existe. Leer la sesión en la metadata la vuelve dinámica: revisar que el build no falle con `cacheComponents`. Toca sesiones: se consulta antes de implementar (`AGENTS.md`, Autonomía).
 
 #### UX-SITIO-10 — Los avisos de cuenta bloqueada mandan al formulario de contacto sin enlace, y cambian de voz
 
 - **Página:** `/ingresar` con la cuenta bloqueada o el email sin verificar.
 - **Dónde:** `src/app/(auth)/ingresar/page.tsx:46-49`; `src/lib/ingreso.ts:52` y `:57`.
-- **Qué pasa:** el texto dice "escribinos por el formulario de contacto", pero no enlaza a `/#contacto`, y `/ingresar` no tiene barra (UX-SITIO-05): hay que volver al inicio y buscarlo. Además, el sitio habla en primera persona del singular ("Contactame", "Te respondo por email", `ContactForm.tsx:107`) y estos avisos, en plural ("escribinos", "No pudimos").
+- **Qué pasa:** el texto dice "escribinos por el formulario de contacto", pero no enlaza a `/#contacto`, y `/ingresar` no tiene barra (UX-SITIO-05): hay que volver al inicio y buscarlo. Además, la voz está mezclada: los textos de presentación van en primera persona del singular ("Contactame", "Te respondo por email", `ContactForm.tsx:107`) y los de error, en plural ("escribinos", "No pudimos…" en `ContactForm.tsx:51,55`, `src/app/(sitio)/cuenta/page.tsx:29`, `src/app/(auth)/ingresar/page.tsx:32`, `src/lib/ingreso.ts:57,60,70` y los mensajes de `src/app/api/consultas/route.ts:14,38`, que el formulario muestra tal cual).
 - **Por qué importa:** a quien está bloqueado se le indica una salida que no puede tomar desde ahí. La voz que cambia hace que la página parezca de otro producto.
-- **Propuesta:** que "formulario de contacto" sea un enlace a `/#contacto` en los tres avisos y unificar la voz (decidir con el equipo si el sitio habla en singular o en plural; hoy domina el singular).
+- **Propuesta:** que "formulario de contacto" sea un enlace a `/#contacto` en los tres avisos y unificar la voz en todos los textos de arriba, no solo en `/ingresar` (decidir con el equipo si el sitio habla en singular o en plural). Los textos de `src/lib/ingreso.ts` son del flujo de ingreso: cambiarlos es tocar auth, se consulta antes (`AGENTS.md`, Autonomía).
 
 ### Baja
 
@@ -135,7 +135,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Dónde:** `src/components/sitio/ContactForm.tsx:9` (`FIELD`, sin variantes para `aria-invalid`).
 - **Qué pasa:** el campo inválido tiene el mismo borde que uno válido; el error se ve solo en el texto de abajo (con su punto de color).
 - **Por qué importa:** en un formulario largo en celular, el campo con problema no se ubica de un vistazo.
-- **Propuesta:** `aria-invalid:border-[3px]` o un `aria-invalid:bg-…` suave, solo con tokens (el borde ya es tinta; el cambio tiene que ser de grosor o de fondo, no solo de color).
+- **Propuesta:** un token nuevo de grosor (por ejemplo `--borde-error` en `@theme`) aplicado con `aria-invalid:`, o un fondo suave de la paleta, siempre con tokens (el borde ya es tinta; el cambio tiene que ser de grosor o de fondo, no solo de color).
 
 #### UX-SITIO-12 — El mensaje de error empuja el formulario al aparecer
 
@@ -191,7 +191,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Dónde:** `src/components/sitio/Contact.tsx:18` y `src/components/sitio/CopyProfileLink.tsx:21-28`.
 - **Qué pasa:** al lado del formulario, la única otra acción es copiar el link del sitio, con el mismo peso visual que un botón principal. No hay un canal alternativo (email, LinkedIn) para quien no quiere usar el formulario.
 - **Por qué importa:** en la sección de contacto, la acción secundaria se lee como la principal y no ayuda a contactar.
-- **Propuesta:** bajarla a un enlace de texto (o llevarla al pie) y, si se quiere, sumar el email o los perfiles que ya están en el pie (`Contact.tsx:43-54`).
+- **Propuesta:** bajarla a un enlace de texto (o llevarla al pie) y, si se quiere, sumar los perfiles que ya están en el pie (GitHub y X, `Contact.tsx:43-54`). Un email visible sería un dato nuevo en `src/content/profile.ts`.
 
 #### UX-SITIO-19 — `/ingresar` no dice para qué se ingresa ni vuelve a donde estaba
 
@@ -199,7 +199,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 - **Dónde:** `src/app/(auth)/ingresar/page.tsx:108` (texto fijo) y `:112-114` ("Volver al inicio" siempre a `/`).
 - **Qué pasa:** viniendo de `/cuenta` el texto igual dice "para ver el detalle de los proyectos y las demos". Si la persona se arrepiente, "Volver al inicio" la saca de `/proyectos` aunque viniera de ahí; el `callbackUrl` ya está en la URL.
 - **Por qué importa:** pulido de orientación en la puerta de entrada del contenido protegido.
-- **Propuesta:** un texto neutro ("Ingresá con tu cuenta de Google para ver los casos de estudio y las demos, y tu cuenta.") y que el enlace de volver vaya a la página anterior pública cuando el `callbackUrl` es un detalle (`/proyectos`), validado con `rutaInterna` como ya se hace.
+- **Propuesta:** un texto neutro ("Ingresá con tu cuenta de Google para ver los casos de estudio y las demos, y tu cuenta.") y que el enlace de volver lleve a donde estaba la persona. El `callbackUrl` no alcanza para saberlo (un detalle se abre tanto desde la landing como desde `/proyectos`): habría que sumar el origen al armar el enlace (`urlDeIngreso`, `src/lib/acceso.ts:52`), validado con `rutaInterna`, o usar `history.back()` cuando la página anterior es del mismo sitio. Toca el flujo de ingreso: se consulta antes.
 
 #### UX-SITIO-20 — Microcopy: "Mi amplio set de habilidades"
 
@@ -232,14 +232,15 @@ Títulos con el formato de auditoría de `docs/convencion-nombres-github.md` §4
 | 4 | Auditoría UI sitio: unificar el marco de ingresar, cuenta y 403 | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-05, UX-SITIO-19 |
 | 5 | Auditoría UI sitio: mejorar la accesibilidad del formulario de contacto | `tipo:audit`, `area:web`, `prioridad:media` | UX-SITIO-06, UX-SITIO-07, UX-SITIO-11, UX-SITIO-12 |
 | 6 | Auditoría UI sitio: mostrar todo el stack con movimiento reducido | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-08 |
-| 7 | Auditoría UI sitio: dar títulos de pestaña con el sitio y el proyecto | `tipo:audit`, `area:web`, `prioridad:media` | UX-SITIO-09 |
-| 8 | Auditoría UI sitio: enlazar el contacto en los avisos de ingreso y unificar la voz | `tipo:audit`, `area:web`, `prioridad:media` | UX-SITIO-10, UX-SITIO-20 |
+| 7 | Auditoría UI sitio: dar títulos de pestaña con el sitio y el proyecto | `tipo:audit`, `area:web`, `area:auth`, `prioridad:media` | UX-SITIO-09 |
+| 8 | Auditoría UI sitio: enlazar el contacto en los avisos de ingreso y unificar la voz | `tipo:audit`, `area:web`, `area:auth`, `prioridad:media` | UX-SITIO-10, UX-SITIO-20 |
 | 9 | Auditoría UI sitio: sumar salto al contenido y contexto a los enlaces | `tipo:audit`, `area:web`, `prioridad:baja` | UX-SITIO-13, UX-SITIO-14, UX-SITIO-15 |
 | 10 | Auditoría UI sitio: pasar los tamaños de letra sueltos a tokens | `tipo:audit`, `area:diseno`, `prioridad:baja` | UX-SITIO-16 |
 | 11 | Auditoría UI sitio: bajar el peso de copiar el link en contacto | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:baja` | UX-SITIO-18 |
 
 Notas para quien los abra:
 
+- Los issues 4 (por UX-SITIO-19), 7 y 8 tocan sesiones o el flujo de ingreso: según `AGENTS.md` (Autonomía), quien los implemente consulta a una persona antes de empezar, aunque el issue lo pida.
 - El issue 7 toca `generateMetadata` en una ruta con sesión: revisar que no revele si un slug existe (ver UX-SITIO-09).
-- El issue 8 pide una decisión de voz (singular o plural) antes de tocar los textos de `src/lib/ingreso.ts`, que tienen tests.
+- El issue 8 pide una decisión de voz (singular o plural) antes de tocar los textos, y los de `src/lib/ingreso.ts` tienen tests.
 - El issue 10 depende del manual de marca definitivo si llega antes que el arreglo (`globals.css:3-6`).
