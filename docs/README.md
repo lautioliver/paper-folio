@@ -55,7 +55,8 @@ Regla: si un documento de producto y el código no coinciden, **gana** [architec
 - [Roadmap](development/roadmap.md)
 - [Horizonte](development/horizon.md)
 - [Deploy](development/deploy.md)
-- Auditorías: `development/audit-<tema>-<AAAA-MM-DD>.md`. Cada hallazgo con ID estable (`AUD-01`…) para poder abrir un issue por hallazgo.
+- Auditorías: en `development/auditorias/<tema>.md`. Cada hallazgo con ID estable (`UX-<área>-01`…) para poder abrir un issue por hallazgo.
+  - [UI y UX del sitio público](development/auditorias/ui-ux-sitio.md) (`UX-SITIO-NN`, #80)
 
 ### Decisiones
 
