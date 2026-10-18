@@ -30,7 +30,7 @@ Este documento cubre lo que se repite en todo el sitio y el panel, o lo que es d
 | `tinta` sobre `acento` | 6,94 | pasa | pasa | Resaltado `acento`, aviso de error y chip "Bloqueado" (`usuarios/page.tsx:81,115`) |
 | `tinta` sobre `secundario` | 5,20 | pasa | pasa | Inicial del proyecto con tono `secundario` (`Sections.tsx:131`) |
 | `papel` sobre `terciario` | 4,55 | pasa (justo) | pasa | Resaltado `terciario` en "trayectoria" (`Sections.tsx:209`, `tones.ts:17`) |
-| `tinta` sobre `terciario` | 4,33 | **no pasa** | pasa | Inicial del proyecto con tono `terciario` (`Sections.tsx:131`, `[slug]/page.tsx:67`): `text-h3` en negrita y `aria-hidden`, así que hoy pasa como texto grande |
+| `tinta` sobre `terciario` | 4,33 | **no pasa** | pasa | Inicial del proyecto con tono `terciario` (`Sections.tsx:131`, `[slug]/page.tsx:67`): `text-h3` es 24 px, así que hoy pasa como texto grande. `aria-hidden` no lo exime (lo ven igual las personas con baja visión): si la inicial baja de 24 px, falla |
 | `papel` sobre `secundario` | 3,78 | **no pasa** | pasa | Resaltado `secundario` en h1/h2 (`Sections.tsx:25,100`, `tones.ts:16`): pasa como texto grande. Chip "En curso" a 14 px (`ChipEstado.tsx:5`): **falla** → UX-TRANS-01 |
 | `papel` sobre `acento` | 2,84 | no pasa | no pasa | No se usa (bien: `tones.ts:15` usa `tinta`) |
 | `papel` sobre `primario` | 1,73 | no pasa | no pasa | No se usa (bien) |
@@ -43,8 +43,7 @@ Este documento cubre lo que se repite en todo el sitio y el panel, o lo que es d
 | | `superficie` | 3,23 | pasa | Barra del panel |
 | | `tinta` | 5,20 | pasa | Pie y trayectoria |
 | | `primario` | 2,18 | **no pasa** | Botón "Escribime" dentro de la tarjeta amarilla (`Sections.tsx:72,77`) → UX-TRANS-04 |
-| Chip seleccionado `primario` | chip sin seleccionar `papel` | 1,73 | **no pasa** | `EnlacesPanel.tsx:69`, `metricas/page.tsx:42` → UX-TRANS-05 |
-| Chip seleccionado `primario` | chip sin seleccionar `superficie` | 1,48 | **no pasa** | `servicios/formulario.tsx:151` → UX-TRANS-05 |
+| Chip seleccionado `primario` | su borde `tinta` | 11,35 | pasa | `EnlacesPanel.tsx:69`, `metricas/page.tsx:42`, `servicios/formulario.tsx:151`. Contra el chip sin seleccionar (`papel` 1,73; `superficie` 1,48) 1.4.11 no pide 3:1, pero el color es la única diferencia → UX-TRANS-05 (1.4.1) |
 | Borde `tinta` de campos y tarjetas | `papel` / `superficie` | 19,68 / 16,81 | pasa | `contorno`, `marca`, `ContactForm.tsx:9` |
 | Separador `papel/20` | `tinta` | 1,78 | no aplica | Decorativo (`Contact.tsx:57`) |
 
@@ -74,16 +73,16 @@ Los botones deshabilitados (`disabled:opacity-40` y `-60`) quedan fuera de 1.4.3
 
 - **Página:** todo `/panel` en celular y tablet (menos de 1024 px).
 - **Dónde:** `src/components/panel/PanelShell.tsx:23-25` (barra `fixed inset-x-0 bottom-0`) y `:20` (el `main` solo tiene `pb-28`).
-- **Qué pasa:** la barra mide unos 60 px de alto y queda fija encima del contenido. Al avanzar con Tab, el navegador desplaza lo justo para que el siguiente control entre por el borde inferior de la ventana, que es donde está la barra: un botón de 33 a 41 px (`px-3 py-1` o `px-5 py-2` con borde) queda tapado entero. El `pb-28` del `main` solo sirve al final de la página. El sitio ya resuelve lo mismo arriba con `scroll-pt-24` (`src/app/layout.tsx:22`), pero no hay un equivalente abajo para el panel. Inferido del código: no se pudo probar en producción porque pide sesión.
+- **Qué pasa:** la barra mide unos 67 px de alto (`p-3` y borde de la barra, más el chip: `py-2`, línea de 21 px y bordes) y queda fija encima del contenido. Al avanzar con Tab, el navegador desplaza lo justo para que el siguiente control entre por el borde inferior de la ventana, que es donde está la barra: un botón de 33 a 41 px (`px-3 py-1` o `px-5 py-2` con borde) queda tapado entero. El `pb-28` del `main` solo sirve al final de la página. El sitio ya resuelve lo mismo arriba con `scroll-pt-24` (`src/app/layout.tsx:22`), pero no hay un equivalente abajo para el panel. Inferido del código: no se pudo probar en producción porque pide sesión.
 - **Por qué importa:** WCAG 2.4.11 (AA, foco no tapado) falla cuando el elemento con foco queda oculto por completo.
-- **Propuesta:** `scroll-padding-bottom` en el `html` mientras se muestra la barra (por ejemplo `max-lg:scroll-pb-24` aplicado desde el layout del panel), y confirmarlo en un celular navegando con teclado.
+- **Propuesta:** `scroll-padding-bottom` de al menos 72 px en el `html` mientras se muestra la barra. El `html` lo renderiza solo el layout raíz (`src/app/layout.tsx:19-23`), así que una clase en el layout del panel no sirve: tiene que ser una regla en `globals.css` del estilo `html:has([data-panel])` con el corte de `lg`, y un `data-panel` en `PanelShell.tsx:13`, y confirmarlo en un celular navegando con teclado.
 - **Gravedad:** alta (a confirmar en un navegador con sesión).
 
 ### UX-TRANS-04 — El anillo de foco no contrasta sobre el amarillo
 
 - **Página:** `/` (sección de servicios) y cualquier control futuro sobre `primario`, `acento`, `secundario` o `terciario`.
 - **Dónde:** `src/styles/globals.css:73-76` (`outline: 2px solid var(--color-secundario)`), con el caso concreto en `src/components/sitio/Sections.tsx:72` (tarjeta `bg-primario`) y `:77` (botón "Escribime").
-- **Qué pasa:** el anillo `secundario` da 3,78 sobre `papel`, 3,23 sobre `superficie` y 5,20 sobre `tinta`, pero 2,18 sobre `primario`, 1,33 sobre `acento` y 1,20 sobre `terciario`. Hoy el único control sobre un fondo de color es "Escribime"; en producción, a 1440 px, es la séptima parada de Tab.
+- **Qué pasa:** el anillo `secundario` da 3,78 sobre `papel`, 3,23 sobre `superficie` y 5,20 sobre `tinta`, pero 2,18 sobre `primario`, 1,33 sobre `acento` y 1,20 sobre `terciario`. Hoy el único control sobre un fondo de color es "Escribime"; en producción, a 360 px, es la séptima parada de Tab (después de logo, "Ingresar", menú, los dos botones del hero y la pausa de la banda).
 - **Por qué importa:** WCAG 1.4.11 (AA) pide 3:1 para el indicador de foco contra lo que lo rodea. Un anillo de un solo color no puede servir para toda la paleta.
 - **Propuesta:** anillo en `tinta` por defecto (pasa contra todos los fondos claros: 19,68 sobre `papel`, 11,35 sobre `primario`, 4,33 sobre `terciario`) y en `papel` dentro de las zonas `bg-tinta` (pie, trayectoria). Se puede resolver con una variable `--color-foco` que el contenedor oscuro redefine. Revisarlo junto con UX-TRANS-02.
 - **Gravedad:** media.
@@ -93,7 +92,7 @@ Los botones deshabilitados (`disabled:opacity-40` y `-60`) quedan fuera de 1.4.3
 - **Página:** navegación del panel, filtros de métricas, selector de ícono de servicios.
 - **Dónde:** `src/components/panel/EnlacesPanel.tsx:69` (`bg-primario` contra `bg-papel`), `src/app/panel/metricas/page.tsx:42` (igual) y `src/app/panel/servicios/formulario.tsx:151` (`has-checked:bg-primario` contra `bg-superficie`).
 - **Qué pasa:** el chip actual y los demás tienen el mismo borde, la misma tipografía y el mismo texto; solo cambia el relleno, con 1,73:1 (`primario`/`papel`) o 1,48:1 (`primario`/`superficie`). `aria-current` y el radio lo anuncian bien al lector de pantalla, pero alguien con baja visión o que mira la pantalla al sol no ve cuál está elegido.
-- **Por qué importa:** WCAG 1.4.11 (el estado es información visual necesaria) y 1.4.1 (no depender solo del color).
+- **Por qué importa:** WCAG 1.4.1 (AA): el color es la única señal visual del estado. 1.4.11 no aplica acá (el relleno contrasta 11,35:1 con su borde `tinta`, y el cambio entre estados no tiene que llegar a 3:1), pero 1,73:1 y 1,48:1 entre los dos rellenos son difíciles de distinguir.
 - **Propuesta:** sumar una señal que no sea el color: la sombra de marca (`marca`) solo en el elegido, que es justo el lenguaje de "pieza apretada/levantada" del manual, o un subrayado grueso. Una sola regla para los tres lugares.
 - **Gravedad:** media.
 
@@ -118,8 +117,8 @@ Los botones deshabilitados (`disabled:opacity-40` y `-60`) quedan fuera de 1.4.3
 ### UX-TRANS-08 — Los botones se reescriben en cada archivo, con variantes que no coinciden
 
 - **Página:** todas.
-- **Dónde:** botón primario grande en `src/components/sitio/Sections.tsx:15`, `src/app/(auth)/ingresar/page.tsx:12`, `src/app/forbidden.tsx:11` y `src/app/(sitio)/cuenta/page.tsx:53`; primario chico en `src/app/panel/consultas/[id]/controles.tsx:16-17`, `src/app/panel/servicios/formulario.tsx:22`, `src/app/panel/proyectos/formulario.tsx:13`, `src/app/panel/demos/formulario.tsx:12`, `src/app/panel/usuarios/page.tsx:93` y `src/app/panel/demos/page.tsx:24`; secundario chico en `src/app/panel/servicios/page.tsx:10`, `src/app/panel/demos/page.tsx:12`, `src/app/panel/proyectos/lista.tsx:10`, `src/app/panel/usuarios/page.tsx:15` y `src/app/panel/metricas/page.tsx:29`.
-- **Qué pasa:** hay al menos cuatro variantes reales, copiadas en quince lugares, y ya divergen: el deshabilitado es `opacity-40` en `servicios/page.tsx:10` y `demos/page.tsx:12` y `opacity-60` en el resto; "Contactame" de la barra (`src/components/sitio/Navbar.tsx:88`) es `rounded-lg` sin borde ni sombra, mientras el "Contactame" del hero (`Sections.tsx:29`) es un botón de marca; unos llevan `min-h-11` (`ingresar/page.tsx:12`) y otros no.
+- **Dónde:** botón primario grande en `src/components/sitio/Sections.tsx:15`, `src/app/(auth)/ingresar/page.tsx:12`, `src/app/forbidden.tsx:11` y `src/app/(sitio)/cuenta/page.tsx:53`; primario chico en `src/app/panel/consultas/[id]/controles.tsx:16-17`, `src/app/panel/servicios/formulario.tsx:22`, `src/app/panel/proyectos/formulario.tsx:13`, `src/app/panel/demos/formulario.tsx:12`, `src/app/panel/usuarios/page.tsx:93` y `src/app/panel/demos/page.tsx:24`; secundario chico en `src/app/panel/servicios/page.tsx:10`, `src/app/panel/demos/page.tsx:12`, `src/app/panel/proyectos/lista.tsx:10`, `src/app/panel/usuarios/page.tsx:15`; y los chips de filtro, que son otra variante más, en `src/app/panel/metricas/page.tsx:29`.
+- **Qué pasa:** hay al menos cuatro variantes reales, copiadas en quince lugares, y ya divergen: el deshabilitado es `opacity-40` en `servicios/page.tsx:10` y `demos/page.tsx:12`, `opacity-60` en los formularios del panel y en `proyectos/lista.tsx:10`, y no existe en los demás (por ejemplo `Sections.tsx:15`, `ingresar/page.tsx:12`, `usuarios/page.tsx:15,93`); "Contactame" de la barra (`src/components/sitio/Navbar.tsx:88`) es `rounded-lg` sin borde ni sombra, mientras el "Contactame" del hero (`Sections.tsx:29`) es un botón de marca; unos llevan `min-h-11` (`ingresar/page.tsx:12`) y otros no.
 - **Por qué importa:** inconsistencia con el manual (la pieza con borde, radio y sombra) y cada arreglo de foco o de estado hay que hacerlo quince veces.
 - **Propuesta:** un componente `Boton` (y su versión enlace) en `src/components/` con `variante` (`primario`, `secundario`) y `tamano` (`normal`, `chico`), con un solo estilo de deshabilitado. Migrar de a una sección.
 - **Gravedad:** media.
@@ -136,10 +135,10 @@ Los botones deshabilitados (`disabled:opacity-40` y `-60`) quedan fuera de 1.4.3
 ### UX-TRANS-10 — Tamaños de letra fuera de la escala del manual
 
 - **Página:** `/`, `/proyectos`, `/proyectos/[slug]`, pie.
-- **Dónde:** `text-[1.75rem] leading-[1.15]` en `src/components/sitio/Highlight.tsx:22` y `src/app/(sitio)/proyectos/page.tsx:31`; `text-[2.25rem] leading-[1.1]` y `lg:text-[3.75rem]` en `src/components/sitio/Sections.tsx:23`; `text-xs` (12 px) en `src/components/sitio/Contact.tsx:57`, `src/components/sitio/Sections.tsx:138,143`, `src/components/sitio/ShareButton.tsx:34` y `src/app/(sitio)/proyectos/[slug]/page.tsx:74`.
-- **Qué pasa:** la escala tiene `text-h1`…`text-pequeno` (`globals.css:17-26`), pero el h2 de celular, el h1 de celular y el h1 grande de PC son valores sueltos, y 12 px aparece en cinco lugares sin token. `proyectos/page.tsx:31` además copia a mano el estilo de `SectionTitle` porque necesita un `h1`.
+- **Dónde:** `text-[1.75rem] leading-[1.15]` en `src/components/sitio/Highlight.tsx:22` y `src/app/(sitio)/proyectos/page.tsx:31`; `text-[2.25rem] leading-[1.1]` y `lg:text-[3.75rem]` en `src/components/sitio/Sections.tsx:23`; `text-xs` (12 px) en `src/components/sitio/Contact.tsx:57`, `src/components/sitio/Sections.tsx:138,143`, `src/components/sitio/ShareButton.tsx:34` y `src/app/(sitio)/proyectos/[slug]/page.tsx:74`, más `fontSize: 12` en los ejes de los gráficos (`src/app/panel/metricas/graficos.tsx:61`).
+- **Qué pasa:** la escala tiene `text-h1`…`text-pequeno` (`globals.css:17-26`), pero el h2 de celular (1,75 rem) y el h1 grande de PC (3,75 rem) son valores sueltos; el h1 de celular (2,25 rem) es justo `--text-h2` escrito a mano y con otro interlineado (1,1 en vez de 1,15); y 12 px aparece en seis lugares sin token. `proyectos/page.tsx:31` además copia a mano el estilo de `SectionTitle` porque necesita un `h1`.
 - **Por qué importa:** "Colores y tipografías solo desde los tokens" (`AGENTS.md`); hoy un cambio de escala no llega a estos lugares.
-- **Propuesta:** sumar los tokens que faltan (por ejemplo `--text-h1-movil`, `--text-h2-movil`, `--text-display`, `--text-mini`) y que `SectionTitle` acepte `as="h1"`.
+- **Propuesta:** sumar los tokens que faltan (por ejemplo `--text-h2-movil`, `--text-display`, `--text-mini`), usar `text-h2` donde ya coincide y que `SectionTitle` acepte `as="h1"`.
 - **Gravedad:** media.
 
 ### UX-TRANS-11 — La metadata no tiene plantilla de título ni datos para compartir
@@ -154,8 +153,8 @@ Los botones deshabilitados (`disabled:opacity-40` y `-60`) quedan fuera de 1.4.3
 ### UX-TRANS-12 — Radios y chips fuera del sistema
 
 - **Página:** sitio y panel.
-- **Dónde:** `rounded-lg` en `src/components/sitio/ContactForm.tsx:9`, `src/components/sitio/Navbar.tsx:88,96`, `src/components/sitio/MenuCuenta.tsx:12`, `src/components/sitio/StackBand.tsx:38` y `src/components/sitio/Sections.tsx:131`; `rounded-md` en `Sections.tsx:138` y `src/app/(sitio)/proyectos/[slug]/page.tsx:74,117`. Chips de estado: `rounded-full` en `src/components/panel/ChipEstado.tsx:13` y `contorno` (radio de marca) en `src/app/panel/servicios/page.tsx:48`, `src/app/panel/demos/page.tsx:48` y `src/app/panel/usuarios/page.tsx:114-115`.
-- **Qué pasa:** hay un solo radio de marca (`--radius-marca`, `globals.css:29`), y además tres radios más chicos que nadie decidió. Los chips de estado tienen dos formas según la sección.
+- **Dónde:** `rounded-lg` en `src/components/sitio/ContactForm.tsx:9`, `src/components/sitio/Navbar.tsx:88,96`, `src/components/sitio/MenuCuenta.tsx:12`, `src/components/sitio/StackBand.tsx:38` `src/components/sitio/Sections.tsx:131` y `src/app/(sitio)/proyectos/[slug]/page.tsx:67`; `rounded-md` en `Sections.tsx:138` y `[slug]/page.tsx:74,117`; `rounded-sm` en `Sections.tsx:106,110`; y `borderRadius: 8` en el tooltip de los gráficos (`src/app/panel/metricas/graficos.tsx:52`). Chips de estado: `rounded-full` en `src/components/panel/ChipEstado.tsx:13` y `contorno` (radio de marca) en `src/app/panel/servicios/page.tsx:48`, `src/app/panel/demos/page.tsx:48` y `src/app/panel/usuarios/page.tsx:114-115`.
+- **Qué pasa:** hay un solo radio de marca (`--radius-marca`, `globals.css:29`), y además otros tres (`rounded-lg`, `rounded-md`, `rounded-sm`) y un valor en línea que nadie decidió. Los chips de estado tienen dos formas según la sección.
 - **Por qué importa:** inconsistencia con el manual; no es un error de accesibilidad.
 - **Propuesta:** decidir si existe un "radio chico" (y volverlo token, por ejemplo `--radius-chico`) o llevar todo al de marca; un solo componente `Chip` para los estados del panel.
 - **Gravedad:** baja.
@@ -202,19 +201,22 @@ Los botones deshabilitados (`disabled:opacity-40` y `-60`) quedan fuera de 1.4.3
 
 ## 5. Issues propuestos
 
-Para pasarlos a issues con `crear-issue` después de revisar esta tabla. Títulos sin prefijo, en imperativo.
+Para pasarlos a issues con `crear-issue` después de revisar esta tabla: uno por hallazgo, con `tipo:audit` y el título `Auditoría UI/UX transversal: <hallazgo>` (la regla de `crear-issue`). UX-TRANS-07, 08, 09 y 12 se resuelven mejor juntos (los componentes compartidos), pero quedan como issues separados para poder cerrarlos de a uno.
 
-| Título | Labels sugeridos | Hallazgos |
+| Título | Labels sugeridos | Hallazgo |
 |---|---|---|
-| Corregir el contraste del chip de estado "En curso" | `tipo:bug`, `area:panel`, `area:diseno`, `prioridad:alta` | UX-TRANS-01 |
-| Mostrar el foco en los controles con el `input` oculto | `tipo:bug`, `area:diseno`, `prioridad:alta` | UX-TRANS-02 |
-| Evitar que la barra inferior del panel tape el foco | `tipo:bug`, `area:panel`, `prioridad:alta` | UX-TRANS-03 |
-| Hacer que el anillo de foco contraste sobre todos los fondos | `tipo:task`, `area:diseno`, `prioridad:media` | UX-TRANS-04 |
-| Marcar la opción elegida con algo más que el color | `tipo:task`, `area:diseno`, `prioridad:media` | UX-TRANS-05 |
-| Agregar un enlace para saltar al contenido | `tipo:feature`, `area:web`, `prioridad:media` | UX-TRANS-06 |
-| Crear los componentes compartidos de botón, campo, mensaje y chip | `tipo:task`, `area:diseno`, `prioridad:media` | UX-TRANS-07, UX-TRANS-08, UX-TRANS-09, UX-TRANS-12 |
-| Completar la escala tipográfica con los tamaños que faltan | `tipo:task`, `area:diseno`, `prioridad:media` | UX-TRANS-10 |
-| Agregar la plantilla de título y Open Graph a la metadata | `tipo:task`, `area:web`, `prioridad:media` | UX-TRANS-11 |
-| Llevar la barra y el pie al layout del sitio | `tipo:task`, `area:web`, `prioridad:baja` | UX-TRANS-13 |
-| Ajustar el botón de pausa de la banda del stack | `tipo:task`, `area:web`, `prioridad:baja` | UX-TRANS-14 |
-| Agrandar el área de toque de los enlaces de texto | `tipo:task`, `area:diseno`, `prioridad:baja` | UX-TRANS-15 |
+| Auditoría UI/UX transversal: corregir el contraste del chip de estado "En curso" | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:alta` | UX-TRANS-01 |
+| Auditoría UI/UX transversal: mostrar el foco en los controles con el `input` oculto | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:alta` | UX-TRANS-02 |
+| Auditoría UI/UX transversal: evitar que la barra inferior del panel tape el foco | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-TRANS-03 |
+| Auditoría UI/UX transversal: hacer que el anillo de foco contraste sobre todos los fondos | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-04 |
+| Auditoría UI/UX transversal: marcar la opción elegida con algo más que el color | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-05 |
+| Auditoría UI/UX transversal: agregar un enlace para saltar al contenido | `tipo:audit`, `area:web`, `area:panel`, `prioridad:media` | UX-TRANS-06 |
+| Auditoría UI/UX transversal: usar letra de 16 px en los campos del panel | `tipo:audit`, `area:panel`, `prioridad:media` | UX-TRANS-07 |
+| Auditoría UI/UX transversal: unificar los botones en un componente | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-08 |
+| Auditoría UI/UX transversal: unificar los campos y los mensajes de formulario | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-09 |
+| Auditoría UI/UX transversal: completar la escala tipográfica con los tamaños que faltan | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-10 |
+| Auditoría UI/UX transversal: agregar la plantilla de título y Open Graph a la metadata | `tipo:audit`, `area:web`, `prioridad:media` | UX-TRANS-11 |
+| Auditoría UI/UX transversal: decidir los radios y unificar los chips | `tipo:audit`, `area:diseno`, `prioridad:baja` | UX-TRANS-12 |
+| Auditoría UI/UX transversal: llevar la barra y el pie al layout del sitio | `tipo:audit`, `area:web`, `prioridad:baja` | UX-TRANS-13 |
+| Auditoría UI/UX transversal: ajustar el botón de pausa de la banda del stack | `tipo:audit`, `area:web`, `prioridad:baja` | UX-TRANS-14 |
+| Auditoría UI/UX transversal: agrandar el área de toque de los enlaces de texto | `tipo:audit`, `area:diseno`, `prioridad:baja` | UX-TRANS-15 |
