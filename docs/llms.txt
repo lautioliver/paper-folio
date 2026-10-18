@@ -18,6 +18,7 @@ Instrucciones para modelos: leer este archivo y AGENTS.md. Spec aspiracional = /
 - [Roadmap](development/roadmap.md)
 - [Arquitectura implementada](development/architecture.md)
 - [Auditoría de UI y UX del sitio público (hallazgos UX-SITIO-NN e issues propuestos)](development/auditorias/ui-ux-sitio.md)
+- [Auditoría UI/UX transversal: accesibilidad, contraste, responsive y sistema visual](development/auditorias/ui-ux-transversal.md)
 - [Mapa para agentes: docs según cambios, rutas sensibles](mapa-agentes.json)
 - [Contrato de los subagentes: reglas y salida común](agentes/contrato-subagentes.md)
 - [Lecciones de las retros de agentes (revisadas en PR; leer antes de implementar)](agentes/lecciones.md)
