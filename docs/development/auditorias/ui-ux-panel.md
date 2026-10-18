@@ -48,12 +48,12 @@ Lista priorizada de mejoras de interfaz y experiencia del panel (`/panel/**`). N
 - **Por qué importa:** WCAG 2.4.7 (foco visible). Un admin que usa teclado no puede saber dónde está.
 - **Propuesta:** sumar al label `has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-secundario`, así el anillo es el mismo del resto del sitio.
 
-#### UX-PANEL-03 — En demos y servicios, publicar, mover y borrar fallan en silencio
+#### UX-PANEL-03 — En demos y servicios, activar o publicar, mover y borrar fallan en silencio
 
 - **Página:** `/panel/demos` y `/panel/servicios`.
 - **Dónde:** `src/app/panel/demos/acciones.ts:53-70` y `src/app/panel/servicios/acciones.ts:59-77` (devuelven `void` y descartan el `ResultadoDemo`/`ResultadoServicio`); los botones en `src/app/panel/demos/page.tsx:59-84` y `src/app/panel/servicios/page.tsx:56-79`.
 - **Qué pasa:** si el servicio responde con error (la demo ya no existe, la base falló a medias, otro admin la movió), la acción refresca y no dice nada. Los botones tampoco se deshabilitan mientras corre la acción: un doble clic en "Subir" sube dos lugares.
-- **Por qué importa:** el admin cree que publicó o borró algo que sigue igual, y lo descubre recién en el sitio. En proyectos el mismo caso sí avisa (`src/app/panel/proyectos/lista.tsx:66-67`, `:154`).
+- **Por qué importa:** el admin cree que activó una demo, publicó un servicio o borró algo que sigue igual, y lo descubre recién en el sitio. En proyectos el mismo caso sí avisa (`src/app/panel/proyectos/lista.tsx:66-67`, `:154`).
 - **Propuesta:** el patrón de proyectos: `useActionState` con `{ error }`, un mensaje `aria-live` por lista y `disabled` mientras la acción está pendiente (o `useFormStatus` en un botón cliente compartido).
 
 ### Media
@@ -70,15 +70,15 @@ Lista priorizada de mejoras de interfaz y experiencia del panel (`/panel/**`). N
 
 - **Página:** `/panel/consultas/[id]`.
 - **Dónde:** `src/app/panel/consultas/[id]/controles.tsx:19-26` (solo hay mensaje de error), `src/app/panel/consultas/[id]/acciones.ts:23-28`, y el orden de `src/app/panel/consultas/[id]/detalle.tsx:91-120` (controles y después el seguimiento, que crece hacia abajo porque `src/lib/seguimiento.ts:141`, `:186` y `:238` agregan con `$push`).
-- **Qué pasa:** al cambiar el estado, guardar una nota o enviar la respuesta, la entrada nueva aparece al final de la página, debajo de los tres formularios. En celular queda varias pantallas más abajo. El lector de pantalla no anuncia nada cuando sale bien.
-- **Por qué importa:** el operador no sabe si la nota se guardó o si el email salió sin hacer scroll; con una respuesta por email, la duda lleva a mandarla dos veces.
+- **Qué pasa:** al cambiar el estado, guardar una nota o enviar la respuesta, la entrada nueva aparece al final de la página, debajo de los tres formularios. En celular queda varias pantallas más abajo. El lector de pantalla no anuncia nada cuando sale bien. Después de una respuesta enviada, lo único que cambia cerca es el chip (pasa a "Respondida") y el formulario se reemplaza por "Para responder por email, pasá la consulta a En curso" (ver UX-PANEL-16), que se lee como una instrucción para volver a responder.
+- **Por qué importa:** el operador no sabe si la nota se guardó o si el email salió sin hacer scroll. Mandar la respuesta dos veces no se puede (el servidor solo responde desde En curso), pero el texto que queda en lugar del formulario lo invita a reabrir la consulta.
 - **Propuesta:** devolver también un `ok` en `EstadoAccion` y mostrar "Listo: guardamos la nota" / "Listo: enviamos la respuesta" en el mismo `MensajeError` (renombrado a `Mensaje`). Evaluar mostrar el seguimiento de lo más nuevo a lo más viejo, o arriba de los controles.
 
 #### UX-PANEL-06 — Los errores de los formularios no se distinguen ni reciben el foco
 
 - **Página:** todos los formularios del panel.
 - **Dónde:** `src/app/panel/proyectos/formulario.tsx:24-31` (el error va en `font-normal text-tinta`, igual que la ayuda de `:54`) y `:340-342` (el error general va abajo de todo, junto al botón); `src/app/panel/demos/formulario.tsx:14-21`; `src/app/panel/servicios/formulario.tsx:24-31`; `src/app/panel/consultas/[id]/controles.tsx:19-26`.
-- **Qué pasa:** el texto del error tiene el mismo color, tamaño y peso que la ayuda (en proyectos) o que un label (en el resto). Los campos con `aria-invalid` no cambian de aspecto. Después de un envío fallido el foco queda en el botón: en el formulario de proyectos (16 campos), el error del slug queda dos pantallas más arriba.
+- **Qué pasa:** el texto del error tiene el mismo color, tamaño y peso que la ayuda (en proyectos) o que un label (en el resto). Los campos con `aria-invalid` no cambian de aspecto. Después de un envío fallido, en proyectos el foco queda en el botón y el error del slug queda dos pantallas más arriba (el formulario tiene 14 campos). En demos y servicios es peor: el botón está dentro de los campos que se vuelven a montar con cada intento (`key` en `src/app/panel/demos/formulario.tsx:55` y `src/app/panel/servicios/formulario.tsx:53`), así que el foco cae en el `<body>` y con teclado hay que volver a recorrer la página desde arriba.
 - **Por qué importa:** WCAG 3.3.1 pide identificar el error, y verlo es parte de eso. Hoy hay que leer el formulario entero para encontrar qué falló.
 - **Propuesta:** un estilo de error único del panel (por ejemplo, un ícono o el prefijo "Error:" en negrita, y `aria-invalid:border-acento` en el campo, sin hex nuevos) y, si el envío falla, mover el foco al primer campo inválido o a un resumen arriba con enlaces a cada campo.
 
@@ -124,7 +124,7 @@ Lista priorizada de mejoras de interfaz y experiencia del panel (`/panel/**`). N
 - **Dónde:** no hay `loading.tsx`, `error.tsx` ni `not-found.tsx` en `src/app/` (solo `src/app/forbidden.tsx`). `src/app/panel/layout.tsx:31` usa `<Suspense fallback={null}>`. Llaman a `notFound()` `src/app/panel/consultas/[id]/detalle.tsx:49`, `src/app/panel/proyectos/[id]/editar.tsx:12`, `src/app/panel/demos/[id]/page.tsx:16` y `src/app/panel/servicios/[id]/page.tsx:13`. `src/app/panel/proyectos/acciones.ts:68` vuelve a lanzar el error de la base.
 - **Qué pasa:** mientras se lee la sesión, la pantalla queda en blanco (sin el menú). Un id que no existe muestra la 404 por defecto de Next, en inglés y sin la marca. Si Mongo falla, aparece la página de error genérica de Next ("Application error…"), sin forma de volver al panel.
 - **Por qué importa:** son justo los momentos en que el operador necesita orientarse. Un enlace viejo a una consulta borrada lo deja en una página en otro idioma, fuera del panel.
-- **Propuesta:** un `not-found.tsx` en la carpeta del panel ("No encontramos esa consulta o ese contenido" con un enlace a la sección), un `error.tsx` en la misma carpeta (cliente, con "Probá de nuevo" que llame a `reset` y el enlace a Consultas) y un esqueleto del shell como fallback del layout. La 404 y el error del sitio público conviene resolverlos junto con la auditoría transversal de UI y UX.
+- **Propuesta:** un `not-found.tsx` en la carpeta del panel ("No encontramos esa consulta o ese contenido" con un enlace a la sección), un `error.tsx` en la misma carpeta (cliente, con "Probá de nuevo" que llame a `reset` y el enlace a Consultas) y un esqueleto del shell como fallback del layout. Ojo: el `error.tsx` de una carpeta no atrapa los errores de su propio `layout.tsx`, y el layout del panel lee el rol de la base (`src/app/panel/layout.tsx:24`): para que una caída de Mongo no termine en la página genérica hace falta además un `error.tsx` en la raíz de `app/` (o un `global-error.tsx`). La 404 y el error del sitio público conviene resolverlos junto con la auditoría transversal de UI y UX.
 
 #### UX-PANEL-12 — Varias pestañas se llaman igual y ninguna dice de qué sitio es
 
@@ -162,9 +162,9 @@ Lista priorizada de mejoras de interfaz y experiencia del panel (`/panel/**`). N
 
 - **Página:** `/panel/consultas/[id]`.
 - **Dónde:** `src/app/panel/consultas/[id]/controles.tsx:124-128`; la regla, en `src/lib/estados-consulta.ts:45` (`ESTADOS_PARA_RESPONDER = ["en_curso"]`).
-- **Qué pasa:** en una consulta nueva, el formulario de respuesta no aparece: se lee "Para responder por email, pasá la consulta a En curso", hay que ir al formulario de estado de arriba, cambiarlo, esperar el refresco y recién ahí escribir.
-- **Por qué importa:** es el recorrido principal del operador y suma un paso que no aporta. El texto no enlaza ni lleva al control.
-- **Propuesta (sin cambiar la regla):** en lugar del texto, un botón "Pasar a En curso y responder" que corra la transición y muestre el formulario. La regla sigue igual (se responde en curso), así que no hace falta `logica-negocio`. Si se prefiere responder desde Nueva sin pasar por En curso, eso sí cambia la regla y se consulta aparte.
+- **Qué pasa:** en una consulta nueva, el formulario de respuesta no aparece: se lee "Para responder por email, pasá la consulta a En curso", hay que ir al formulario de estado de arriba, cambiarlo, esperar el refresco y recién ahí escribir. El mismo texto se muestra en Respondida y en Archivada (el componente solo mira si el estado está en `ESTADOS_PARA_RESPONDER`), también justo después de enviar una respuesta.
+- **Por qué importa:** es el recorrido principal del operador y suma un paso que no aporta. El texto no enlaza ni lleva al control, y en una consulta ya respondida sugiere reabrirla para volver a responder.
+- **Propuesta (sin cambiar la regla):** un texto por estado. En Nueva, un botón "Pasar a En curso y responder" que corra la transición y muestre el formulario. En Respondida, "Ya respondiste esta consulta: la respuesta está en el seguimiento". En Archivada, "La consulta está archivada". La regla sigue igual (se responde en curso), así que no hace falta `logica-negocio`. Si se prefiere responder desde Nueva sin pasar por En curso, eso sí cambia la regla y se consulta aparte.
 
 ### Baja
 
@@ -189,7 +189,7 @@ Lista priorizada de mejoras de interfaz y experiencia del panel (`/panel/**`). N
 #### UX-PANEL-20 — La validación del navegador aparece antes que la nuestra
 
 - **Dónde:** `pattern` del slug en `src/app/panel/proyectos/formulario.tsx:185`; `type="url"` en `:248` y en `src/app/panel/demos/formulario.tsx:129`.
-- **Qué pasa:** un slug con mayúsculas muestra el globo del navegador "Usá el formato solicitado" (o "Please match the requested format"), sin decir cuál; el texto de ayuda está arriba y no se repite.
+- **Qué pasa:** un slug con mayúsculas muestra el globo nativo del navegador, que dice algo como "Usa un formato que coincida con el solicitado" (o "Please match the requested format"): no dice cuál, no está en rioplatense y el texto de ayuda queda arriba sin repetirse.
 - **Propuesta:** `title="Minúsculas, números y guiones; sin espacios"` en el slug (el navegador lo suma al globo), o validar en el cliente con los mismos mensajes del servidor.
 
 #### UX-PANEL-21 — "Cancelar" descarta lo escrito sin avisar
@@ -249,22 +249,22 @@ Lista priorizada de mejoras de interfaz y experiencia del panel (`/panel/**`). N
 
 ## 4. Issues propuestos
 
-Para pasar a GitHub con `crear-issue` después de revisar. Todos llevan `tipo:` y `area:panel`; la prioridad sale de la gravedad más alta que cubren.
+Para pasar a GitHub con `crear-issue` después de revisar. Siguen la convención de los issues de auditoría (`docs/convencion-nombres-github.md` §4.4): título `Auditoría <área>: <hallazgo>`, label `tipo:audit` y, en el cuerpo, el enlace a este documento con los IDs que cubre. `crear-issue` abre uno por hallazgo por defecto; acá se proponen agrupados por arreglo, para no abrir 27 issues que se resuelven juntos. Si se prefiere uno por hallazgo, la columna de la derecha dice cuáles. La prioridad sale de la gravedad más alta que cubren.
 
 | # | Título | Labels sugeridos | Hallazgos |
 |---|---|---|---|
-| 1 | Subir el contraste del chip de estado "En curso" | `tipo:bug`, `area:panel`, `area:diseno`, `prioridad:alta` | UX-PANEL-01 |
-| 2 | Mostrar el foco en el selector de ícono de los servicios | `tipo:bug`, `area:panel`, `prioridad:alta` | UX-PANEL-02 |
-| 3 | Avisar los errores de las acciones de las listas de demos y servicios | `tipo:bug`, `area:panel`, `prioridad:alta` | UX-PANEL-03 |
-| 4 | Confirmar lo que se guardó en el panel | `tipo:feature`, `area:panel`, `prioridad:media` | UX-PANEL-04, UX-PANEL-05, UX-PANEL-23 |
-| 5 | Unificar cómo se muestran y enfocan los errores de los formularios del panel | `tipo:feature`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-06, UX-PANEL-20 |
-| 6 | Unificar las confirmaciones del panel en un componente accesible | `tipo:feature`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-07, UX-PANEL-08, UX-PANEL-09, UX-PANEL-21 |
-| 7 | Unificar las listas de proyectos, demos y servicios | `tipo:task`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-10, UX-PANEL-18, UX-PANEL-19 |
-| 8 | Agregar pantallas de carga, error, 404 y 403 propias del panel | `tipo:feature`, `area:panel`, `prioridad:media` | UX-PANEL-11, UX-PANEL-27 |
-| 9 | Completar los títulos de pestaña del panel | `tipo:task`, `area:panel`, `prioridad:media` | UX-PANEL-12 |
-| 10 | Mostrar la cuenta y el botón Salir en el panel, con salto al contenido | `tipo:feature`, `area:panel`, `prioridad:media` | UX-PANEL-13, UX-PANEL-14, UX-PANEL-25 |
-| 11 | Agregar estados vacíos y mejorar el contraste en métricas | `tipo:task`, `area:panel`, `prioridad:media` | UX-PANEL-15, UX-PANEL-22, UX-PANEL-26 |
-| 12 | Acortar el camino para responder una consulta | `tipo:feature`, `area:panel`, `prioridad:media` | UX-PANEL-16, UX-PANEL-24 |
-| 13 | Sacar la jerga interna de los textos del panel | `tipo:task`, `area:panel`, `prioridad:baja` | UX-PANEL-17 |
+| 1 | Auditoría UX panel: el chip "En curso" no llega al contraste mínimo | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:alta` | UX-PANEL-01 |
+| 2 | Auditoría UX panel: el selector de ícono de los servicios no muestra el foco | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-PANEL-02 |
+| 3 | Auditoría UX panel: las acciones de las listas de demos y servicios fallan en silencio | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-PANEL-03 |
+| 4 | Auditoría UX panel: guardar no confirma lo que se hizo | `tipo:audit`, `area:panel`, `prioridad:media` | UX-PANEL-04, UX-PANEL-05, UX-PANEL-23 |
+| 5 | Auditoría UX panel: los errores de los formularios no se ven ni reciben el foco | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-06, UX-PANEL-20 |
+| 6 | Auditoría UX panel: las confirmaciones usan dos patrones y faltan en usuarios | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-07, UX-PANEL-08, UX-PANEL-09, UX-PANEL-21 |
+| 7 | Auditoría UX panel: las listas de proyectos, demos y servicios se comportan distinto | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-10, UX-PANEL-18, UX-PANEL-19 |
+| 8 | Auditoría UX panel: faltan pantallas propias de carga, error, 404 y 403 | `tipo:audit`, `area:panel`, `prioridad:media` | UX-PANEL-11, UX-PANEL-27 |
+| 9 | Auditoría UX panel: varias pestañas se llaman igual | `tipo:audit`, `area:panel`, `prioridad:media` | UX-PANEL-12 |
+| 10 | Auditoría UX panel: el shell no muestra la cuenta ni permite salir o saltar el menú | `tipo:audit`, `area:panel`, `prioridad:media` | UX-PANEL-13, UX-PANEL-14, UX-PANEL-25 |
+| 11 | Auditoría UX panel: métricas no tiene estados vacíos y una línea tiene poco contraste | `tipo:audit`, `area:panel`, `prioridad:media` | UX-PANEL-15, UX-PANEL-22, UX-PANEL-26 |
+| 12 | Auditoría UX panel: responder una consulta pide un paso de más | `tipo:audit`, `area:panel`, `prioridad:media` | UX-PANEL-16, UX-PANEL-24 |
+| 13 | Auditoría UX panel: hay jerga interna en los textos | `tipo:audit`, `area:panel`, `prioridad:baja` | UX-PANEL-17 |
 
 El issue 10 toca la sesión (un botón "Salir" en el panel): según `AGENTS.md`, cualquier cambio de auth se consulta antes, aunque reuse la acción que ya existe. El issue 8 se coordina con la auditoría transversal, que cubre la 404 y el error del sitio público.
