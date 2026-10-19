@@ -31,7 +31,7 @@ describe("prepararIcono", () => {
     const dir = await mkdtemp(join(tmpdir(), "icono-marca-"));
     const css = join(dir, "globals.css");
     await writeFile(css, "@theme {\n  --color-tinta: #123456;\n  --color-papel: #fedcba;\n}\n");
-    const { elemento } = await prepararIcono(32, css);
+    const { elemento } = await prepararIcono(32, await readFile(css, "utf8"));
     expect(estiloDe(elemento).background).toBe("#123456");
     expect(estiloDe(elemento).color).toBe("#fedcba");
   });
