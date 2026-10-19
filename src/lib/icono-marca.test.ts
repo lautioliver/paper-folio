@@ -27,6 +27,14 @@ describe("leerColoresMarca", () => {
     expect(css).toContain(`--color-papel: ${colores.papel};`);
   });
 
+  it("rechaza un token que no es HEX de 3, 4, 6 u 8 dígitos", async () => {
+    const css = await readFile(CSS_REAL, "utf8");
+    for (const malo of ["#12345", "#1234567"]) {
+      const roto = css.replace(/--color-tinta:\s*[^;]+;/, `--color-tinta: ${malo};`);
+      expect(() => leerColoresMarca(roto)).toThrow(/--color-tinta/);
+    }
+  });
+
   it("falla si globals.css no define los tokens de la marca", () => {
     expect(() => leerColoresMarca("body { color: red; }")).toThrow(/--color-tinta/);
   });
@@ -53,7 +61,7 @@ describe("prepararIcono", () => {
     expect(estiloDe(elemento).color).toBe(papel);
   });
 
-  it("la letra es la inicial de profile, la misma que la barra de navegación", async () => {
+  it("la letra es la inicial de profile.firstName", async () => {
     const { elemento } = await prepararIcono(32);
     expect(circuloDe(elemento).props.children).toBe(profile.firstName[0]);
   });
