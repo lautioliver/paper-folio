@@ -109,7 +109,7 @@ describe("anillo de foco (UX-TRANS-04)", () => {
   const leer = (file: string) => readFileSync(join(SRC, "..", file), "utf8");
 
   it("el anillo global usa la variable --color-foco, no un color fijo", () => {
-    expect(regla(":focus-visible")).toMatch(/outline:\s*2px solid var\(--color-foco\)/);
+    expect(limpio.match(/(?<!&)(?<!\.\w+):focus-visible\s*\{([^}]*)\}/)?.[1] ?? "").toMatch(/outline:\s*2px solid var\(--color-foco\)/);
   });
 
   it("por defecto el foco es la tinta", () => {
