@@ -76,6 +76,13 @@
   }
 }
 
+/* Panel en celular y tablet: la barra inferior fija (unos 67 px) no tapa el control con foco al avanzar con Tab. */
+@media (width < 64rem) {
+  html:has([data-panel]) {
+    scroll-padding-bottom: 80px;
+  }
+}
+
 /* Banda del stack: dos copias seguidas que se desplazan media pista. */
 @keyframes desplazar {
   to {
