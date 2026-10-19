@@ -5,6 +5,7 @@
 | Módulo | Responsable de |
 |---|---|
 | `src/lib/site.ts` | Datos del sitio (`siteConfig`: nombre y descripción) para la metadata y la UI |
+| `src/lib/icono-marca.tsx` | `prepararIcono(tamano)` (#79): el elemento del logo (la "L" en papel sobre círculo tinta) para `src/app/icon.tsx` y `apple-icon.tsx`; `leerColoresMarca(css)` toma `--color-tinta` y `--color-papel` de `globals.css` |
 | `src/lib/cn.ts` | `cn()`: une clases y descarta las vacías (clases condicionales). No resuelve conflictos de Tailwind (`px-4` y `px-0` quedan las dos) |
 | `src/lib/share.ts` | `shareOrCopy()` (Web Share API con caída a copiar el link) y `copyText()` (Clipboard API); no lanzan, devuelven el resultado para que la UI avise |
 | `src/lib/gsap.ts` | Registra `ScrollTrigger` y exporta `gsap` y `MOTION_OK` (la consulta de reduced-motion para `gsap.matchMedia`); solo para componentes de cliente |
