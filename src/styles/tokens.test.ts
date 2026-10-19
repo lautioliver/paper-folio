@@ -132,6 +132,11 @@ describe("anillo de foco (UX-TRANS-04)", () => {
     expect(leer(file)).toMatch(patron);
   });
 
+  it("las piezas con sombra dura separan el anillo de la sombra (offset de 4px)", () => {
+    expect(limpio).toMatch(/@utility marca\s*\{[^@]*&:focus-visible\s*\{[^}]*outline-offset:\s*4px/);
+    expect(limpio).toMatch(/--shadow-marca:\s*4px 4px 0/);
+  });
+
   it("nada fuerza el anillo secundario", () => {
     expect(limpio).not.toMatch(/outline[^;]*var\(--color-secundario\)/);
     expect(leer("src/app/panel/servicios/formulario.tsx")).not.toContain("outline-secundario");
