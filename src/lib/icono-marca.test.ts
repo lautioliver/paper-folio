@@ -1,5 +1,4 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { profile } from "@/content/profile";
@@ -35,12 +34,16 @@ describe("leerColoresMarca", () => {
 
 describe("prepararIcono", () => {
   it("usa los colores que declara globals.css, no valores fijos en el código", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "icono-marca-"));
-    const css = join(dir, "globals.css");
-    await writeFile(css, "@theme {\n  --color-tinta: #123456;\n  --color-papel: #fedcba;\n}\n");
-    const { elemento } = await prepararIcono(32, { css: await readFile(css, "utf8") });
-    expect(estiloDe(elemento).background).toBe("#123456");
-    expect(estiloDe(elemento).color).toBe("#fedcba");
+    const css = await readFile(CSS_REAL, "utf8");
+    const { tinta, papel } = leerColoresMarca(css);
+    // Se intercambian los dos tokens reales: si el ícono tuviera colores fijos, no cambiaría.
+    const intercambiado = css
+      .replace(`--color-tinta: ${tinta};`, `--color-tinta: ${papel};`)
+      .replace(`--color-papel: ${papel};`, `--color-papel: ${tinta};`);
+    expect(intercambiado).not.toBe(css);
+    const { elemento } = await prepararIcono(32, { css: intercambiado });
+    expect(estiloDe(elemento).background).toBe(papel);
+    expect(estiloDe(elemento).color).toBe(tinta);
   });
 
   it("el ícono real sale con los colores de la marca de globals.css", async () => {
