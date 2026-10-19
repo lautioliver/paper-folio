@@ -134,7 +134,7 @@ describe("crearProyectoAccion y actualizarProyectoAccion", () => {
       ok: false,
       error: "invalida",
       mensaje: "Revisá los campos marcados.",
-      campos: { slug: "Ya hay un proyecto con ese slug." },
+      campos: { slug: "Ya hay un proyecto con ese slug." } as Record<string, string>,
     });
     const r = await crearProyectoAccion(FORMULARIO_INICIAL, formulario());
     expect(r.campos).toEqual({ slug: "Ya hay un proyecto con ese slug." });

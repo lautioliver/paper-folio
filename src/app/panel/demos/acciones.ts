@@ -6,7 +6,7 @@ import { TAG_CONTENIDO } from "@/lib/contenido";
 import { activarDemo, borrarDemo, crearDemo, editarDemo, moverDemo, type ResultadoDemo } from "@/lib/demos-admin";
 import { requerirRol } from "@/lib/permisos";
 import { RUTA_DEMOS, RUTA_NUEVA_DEMO, rutaEdicion } from "./rutas";
-import type { EstadoFormulario, ValoresFormulario } from "./tipos";
+import type { EstadoAccion, EstadoFormulario, ValoresFormulario } from "./tipos";
 
 // Cada acción se puede llamar directo (un POST armado a mano, con cualquier id o valor): el rol se exige
 // acá, antes de tocar la base (el layout del panel no protege, ADR-002 R-3). Los datos los valida el
@@ -49,22 +49,33 @@ export async function guardarDemoAccion(
   redirect(RUTA_DEMOS);
 }
 
-/** Activa (`true`) o desactiva (`false`) la demo. */
-export async function activarDemoAccion(id: string, activa: boolean): Promise<void> {
-  await requerirRol(RUTA_DEMOS, "admin");
-  invalidarSiSalioBien(await activarDemo(id, activa));
-  refresh();
+/**
+ * Resultado de una acción de la lista. Si salió bien, o si la pantalla estaba vieja (ya no existe o lo
+ * tocó otro admin), refresca igual para mostrar la lista real junto con el mensaje.
+ */
+function lista(r: ResultadoDemo): EstadoAccion {
+  invalidarSiSalioBien(r);
+  if (r.ok || r.error === "no-encontrado") refresh();
+  return { error: r.ok ? null : r.mensaje };
 }
 
-/** Sube o baja la demo un lugar entre las de su proyecto. */
-export async function moverDemoAccion(id: string, direccion: "subir" | "bajar"): Promise<void> {
+// Las acciones de la lista son una sola por tipo para toda la lista, no una por fila: si no, el mensaje se
+// iría con la fila al refrescar. El id y el valor llegan como campos del formulario; los valida el servicio.
+
+/** Activa (`true`) o desactiva (`false`) la demo. `id` y `activa` ("true" o "false"): campos ocultos del formulario. */
+export async function activarDemoAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   await requerirRol(RUTA_DEMOS, "admin");
-  invalidarSiSalioBien(await moverDemo(id, direccion));
-  refresh();
+  return lista(await activarDemo(texto(formData, "id"), texto(formData, "activa") === "true"));
 }
 
-export async function borrarDemoAccion(id: string): Promise<void> {
+/** Sube o baja la demo un lugar entre las de su proyecto. `id` y `direccion`: campos ocultos del formulario. */
+export async function moverDemoAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   await requerirRol(RUTA_DEMOS, "admin");
-  invalidarSiSalioBien(await borrarDemo(id));
-  refresh();
+  return lista(await moverDemo(texto(formData, "id"), texto(formData, "direccion")));
+}
+
+/** `id`: lo que se borra (campo oculto del formulario). */
+export async function borrarDemoAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
+  await requerirRol(RUTA_DEMOS, "admin");
+  return lista(await borrarDemo(texto(formData, "id")));
 }

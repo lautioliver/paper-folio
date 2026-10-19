@@ -128,12 +128,12 @@ describe("guardarServicioAccion", () => {
       ok: false,
       error: "duplicado",
       mensaje: "Revisá los campos marcados.",
-      campos: { titulo: "Ya hay un servicio con ese título." },
+      campos: { titulo: "Ya hay un servicio con ese título." } as Record<string, string>,
     });
     const r = await guardarServicioAccion(null, FORMULARIO_INICIAL, form(CAMPOS));
     expect(r).toEqual({
       error: "Revisá los campos marcados.",
-      campos: { titulo: "Ya hay un servicio con ese título." },
+      campos: { titulo: "Ya hay un servicio con ese título." } as Record<string, string>,
       valores: { ...CAMPOS, publicado: false },
       envio: 1,
     });
@@ -154,21 +154,21 @@ describe("acciones de la lista", () => {
     {
       nombre: "publicarServicioAccion",
       correr: (c: Record<string, string>) => publicarServicioAccion(SIN_ERROR, form(c)),
-      campos: { id: ID, publicado: "true" },
+      campos: { id: ID, publicado: "true" } as Record<string, string>,
       servicio: publicarServicio,
       args: [ID, true],
     },
     {
       nombre: "moverServicioAccion",
       correr: (c: Record<string, string>) => moverServicioAccion(SIN_ERROR, form(c)),
-      campos: { id: ID, direccion: "bajar" },
+      campos: { id: ID, direccion: "bajar" } as Record<string, string>,
       servicio: moverServicio,
       args: [ID, "bajar"],
     },
     {
       nombre: "borrarServicioAccion",
       correr: (c: Record<string, string>) => borrarServicioAccion(SIN_ERROR, form(c)),
-      campos: { id: ID },
+      campos: { id: ID } as Record<string, string>,
       servicio: borrarServicio,
       args: [ID],
     },
@@ -192,7 +192,7 @@ describe("acciones de la lista", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it.each(LISTA)("$nombre: sin id en el formulario, el servicio recibe "" y decide", async ({ correr, servicio }) => {
+  it.each(LISTA)("$nombre: sin id en el formulario, el servicio recibe una cadena vacía y decide", async ({ correr, servicio }) => {
     servicio.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "No existe." });
     expect(await correr({})).toEqual({ error: "No existe." });
     expect(servicio.mock.calls[0][0]).toBe("");

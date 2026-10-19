@@ -13,7 +13,7 @@ import {
   type ResultadoServicio,
 } from "@/lib/servicios-admin";
 import { RUTA_NUEVO_SERVICIO, RUTA_SERVICIOS, rutaEdicion } from "./rutas";
-import type { EstadoFormulario, ValoresFormulario } from "./tipos";
+import type { EstadoAccion, EstadoFormulario, ValoresFormulario } from "./tipos";
 
 // Cada acción se puede llamar directo (un POST armado a mano, con cualquier id o valor): el rol se exige
 // acá, antes de tocar la base (el layout del panel no protege). Los datos los valida el servicio con Zod.
@@ -56,22 +56,33 @@ export async function guardarServicioAccion(
   redirect(RUTA_SERVICIOS);
 }
 
-/** Publica (`true`) o despublica (`false`) el servicio. */
-export async function publicarServicioAccion(id: string, publicado: boolean): Promise<void> {
-  await requerirRol(RUTA_SERVICIOS, "admin");
-  invalidarSiSalioBien(await publicarServicio(id, publicado));
-  refresh();
+/**
+ * Resultado de una acción de la lista. Si salió bien, o si la pantalla estaba vieja (ya no existe o lo
+ * tocó otro admin), refresca igual para mostrar la lista real junto con el mensaje.
+ */
+function lista(r: ResultadoServicio): EstadoAccion {
+  invalidarSiSalioBien(r);
+  if (r.ok || r.error === "no-encontrado") refresh();
+  return { error: r.ok ? null : r.mensaje };
 }
 
-/** Sube o baja el servicio un lugar en el orden de la landing. */
-export async function moverServicioAccion(id: string, direccion: "subir" | "bajar"): Promise<void> {
+// Las acciones de la lista son una sola por tipo para toda la lista, no una por fila: si no, el mensaje se
+// iría con la fila al refrescar. El id y el valor llegan como campos del formulario; los valida el servicio.
+
+/** Publica (`true`) o despublica (`false`) el servicio. `id` y `publicado` ("true" o "false"): campos ocultos del formulario. */
+export async function publicarServicioAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   await requerirRol(RUTA_SERVICIOS, "admin");
-  invalidarSiSalioBien(await moverServicio(id, direccion));
-  refresh();
+  return lista(await publicarServicio(texto(formData, "id"), texto(formData, "publicado") === "true"));
 }
 
-export async function borrarServicioAccion(id: string): Promise<void> {
+/** Sube o baja el servicio un lugar en el orden de la landing. `id` y `direccion`: campos ocultos del formulario. */
+export async function moverServicioAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   await requerirRol(RUTA_SERVICIOS, "admin");
-  invalidarSiSalioBien(await borrarServicio(id));
-  refresh();
+  return lista(await moverServicio(texto(formData, "id"), texto(formData, "direccion")));
+}
+
+/** `id`: lo que se borra (campo oculto del formulario). */
+export async function borrarServicioAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
+  await requerirRol(RUTA_SERVICIOS, "admin");
+  return lista(await borrarServicio(texto(formData, "id")));
 }

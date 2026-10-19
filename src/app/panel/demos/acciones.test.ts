@@ -127,12 +127,12 @@ describe("guardarDemoAccion", () => {
       ok: false,
       error: "invalido",
       mensaje: "Revisá los campos marcados.",
-      campos: { proyecto: "El proyecto no existe." },
+      campos: { proyecto: "El proyecto no existe." } as Record<string, string>,
     });
     const r = await guardarDemoAccion(null, { error: "x", campos: {}, envio: 3 }, form({ ...CAMPOS, activa: "on" }));
     expect(r).toEqual({
       error: "Revisá los campos marcados.",
-      campos: { proyecto: "El proyecto no existe." },
+      campos: { proyecto: "El proyecto no existe." } as Record<string, string>,
       valores: { ...CAMPOS, activa: true },
       envio: 4,
     });
@@ -145,21 +145,21 @@ describe("acciones de la lista", () => {
     {
       nombre: "activarDemoAccion",
       correr: (c: Record<string, string>) => activarDemoAccion(SIN_ERROR, form(c)),
-      campos: { id: ID, activa: "true" },
+      campos: { id: ID, activa: "true" } as Record<string, string>,
       servicio: activarDemo,
       args: [ID, true],
     },
     {
       nombre: "moverDemoAccion",
       correr: (c: Record<string, string>) => moverDemoAccion(SIN_ERROR, form(c)),
-      campos: { id: ID, direccion: "bajar" },
+      campos: { id: ID, direccion: "bajar" } as Record<string, string>,
       servicio: moverDemo,
       args: [ID, "bajar"],
     },
     {
       nombre: "borrarDemoAccion",
       correr: (c: Record<string, string>) => borrarDemoAccion(SIN_ERROR, form(c)),
-      campos: { id: ID },
+      campos: { id: ID } as Record<string, string>,
       servicio: borrarDemo,
       args: [ID],
     },
@@ -183,7 +183,7 @@ describe("acciones de la lista", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it.each(LISTA)("$nombre: sin id en el formulario, el servicio recibe "" y decide", async ({ correr, servicio }) => {
+  it.each(LISTA)("$nombre: sin id en el formulario, el servicio recibe una cadena vacía y decide", async ({ correr, servicio }) => {
     servicio.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "No existe." });
     expect(await correr({})).toEqual({ error: "No existe." });
     expect(servicio.mock.calls[0][0]).toBe("");
