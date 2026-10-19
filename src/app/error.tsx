@@ -1,17 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 import { Container } from "@/components/Container";
 
 // Error inesperado en cualquier ruta (sitio y panel). No muestra el mensaje del error: puede traer detalles internos.
-export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
-
+// Va en `section` y no en `main`: dentro del panel ya hay un `main` (PanelShell) y no pueden anidarse.
+export default function ErrorPage({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
-    <main className="flex flex-1 items-center">
+    <section className="flex flex-1 items-center">
       <Container className="py-24">
         <h1 className="text-h2 font-bold">Algo salió mal</h1>
         <p className="mt-4 text-cuerpo">Probá de nuevo. Si sigue pasando, volvé en unos minutos.</p>
@@ -24,6 +20,6 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
           </Link>
         </div>
       </Container>
-    </main>
+    </section>
   );
 }

@@ -26,6 +26,9 @@ describe("error", () => {
     expect(html).toMatch(/<button[^>]*>[^<]*Probar de nuevo/);
     expect(html).toMatch(/<a[^>]*href="\/"[^>]*>[^<]*Volver al inicio/);
   });
+  it("no abre otro main: el panel ya tiene uno", () => {
+    expect(html).not.toContain("<main");
+  });
   it("no muestra el mensaje del error", () => {
     expect(html).not.toContain("boom");
   });
