@@ -66,7 +66,7 @@ export function EnlacesPanel({ enlaces, vertical }: { enlaces: EnlacePanel[]; ve
             <Link
               href={e.href}
               aria-current={actual ? "page" : undefined}
-              className={`${base} ${actual ? "bg-primario" : "bg-papel"} text-tinta`}
+              className={`${base} ${actual ? "bg-primario elegido" : "bg-papel"} text-tinta`}
             >
               {e.etiqueta}
             </Link>
