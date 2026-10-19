@@ -30,7 +30,7 @@ vi.mock("next/navigation", () => ({ redirect: (u: string) => redirect(u) }));
 
 import { TAG_CONTENIDO } from "@/lib/contenido";
 import { borrarServicioAccion, guardarServicioAccion, moverServicioAccion, publicarServicioAccion } from "./acciones";
-import { FORMULARIO_INICIAL } from "./tipos";
+import { FORMULARIO_INICIAL, SIN_ERROR } from "./tipos";
 
 const ID = "6528f0c2a1b2c3d4e5f60718";
 const ADMIN = "6528f0c2a1b2c3d4e5f60001";
@@ -65,19 +65,19 @@ const ACCIONES = [
   },
   {
     nombre: "publicarServicioAccion",
-    correr: () => publicarServicioAccion(ID, false),
+    correr: () => publicarServicioAccion(SIN_ERROR, form({ id: ID, publicado: "false" })),
     ruta: "/panel/servicios",
     servicio: publicarServicio,
   },
   {
     nombre: "moverServicioAccion",
-    correr: () => moverServicioAccion(ID, "subir"),
+    correr: () => moverServicioAccion(SIN_ERROR, form({ id: ID, direccion: "subir" })),
     ruta: "/panel/servicios",
     servicio: moverServicio,
   },
   {
     nombre: "borrarServicioAccion",
-    correr: () => borrarServicioAccion(ID),
+    correr: () => borrarServicioAccion(SIN_ERROR, form({ id: ID })),
     ruta: "/panel/servicios",
     servicio: borrarServicio,
   },
@@ -150,13 +150,51 @@ describe("guardarServicioAccion", () => {
 });
 
 describe("acciones de la lista", () => {
-  it("pasan el id y el valor, y refrescan la lista", async () => {
-    await publicarServicioAccion(ID, true);
-    expect(publicarServicio).toHaveBeenCalledWith(ID, true);
-    await moverServicioAccion(ID, "bajar");
-    expect(moverServicio).toHaveBeenCalledWith(ID, "bajar");
-    await borrarServicioAccion(ID);
-    expect(borrarServicio).toHaveBeenCalledWith(ID);
-    expect(refresh).toHaveBeenCalledTimes(3);
+  const LISTA = [
+    {
+      nombre: "publicarServicioAccion",
+      correr: (c: Record<string, string>) => publicarServicioAccion(SIN_ERROR, form(c)),
+      campos: { id: ID, publicado: "true" },
+      servicio: publicarServicio,
+      args: [ID, true],
+    },
+    {
+      nombre: "moverServicioAccion",
+      correr: (c: Record<string, string>) => moverServicioAccion(SIN_ERROR, form(c)),
+      campos: { id: ID, direccion: "bajar" },
+      servicio: moverServicio,
+      args: [ID, "bajar"],
+    },
+    {
+      nombre: "borrarServicioAccion",
+      correr: (c: Record<string, string>) => borrarServicioAccion(SIN_ERROR, form(c)),
+      campos: { id: ID },
+      servicio: borrarServicio,
+      args: [ID],
+    },
+  ];
+
+  it.each(LISTA)("$nombre: pasa el id y el valor del formulario, refresca y no devuelve error", async ({ correr, campos, servicio, args }) => {
+    expect(await correr(campos)).toEqual({ error: null });
+    expect(servicio).toHaveBeenCalledWith(...args);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(LISTA)("$nombre: si el servicio rechaza, devuelve el mensaje (no falla en silencio)", async ({ correr, campos, servicio }) => {
+    servicio.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "No existe." });
+    expect(await correr(campos)).toEqual({ error: "No existe." });
+    expect(updateTag).not.toHaveBeenCalled();
+  });
+
+  it.each(LISTA)("$nombre: si lo que cambió es la pantalla vieja (no existe), refresca igual para mostrar la lista real", async ({ correr, campos, servicio }) => {
+    servicio.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "No existe." });
+    await correr(campos);
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(LISTA)("$nombre: sin id en el formulario, el servicio recibe "" y decide", async ({ correr, servicio }) => {
+    servicio.mockResolvedValue({ ok: false, error: "no-encontrado", mensaje: "No existe." });
+    expect(await correr({})).toEqual({ error: "No existe." });
+    expect(servicio.mock.calls[0][0]).toBe("");
   });
 });
