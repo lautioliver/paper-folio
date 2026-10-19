@@ -188,4 +188,23 @@ describe("acciones de la lista", () => {
     expect(await correr({})).toEqual({ error: "No existe." });
     expect(servicio.mock.calls[0][0]).toBe("");
   });
+
+  it("activarDemoAccion: el valor que no es true ni false llega crudo al servicio, que lo rechaza", async () => {
+    activarDemo.mockResolvedValue({ ok: false, error: "invalido", mensaje: "Valor inválido." });
+    expect(await activarDemoAccion(SIN_ERROR, form({ id: ID, activa: "quizas" }))).toEqual({ error: "Valor inválido." });
+    expect(activarDemo).toHaveBeenCalledWith(ID, "quizas");
+    expect(activarDemo.mock.calls[0][1]).not.toBe(false);
+  });
+
+  it("activarDemoAccion: false llega como booleano false", async () => {
+    await activarDemoAccion(SIN_ERROR, form({ id: ID, activa: "false" }));
+    expect(activarDemo).toHaveBeenCalledWith(ID, false);
+  });
+
+  it.each(LISTA)("$nombre: si el servicio rechaza por un valor inválido, devuelve el mensaje y no refresca", async ({ correr, campos, servicio }) => {
+    servicio.mockResolvedValue({ ok: false, error: "invalido", mensaje: "Valor inválido." });
+    expect(await correr(campos)).toEqual({ error: "Valor inválido." });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(updateTag).not.toHaveBeenCalled();
+  });
 });
