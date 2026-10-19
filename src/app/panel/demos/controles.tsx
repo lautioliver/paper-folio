@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useActionState, useContext, type ReactNode } from "react";
+import { createContext, useActionState, useContext, useEffect, useState, type ReactNode } from "react";
 import { borrarDemoAccion, activarDemoAccion, moverDemoAccion } from "./acciones";
 import { SIN_ERROR, type EstadoAccion } from "./tipos";
 
@@ -33,11 +33,16 @@ async function elegir(previo: EstadoAccion, formData: FormData): Promise<EstadoA
 /** Envuelve la lista: muestra el aviso de la última acción y deja a los controles de cada fila usarla. */
 export function AccionesDemos({ children }: { children: ReactNode }) {
   const [estado, despachar, ocupado] = useActionState(elegir, SIN_ERROR);
+  // Con `cacheComponents`, `<Activity>` conserva el estado de la ruta oculta. Al ocultarse se corre la limpieza
+  // del efecto, que descarta el aviso: al volver a la lista no se ve el de una acción vieja.
+  const [descartado, setDescartado] = useState<EstadoAccion | null>(null);
+  useEffect(() => () => setDescartado(estado), [estado]);
+  const aviso = estado === descartado ? null : estado.error;
   return (
     <Contexto.Provider value={{ despachar, ocupado }}>
       {/* Siempre en el DOM: un aria-live que aparece junto con el texto no se anuncia en todos los lectores. */}
       <p aria-live="polite" className="mt-4 min-h-5 text-pequeno font-bold text-tinta">
-        {estado.error}
+        {aviso}
       </p>
       {children}
     </Contexto.Provider>

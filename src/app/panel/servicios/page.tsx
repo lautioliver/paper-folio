@@ -27,12 +27,12 @@ export default async function ServiciosPage() {
         siempre al final.
       </p>
 
-      {servicios.length === 0 ? (
-        <p className="contorno mt-8 bg-superficie p-8 text-center">
-          Todavía no hay servicios en la base: la landing muestra los del contenido estático.
-        </p>
-      ) : (
-        <AccionesServicios>
+      <AccionesServicios>
+        {servicios.length === 0 ? (
+          <p className="contorno mt-8 bg-superficie p-8 text-center">
+            Todavía no hay servicios en la base: la landing muestra los del contenido estático.
+          </p>
+        ) : (
           <ol className="mt-8 flex flex-col gap-3">
             {servicios.map((s, i) => (
               <li key={s.id} className="contorno flex flex-wrap items-center gap-4 bg-papel p-4">
@@ -66,8 +66,8 @@ export default async function ServiciosPage() {
               </li>
             ))}
           </ol>
-        </AccionesServicios>
-      )}
+        )}
+      </AccionesServicios>
     </>
   );
 }

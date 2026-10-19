@@ -24,6 +24,11 @@ function siguienteEnvio(previo: EstadoFormulario | undefined): number {
   return (typeof envio === "number" && Number.isSafeInteger(envio) && envio >= 0 ? envio : 0) + 1;
 }
 
+// "true" y "false" son booleanos; cualquier otro valor pasa crudo, así lo rechaza la validación del servicio.
+function booleano(valor: string): boolean | string {
+  return valor === "true" ? true : valor === "false" ? false : valor;
+}
+
 function invalidarSiSalioBien(r: ResultadoDemo): void {
   if (r.ok) updateTag(TAG_CONTENIDO);
 }
@@ -50,8 +55,8 @@ export async function guardarDemoAccion(
 }
 
 /**
- * Resultado de una acción de la lista. Si salió bien, o si la pantalla estaba vieja (ya no existe o lo
- * tocó otro admin), refresca igual para mostrar la lista real junto con el mensaje.
+ * Resultado de una acción de la lista. Refresca si salió bien o si la pantalla estaba vieja (ya no existe):
+ * así se ve la lista real junto con el mensaje. Con un valor inválido no refresca: no cambió nada.
  */
 function lista(r: ResultadoDemo): EstadoAccion {
   invalidarSiSalioBien(r);
@@ -65,7 +70,7 @@ function lista(r: ResultadoDemo): EstadoAccion {
 /** Activa (`true`) o desactiva (`false`) la demo. `id` y `activa` ("true" o "false"): campos ocultos del formulario. */
 export async function activarDemoAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   await requerirRol(RUTA_DEMOS, "admin");
-  return lista(await activarDemo(texto(formData, "id"), texto(formData, "activa") === "true"));
+  return lista(await activarDemo(texto(formData, "id"), booleano(texto(formData, "activa"))));
 }
 
 /** Sube o baja la demo un lugar entre las de su proyecto. `id` y `direccion`: campos ocultos del formulario. */

@@ -26,10 +26,10 @@ export default async function DemosPage() {
         Por proyecto. El detalle de cada proyecto muestra sus demos activas, en este orden.
       </p>
 
-      {grupos.length === 0 ? (
-        <p className="contorno mt-8 bg-superficie p-8 text-center">Todavía no hay demos en la base.</p>
-      ) : (
-        <AccionesDemos>
+      <AccionesDemos>
+        {grupos.length === 0 ? (
+          <p className="contorno mt-8 bg-superficie p-8 text-center">Todavía no hay demos en la base.</p>
+        ) : (
           <div className="mt-8 grid gap-8">
             {grupos.map((g) => (
               <section key={g.proyecto?.id ?? "sin-proyecto"} aria-label={g.proyecto?.nombre ?? "Sin proyecto"}>
@@ -71,8 +71,8 @@ export default async function DemosPage() {
               </section>
             ))}
           </div>
-        </AccionesDemos>
-      )}
+        )}
+      </AccionesDemos>
     </>
   );
 }

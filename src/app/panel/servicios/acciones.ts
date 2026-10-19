@@ -30,6 +30,11 @@ function siguienteEnvio(previo: EstadoFormulario | undefined): number {
   return (typeof envio === "number" && Number.isSafeInteger(envio) && envio >= 0 ? envio : 0) + 1;
 }
 
+// "true" y "false" son booleanos; cualquier otro valor pasa crudo, así lo rechaza la validación del servicio.
+function booleano(valor: string): boolean | string {
+  return valor === "true" ? true : valor === "false" ? false : valor;
+}
+
 function invalidarSiSalioBien(r: ResultadoServicio): void {
   if (r.ok) updateTag(TAG_CONTENIDO);
 }
@@ -57,8 +62,8 @@ export async function guardarServicioAccion(
 }
 
 /**
- * Resultado de una acción de la lista. Si salió bien, o si la pantalla estaba vieja (ya no existe o lo
- * tocó otro admin), refresca igual para mostrar la lista real junto con el mensaje.
+ * Resultado de una acción de la lista. Refresca si salió bien o si la pantalla estaba vieja (ya no existe):
+ * así se ve la lista real junto con el mensaje. Con un valor inválido no refresca: no cambió nada.
  */
 function lista(r: ResultadoServicio): EstadoAccion {
   invalidarSiSalioBien(r);
@@ -72,7 +77,7 @@ function lista(r: ResultadoServicio): EstadoAccion {
 /** Publica (`true`) o despublica (`false`) el servicio. `id` y `publicado` ("true" o "false"): campos ocultos del formulario. */
 export async function publicarServicioAccion(_previo: EstadoAccion, formData: FormData): Promise<EstadoAccion> {
   await requerirRol(RUTA_SERVICIOS, "admin");
-  return lista(await publicarServicio(texto(formData, "id"), texto(formData, "publicado") === "true"));
+  return lista(await publicarServicio(texto(formData, "id"), booleano(texto(formData, "publicado"))));
 }
 
 /** Sube o baja el servicio un lugar en el orden de la landing. `id` y `direccion`: campos ocultos del formulario. */
