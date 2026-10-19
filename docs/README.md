@@ -57,6 +57,7 @@ Regla: si un documento de producto y el código no coinciden, **gana** [architec
 - [Deploy](development/deploy.md)
 - Auditorías: en `development/auditorias/<tema>.md`. Cada hallazgo con ID estable (`UX-<área>-01`…) para poder abrir un issue por hallazgo.
   - [UI y UX del sitio público](development/auditorias/ui-ux-sitio.md) (`UX-SITIO-NN`, #80)
+  - [UI/UX transversal: accesibilidad, responsive y sistema visual](development/auditorias/ui-ux-transversal.md) (`UX-TRANS-NN`, #82)
 
 ### Decisiones
 
