@@ -45,6 +45,10 @@
   border: var(--borde-marca) solid var(--color-tinta);
   border-radius: var(--radius-marca);
   box-shadow: var(--shadow-marca);
+  /* La sombra dura (4 px) taparía un anillo con offset de 2 px abajo y a la derecha. */
+  &:focus-visible {
+    outline-offset: 4px;
+  }
 }
 
 /* Botón que se "aprieta": la sombra baja y la pieza se corre. */
