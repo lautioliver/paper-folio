@@ -78,7 +78,7 @@ No es para:
 
 Cuando el pedido es "pasá la auditoría X a issues":
 - Un issue por hallazgo, con `tipo:audit` y el título `Auditoría <área>: <hallazgo>`.
-- El cuerpo enlaza `docs/development/<auditoría>.md` y el ID del hallazgo (`AUD-07`).
+- El cuerpo enlaza `docs/development/auditorias/<tema>.md` y el ID del hallazgo (`UX-<área>-NN`, por ejemplo `UX-PANEL-07`).
 - Si el documento no tiene IDs, proponé agregarlos antes de abrir los issues.
 - Después de crearlos, ofrecé anotar el número de issue al lado de cada hallazgo en el documento.
 
