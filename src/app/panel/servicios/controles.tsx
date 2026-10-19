@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useActionState, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useActionState, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { borrarServicioAccion, publicarServicioAccion, moverServicioAccion } from "./acciones";
 import { SIN_ERROR, type EstadoAccion } from "./tipos";
 
-export const BOTON = "apretable contorno bg-papel px-3 py-1 text-pequeno font-bold disabled:opacity-40";
+export const BOTON = "apretable contorno bg-papel px-3 py-1 text-pequeno font-bold aria-disabled:opacity-40";
 
 type Despachar = (formData: FormData) => void;
 const Contexto = createContext<{
@@ -67,7 +67,17 @@ function Campos({ accion, id, extra }: { accion: string; id: string; extra?: Rec
   );
 }
 
-/** Mover, publicar o despublicar y borrar una fila. Mientras corre una acción de la lista, los botones se deshabilitan. */
+/**
+ * Frena el envío de un botón bloqueado. Se marca con `aria-disabled` y no con `disabled`: un botón `disabled`
+ * pierde el foco y quien usa teclado vuelve al principio de la página en cada acción.
+ */
+function frenarSi(bloqueado: boolean) {
+  return (e: FormEvent<HTMLFormElement>) => {
+    if (bloqueado) e.preventDefault();
+  };
+}
+
+/** Mover, publicar o despublicar y borrar una fila. Mientras corre una acción de la lista, los botones quedan bloqueados sin perder el foco. */
 export function ControlesServicio({
   id,
   titulo,
@@ -89,26 +99,26 @@ export function ControlesServicio({
     <>
       {ordenable && (
         <>
-          <form action={despachar}>
+          <form action={despachar} onSubmit={frenarSi(primera || ocupado)}>
             <Campos accion="mover" id={id} extra={{ direccion: "subir" }} />
-            <button type="submit" className={BOTON} disabled={primera || ocupado} aria-label={`Subir ${titulo}`}>
+            <button type="submit" className={BOTON} aria-disabled={primera || ocupado} aria-label={`Subir ${titulo}`}>
               Subir
             </button>
           </form>
-          <form action={despachar}>
+          <form action={despachar} onSubmit={frenarSi(ultima || ocupado)}>
             <Campos accion="mover" id={id} extra={{ direccion: "bajar" }} />
-            <button type="submit" className={BOTON} disabled={ultima || ocupado} aria-label={`Bajar ${titulo}`}>
+            <button type="submit" className={BOTON} aria-disabled={ultima || ocupado} aria-label={`Bajar ${titulo}`}>
               Bajar
             </button>
           </form>
         </>
       )}
-      <form action={despachar}>
+      <form action={despachar} onSubmit={frenarSi(ocupado)}>
         <Campos accion="publicar" id={id} extra={{ publicado: String(!publicado) }} />
         <button
           type="submit"
           className={BOTON}
-          disabled={ocupado}
+          aria-disabled={ocupado}
           aria-label={`${publicado ? "Despublicar" : "Publicar"} ${titulo}`}
         >
           {publicado ? "Despublicar" : "Publicar"}
@@ -125,11 +135,12 @@ export function BotonBorrarServicio({ id, titulo }: { id: string; titulo: string
     <form
       action={despachar}
       onSubmit={(e) => {
+        if (ocupado) return e.preventDefault();
         if (!window.confirm(`¿Borrar el servicio "${titulo}"? No se puede deshacer.`)) e.preventDefault();
       }}
     >
       <Campos accion="borrar" id={id} />
-      <button type="submit" className={BOTON} disabled={ocupado} aria-label={`Borrar ${titulo}`}>
+      <button type="submit" className={BOTON} aria-disabled={ocupado} aria-label={`Borrar ${titulo}`}>
         Borrar
       </button>
     </form>
