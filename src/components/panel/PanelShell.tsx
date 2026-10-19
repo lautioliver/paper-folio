@@ -10,7 +10,7 @@ import { EnlacesPanel } from "./EnlacesPanel";
 export function PanelShell({ rol, children }: { rol: Rol; children: ReactNode }) {
   const enlaces = enlacesPara(rol);
   return (
-    <div className="flex flex-1 flex-col lg:flex-row">
+    <div data-panel className="flex flex-1 flex-col lg:flex-row">
       <aside className="hidden w-64 shrink-0 border-r-2 border-tinta bg-superficie p-6 lg:block">
         <p className="mb-6 text-h3 font-bold">Panel</p>
         <nav aria-label="Panel">

@@ -82,6 +82,7 @@ Los grupos de rutas siguen `.github/labeler.yml`: `(sitio)` es lo público, `(au
 - **Tipografía:** Onest (`font-sans`, con `next/font/google`). Escala: `text-h1`, `text-h2`, `text-h3`, `text-cuerpo`, `text-pequeno`.
 - **Estilo neo-brutalista:** `--borde-marca` (2px, con `border-(length:--borde-marca)`), `rounded-marca` y `shadow-marca` (sombra dura de 4px en `tinta`).
 - **Utilidades de marca:** `contorno` (borde y radio, para tarjetas), `marca` (contorno más la sombra dura) y `apretable` (el botón se "aprieta" en hover y active), definidas con `@utility` en `globals.css`.
+- **Barra inferior del panel:** bajo 1024 px, `html:has([data-panel])` suma `scroll-padding-bottom: 80px` en `globals.css`, así el navegador no deja el control con foco detrás de la barra fija (`data-panel` está en `PanelShell`).
 - Las pruebas que los exigen están en `src/styles/tokens.test.ts`.
 
 Ver [módulos](../reference/modules.md) y [superficies](../reference/surfaces.md).
