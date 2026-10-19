@@ -1,18 +1,29 @@
 "use client";
 
-// Reemplaza al layout raíz cuando falla él mismo: no carga los estilos globales, por eso va con estilos en línea mínimos.
-// Usa `white` y `black` (los más cercanos a `papel` y `tinta`): un test prohíbe los hex fuera de globals.css.
+import Link from "next/link";
+import { Container } from "@/components/Container";
+import "@/styles/globals.css";
+
+// Reemplaza al layout raíz cuando falla él mismo: trae su propio <html> y los estilos globales.
+// La fuente Onest la carga el layout raíz, que es lo que falló: acá `font-sans` cae a la tipografía del navegador.
 export default function GlobalError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
-    <html lang="es-AR">
-      <body style={{ margin: 0, minHeight: "100vh", display: "grid", placeItems: "center", fontFamily: "sans-serif", background: "white", color: "black" }}>
-        <main style={{ padding: "1.5rem", maxWidth: "36rem" }}>
-          <title>Algo salió mal</title>
-          <h1>Algo salió mal</h1>
-          <p>Probá de nuevo. Si sigue pasando, volvé en unos minutos.</p>
-          <button type="button" onClick={() => retry()} style={{ padding: "0.75rem 1.25rem", font: "inherit", fontWeight: 700 }}>
-            Probar de nuevo
-          </button>
+    <html lang="es-AR" className="h-full antialiased">
+      <body className="flex min-h-full flex-col bg-papel font-sans text-tinta">
+        <title>Algo salió mal</title>
+        <main className="flex flex-1 items-center">
+          <Container className="py-24">
+            <h1 className="text-h2 font-bold">Algo salió mal</h1>
+            <p className="mt-4 text-cuerpo">Probá de nuevo. Si sigue pasando, volvé en unos minutos.</p>
+            <div className="mt-8 flex flex-wrap items-center gap-6">
+              <button type="button" onClick={() => retry()} className="marca apretable inline-flex bg-tinta px-5 py-3 font-bold text-papel">
+                Probar de nuevo
+              </button>
+              <Link href="/" className="font-bold underline underline-offset-4">
+                Volver al inicio
+              </Link>
+            </div>
+          </Container>
         </main>
       </body>
     </html>
