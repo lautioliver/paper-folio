@@ -101,3 +101,44 @@ describe("tokens de diseño provisorios", () => {
     expect(withHex).toEqual([]);
   });
 });
+
+describe("anillo de foco (UX-TRANS-04)", () => {
+  const limpio = stripNoise(css);
+  const regla = (selector: string) =>
+    limpio.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+  const leer = (file: string) => readFileSync(join(SRC, "..", file), "utf8");
+
+  it("el anillo global usa la variable --color-foco, no un color fijo", () => {
+    expect(limpio.match(/(?<!&)(?<!\.\w+):focus-visible\s*\{([^}]*)\}/)?.[1] ?? "").toMatch(/outline:\s*2px solid var\(--color-foco\)/);
+  });
+
+  it("por defecto el foco es la tinta", () => {
+    expect(regla(":root")).toMatch(/--color-foco:\s*var\(--color-tinta\)/);
+  });
+
+  it("la zona oscura redefine el foco en papel", () => {
+    expect(limpio).toMatch(/@utility zona-oscura\s*\{[^}]*--color-foco:\s*var\(--color-papel\)/);
+  });
+
+  it("hay una utilidad de foco para los controles con el input oculto", () => {
+    expect(limpio).toMatch(/@utility foco-contenedor\s*\{[\s\S]*:has\(input:focus-visible\)[\s\S]*var\(--color-foco\)/);
+  });
+
+  it.each([
+    ["src/components/sitio/Contact.tsx", /<footer className="[^"]*\bzona-oscura\b/],
+    ["src/components/sitio/Sections.tsx", /<section id="trayectoria" className="[^"]*\bzona-oscura\b/],
+    ["src/app/panel/servicios/formulario.tsx", /className="[^"]*\bfoco-contenedor\b/],
+  ])("%s usa la utilidad de foco", (file, patron) => {
+    expect(leer(file)).toMatch(patron);
+  });
+
+  it("las piezas con sombra dura separan el anillo de la sombra (offset de 4px)", () => {
+    expect(limpio).toMatch(/@utility marca\s*\{[^@]*&:focus-visible\s*\{[^}]*outline-offset:\s*4px/);
+    expect(limpio).toMatch(/--shadow-marca:\s*4px 4px 0/);
+  });
+
+  it("nada fuerza el anillo secundario", () => {
+    expect(limpio).not.toMatch(/outline[^;]*var\(--color-secundario\)/);
+    expect(leer("src/app/panel/servicios/formulario.tsx")).not.toContain("outline-secundario");
+  });
+});

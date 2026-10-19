@@ -21,12 +21,6 @@ describe("selector de ícono de los servicios", () => {
   it("el radio se oculta (sr-only), así que el label tiene que mostrar el foco", () => {
     expect(selector).toMatch(/<input\b[^>]*className="sr-only"/);
     const clases = label.split(/\s+/);
-    for (const clase of [
-      "has-focus-visible:outline-2",
-      "has-focus-visible:outline-offset-2",
-      "has-focus-visible:outline-secundario",
-    ]) {
-      expect(clases).toContain(clase);
-    }
+    expect(clases).toContain("foco-contenedor");
   });
 });

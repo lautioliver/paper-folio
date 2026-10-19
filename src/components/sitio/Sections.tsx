@@ -202,7 +202,7 @@ export async function Projects() {
 
 export function Timeline() {
   return (
-    <section id="trayectoria" className="bg-tinta py-20 text-papel">
+    <section id="trayectoria" className="zona-oscura bg-tinta py-20 text-papel">
       <Container className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
         <div>
           <SectionTitle>
