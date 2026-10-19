@@ -26,8 +26,11 @@ describe("error", () => {
     expect(html).toMatch(/<button[^>]*>[^<]*Probar de nuevo/);
     expect(html).toMatch(/<a[^>]*href="\/"[^>]*>[^<]*Volver al inicio/);
   });
-  it("no abre otro main: el panel ya tiene uno", () => {
-    expect(html).not.toContain("<main");
+  it("trae su propio main: reemplaza al layout del panel", () => {
+    expect(html).toContain("<main");
+  });
+  it("pone su propio título de pestaña", () => {
+    expect(html).toContain("<title>Algo salió mal</title>");
   });
   it("no muestra el mensaje del error", () => {
     expect(html).not.toContain("boom");
@@ -41,5 +44,10 @@ describe("global-error", () => {
     expect(html).toContain("Algo salió mal");
     expect(html).toMatch(/<button[^>]*>[^<]*Probar de nuevo/);
     expect(html).not.toContain("boom");
+  });
+  it("usa los tokens de la marca y no estilos en línea", () => {
+    expect(html).toContain("bg-papel");
+    expect(html).toContain("text-tinta");
+    expect(html).not.toContain("style=");
   });
 });
