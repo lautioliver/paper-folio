@@ -1,11 +1,11 @@
 "use client";
 
 // Reemplaza al layout raíz cuando falla él mismo: no carga los estilos globales, por eso va con estilos en línea mínimos.
-// Los hex repiten los tokens `tinta` y `papel` de src/styles/globals.css.
+// Usa `white` y `black` (los más cercanos a `papel` y `tinta`): un test prohíbe los hex fuera de globals.css.
 export default function GlobalError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
     <html lang="es-AR">
-      <body style={{ margin: 0, minHeight: "100vh", display: "grid", placeItems: "center", fontFamily: "sans-serif", background: "#ffffff", color: "#0b0b0b" }}>
+      <body style={{ margin: 0, minHeight: "100vh", display: "grid", placeItems: "center", fontFamily: "sans-serif", background: "white", color: "black" }}>
         <main style={{ padding: "1.5rem", maxWidth: "36rem" }}>
           <title>Algo salió mal</title>
           <h1>Algo salió mal</h1>
