@@ -11,13 +11,16 @@ export type OpcionesIcono = { css?: string; opaco?: boolean };
 // El ícono toma los colores de los tokens de globals.css al generarse: no hay HEX en este código.
 // Solo HEX: Satori (el motor de ImageResponse) no entiende otros formatos de color.
 export function leerColoresMarca(css: string): ColoresMarca {
-  const tinta = css.match(/--color-tinta:\s*(#[0-9a-fA-F]{3,8})\s*;/)?.[1];
-  const papel = css.match(/--color-papel:\s*(#[0-9a-fA-F]{3,8})\s*;/)?.[1];
+  const tinta = css.match(/--color-tinta:\s*(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))\s*;/)?.[1];
+  const papel = css.match(/--color-papel:\s*(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}))\s*;/)?.[1];
   if (!tinta || !papel) {
     throw new Error("globals.css debe definir --color-tinta y --color-papel en HEX (Satori no entiende otros formatos)");
   }
   return { tinta, papel };
 }
+
+// La fuente se lee una vez al cargar el módulo (así lo indica la doc de ImageResponse).
+const fuenteIcono = readFile(join(process.cwd(), "assets/fonts/Onest-Bold.ttf"));
 
 /**
  * Logo de Paperfolio para los íconos de la app: la inicial de `profile` en papel dentro de un círculo tinta,
@@ -30,7 +33,7 @@ export async function prepararIcono(
 ): Promise<{ elemento: ReactElement; fuente: Buffer }> {
   const [cssMarca, fuente] = await Promise.all([
     css ?? readFile(join(process.cwd(), "src/styles/globals.css"), "utf8"),
-    readFile(join(process.cwd(), "assets/fonts/Onest-Bold.ttf")),
+    fuenteIcono,
   ]);
   const { tinta, papel } = leerColoresMarca(cssMarca);
   const circulo = (
@@ -44,6 +47,7 @@ export async function prepararIcono(
         background: tinta,
         color: papel,
         borderRadius: "50%",
+        // Satori no resuelve variables CSS: el nombre y el peso son los de `fonts` en generarIcono.
         fontFamily: "Onest",
         fontWeight: 700,
         fontSize: Math.round(tamano * 0.55),
