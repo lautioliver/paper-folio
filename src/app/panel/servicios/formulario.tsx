@@ -148,7 +148,7 @@ function CamposServicio({
             {SERVICE_ICONS.map((nombre) => (
               <label
                 key={nombre}
-                className="contorno flex cursor-pointer flex-col items-center gap-1 bg-superficie p-2 text-pequeno has-checked:bg-primario [&_svg]:h-12"
+                className="contorno flex cursor-pointer flex-col items-center gap-1 bg-superficie p-2 text-pequeno has-checked:bg-primario has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-secundario [&_svg]:h-12"
               >
                 <input
                   type="radio"
