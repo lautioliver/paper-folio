@@ -21,6 +21,8 @@ export function leerColoresMarca(css: string): ColoresMarca {
 
 // La fuente se lee una vez al cargar el módulo (así lo indica la doc de ImageResponse).
 const fuenteIcono = readFile(join(process.cwd(), "assets/fonts/Onest-Bold.ttf"));
+// El catch evita un unhandledRejection al importar; quien hace await sigue recibiendo el error.
+fuenteIcono.catch(() => {});
 
 /**
  * Logo de Paperfolio para los íconos de la app: la inicial de `profile` en papel dentro de un círculo tinta,
