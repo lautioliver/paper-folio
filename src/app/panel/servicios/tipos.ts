@@ -34,3 +34,7 @@ export function valoresAMostrar(estado: EstadoFormulario, inicial: ValoresFormul
 export function claveDelFormulario(estado: EstadoFormulario): string {
   return String(estado.envio ?? 0);
 }
+
+/** Estado de las acciones de la lista (activar o publicar, mover, borrar): `error` es `null` si salió bien. */
+export type EstadoAccion = { error: string | null };
+export const SIN_ERROR: EstadoAccion = { error: null };
