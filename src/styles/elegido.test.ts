@@ -13,6 +13,16 @@ describe("opción elegida (UX-TRANS-05)", () => {
     expect(css).toMatch(/@utility elegido\s*\{[^}]*box-shadow:\s*var\(--shadow-marca\)/);
   });
 
+  it("`apretable` no le saca la sombra a la opción elegida en hover ni active", () => {
+    expect(css).toMatch(/&:hover:not\(\.elegido\)\s*\{[^}]*box-shadow/);
+    expect(css).toMatch(/&:active:not\(\.elegido\)\s*\{[^}]*box-shadow/);
+    expect(css).not.toMatch(/&:hover\s*\{[^}]*box-shadow/);
+  });
+
+  it("el offset del anillo de `elegido` gana a `foco-contenedor` por especificidad", () => {
+    expect(css).toMatch(/&&:has\(input:focus-visible\)/);
+  });
+
   it("la navegación del panel la aplica solo a la sección actual", () => {
     expect(leer("components", "panel", "EnlacesPanel.tsx")).toMatch(/actual \? "[^"]*\belegido\b/);
   });
