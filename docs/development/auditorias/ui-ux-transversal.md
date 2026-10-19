@@ -61,6 +61,7 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 
 ### UX-TRANS-03 — La barra inferior del panel tapa el elemento con foco
 
+- **Issue:** #93
 - **Página:** todo `/panel` en celular y tablet (menos de 1024 px).
 - **Dónde:** `src/components/panel/PanelShell.tsx:23-25` (barra `fixed inset-x-0 bottom-0`) y `:20` (el `main` solo tiene `pb-28`).
 - **Qué pasa:** la barra mide unos 67 px de alto (`p-3` y borde de la barra, más el chip: `py-2`, línea de 21 px y bordes) y queda fija encima del contenido. Al avanzar con Tab, el navegador desplaza lo justo para que el siguiente control entre por el borde inferior de la ventana, que es donde está la barra: el control queda debajo de la barra, entero o en parte, sea un botón de 33 a 41 px o un campo de más de 100 px. El `pb-28` del `main` solo sirve al final de la página. El sitio ya resuelve lo mismo arriba con `scroll-pt-24` (`src/app/layout.tsx:22`), pero no hay un equivalente abajo para el panel. Confirmado en la revisión del PR #85 (Playwright con Chromium, build local de `main` con sesión de admin, avanzando con Tab, con y sin `prefers-reduced-motion`): en `/panel/proyectos/nuevo` a 390 px el `textarea` "stack" (104 px de alto) queda entero detrás de la barra (y=800 a 904, con la barra desde y=777); en `/panel/consultas`, a 390 y 768 px, los enlaces de las filas quedan detrás de la barra; en `/panel/usuarios` a 390 px, los botones "Bloquear" y "Desbloquear" quedan tapados en parte (se ven 13 de 33 px).
@@ -70,6 +71,7 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 
 ### UX-TRANS-04 — El anillo de foco no contrasta sobre el amarillo
 
+- **Issue:** #94
 - **Reemplaza a:** UX-SITIO-21 (`ui-ux-sitio.md`), el mismo botón "Escribime" visto desde la página. La gravedad que vale es la de acá.
 - **Página:** `/` (sección de servicios) y cualquier control futuro sobre `primario`, `acento`, `secundario` o `terciario`.
 - **Dónde:** `src/styles/globals.css:73-76` (`outline: 2px solid var(--color-secundario)`), con el caso concreto en `src/components/sitio/Sections.tsx:72` (tarjeta `bg-primario`) y `:77` (botón "Escribime").
@@ -80,6 +82,7 @@ Ver UX-PANEL-02 (`ui-ux-panel.md`, en esta carpeta). El radio `sr-only` existe e
 
 ### UX-TRANS-05 — La opción elegida se distingue solo por un relleno de poco contraste
 
+- **Issue:** #95
 - **Página:** navegación del panel, filtros de métricas, selector de ícono de servicios.
 - **Dónde:** `src/components/panel/EnlacesPanel.tsx:69` (`bg-primario` contra `bg-papel`), `src/app/panel/metricas/page.tsx:42` (igual) y `src/app/panel/servicios/formulario.tsx:151` (`has-checked:bg-primario` contra `bg-superficie`).
 - **Qué pasa:** el chip actual y los demás tienen el mismo borde, la misma tipografía y el mismo texto; solo cambia el relleno, con 1,73:1 (`primario`/`papel`) o 1,48:1 (`primario`/`superficie`). `aria-current` y el radio lo anuncian bien al lector de pantalla, pero alguien con baja visión o que mira la pantalla al sol no ve cuál está elegido.
@@ -203,9 +206,9 @@ Para pasarlos a issues con `crear-issue` después de revisar esta tabla: uno por
 
 | Título | Labels sugeridos | Hallazgo |
 |---|---|---|
-| Auditoría UI/UX transversal: evitar que la barra inferior del panel tape el foco | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-TRANS-03 |
-| Auditoría UI/UX transversal: hacer que el anillo de foco contraste sobre todos los fondos | `tipo:audit`, `area:diseno`, `prioridad:alta` | UX-TRANS-04 (reemplaza a UX-SITIO-21) |
-| Auditoría UI/UX transversal: marcar la opción elegida con algo más que el color | `tipo:audit`, `area:diseno`, `prioridad:alta` | UX-TRANS-05 |
+| Auditoría UI/UX transversal: evitar que la barra inferior del panel tape el foco | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-TRANS-03 (#93) |
+| Auditoría UI/UX transversal: hacer que el anillo de foco contraste sobre todos los fondos | `tipo:audit`, `area:diseno`, `prioridad:alta` | UX-TRANS-04, #94 (reemplaza a UX-SITIO-21) |
+| Auditoría UI/UX transversal: marcar la opción elegida con algo más que el color | `tipo:audit`, `area:diseno`, `prioridad:alta` | UX-TRANS-05 (#95) |
 | Auditoría UI/UX transversal: agregar un enlace para saltar al contenido | `tipo:audit`, `area:web`, `area:panel`, `prioridad:media` | UX-TRANS-06 (reemplaza a UX-PANEL-14 y UX-SITIO-13) |
 | Auditoría UI/UX transversal: usar letra de 16 px en los campos del panel | `tipo:audit`, `area:panel`, `prioridad:media` | UX-TRANS-07 |
 | Auditoría UI/UX transversal: unificar los botones en un componente | `tipo:audit`, `area:diseno`, `prioridad:media` | UX-TRANS-08 (reemplaza la parte de sistema de UX-SITIO-17 y el deshabilitado de UX-PANEL-10) |

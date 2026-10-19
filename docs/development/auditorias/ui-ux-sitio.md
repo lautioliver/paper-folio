@@ -48,6 +48,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 
 #### UX-SITIO-01 — La página 404 es la de Next, en inglés y sin salida
 
+- **Issue:** #89
 - **Página:** cualquier URL inexistente, y `/proyectos/[slug]` con un slug despublicado o inexistente para quien tiene sesión.
 - **Dónde:** falta un `not-found.tsx` en `src/app/`; el 404 lo dispara `src/app/(sitio)/proyectos/[slug]/page.tsx:54` (`notFound()`).
 - **Qué pasa:** en producción, `/no-existe-xyz` muestra "404 · This page could not be found." con el título de pestaña "404: This page could not be found.", sin la barra, sin el pie y sin ningún enlace. El documento declara `lang="es-AR"` (`src/app/layout.tsx:20`) con el texto en inglés.
@@ -58,6 +59,7 @@ Lista priorizada de mejoras para el sitio público antes de las exposiciones (26
 
 #### UX-SITIO-02 — Un error inesperado muestra la pantalla genérica de Next, en inglés
 
+- **Issue:** #89
 - **Página:** las que se renderizan en cada pedido: `/proyectos/[slug]` y `/cuenta`.
 - **Dónde:** faltan `error.tsx` y `global-error.tsx` en `src/app/`. `src/app/(sitio)/cuenta/page.tsx:22-31` y la rama `verificacion` de `src/app/(auth)/ingresar/page.tsx:28-41` manejan la base caída, pero el detalle no: `src/app/(sitio)/proyectos/[slug]/page.tsx:50` llama a `requerirSesion`, que lee el rol con `buscarRol` (`src/lib/permisos.ts:18`) sin try/catch. En `/cuenta`, el `auth()` de `src/app/(sitio)/cuenta/page.tsx:33` queda fuera del try. La barra no entra: `sesionParaLaBarra` ya atrapa sus errores y muestra "Ingresar" (`src/lib/sesion.ts:19-26`). La landing y `/proyectos` leen el contenido con `"use cache"` (`src/lib/contenido.ts:144,154,178`, `cacheComponents` en `next.config.ts:4`): ahí un error rompe el build o deja servida la versión anterior, no llega a la persona.
 - **Qué pasa:** si la base no responde cuando alguien con sesión abre un caso de estudio (o falla el `auth()` de `/cuenta`), Next muestra su pantalla genérica en inglés, sin barra ni forma de reintentar. Solo se revisó en código: no se puede provocar en producción.
@@ -243,7 +245,7 @@ Títulos con el formato de auditoría de `docs/convencion-nombres-github.md` §4
 
 | # | Título | Labels sugeridos | Cubre |
 |---|---|---|---|
-| 1 | Auditoría UI sitio: agregar páginas de error 404 y 500 en español | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:alta` | UX-SITIO-01, UX-SITIO-02 |
+| 1 (#89) | Auditoría UI sitio: agregar páginas de error 404 y 500 en español | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:alta` | UX-SITIO-01, UX-SITIO-02 |
 | 2 | Auditoría UI sitio: avisar en la landing que el caso de estudio y la demo piden ingresar | `tipo:audit`, `area:web`, `prioridad:media` | UX-SITIO-03 |
 | 3 | Auditoría UI sitio: alinear la barra con las secciones de la landing | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-04, UX-SITIO-17 (lo propio de la barra) |
 | 4 | Auditoría UI sitio: dar el marco del sitio a ingresar y al 403 | `tipo:audit`, `area:web`, `area:diseno`, `prioridad:media` | UX-SITIO-05 (lo propio de las páginas) |

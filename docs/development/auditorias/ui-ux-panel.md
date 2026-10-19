@@ -36,6 +36,7 @@ Lista priorizada de mejoras de interfaz y experiencia del panel (`/panel/**`). N
 
 Este documento es el dueño del hallazgo; la auditoría transversal (#82, PR #85) remite acá.
 
+- **Issue:** #90
 - **Página:** `/panel/consultas` y `/panel/consultas/[id]`.
 - **Dónde:** `src/components/panel/ChipEstado.tsx:5` (`bg-secundario text-papel`) y `:13` (`text-pequeno font-bold`).
 - **Qué pasa:** texto blanco sobre `secundario` da 3,78:1. A 14 px en negrita no es texto grande (hace falta 18,66 px en negrita), así que necesita 4,5:1.
@@ -46,6 +47,7 @@ Este documento es el dueño del hallazgo; la auditoría transversal (#82, PR #85
 
 Este documento es el dueño del hallazgo; la auditoría transversal (#82, PR #85) remite acá.
 
+- **Issue:** #91
 - **Página:** `/panel/servicios/nuevo` y `/panel/servicios/[id]`.
 - **Dónde:** `src/app/panel/servicios/formulario.tsx:149-159`.
 - **Qué pasa:** cada opción es un `<input type="radio" className="sr-only">` dentro de un `<label>` que se pinta con `has-checked:bg-primario`. El anillo de `:focus-visible` (`src/styles/globals.css:73-76`) cae sobre el radio, que mide 1 px y está recortado, y el label no tiene estilo de foco. Con el teclado no se ve cuál de los cinco íconos tiene el foco hasta elegirlo con las flechas (y eso ya lo marca).
@@ -54,6 +56,7 @@ Este documento es el dueño del hallazgo; la auditoría transversal (#82, PR #85
 
 #### UX-PANEL-03 — En demos y servicios, activar o publicar, mover y borrar fallan en silencio
 
+- **Issue:** #92
 - **Página:** `/panel/demos` y `/panel/servicios`.
 - **Dónde:** `src/app/panel/demos/acciones.ts:53-70` y `src/app/panel/servicios/acciones.ts:59-77` (devuelven `void` y descartan el `ResultadoDemo`/`ResultadoServicio`); los botones en `src/app/panel/demos/page.tsx:59-84` y `src/app/panel/servicios/page.tsx:56-79`.
 - **Qué pasa:** si el servicio devuelve `ok: false` (la demo o el servicio ya no existe, el orden cambió porque otro admin lo movió), la acción refresca y no dice nada. Si la base falla, el servicio lanza, la acción también y se ve la página de error (ver UX-PANEL-11): eso no es silencioso, lo silencioso son los `ok: false`. Los botones tampoco se deshabilitan mientras corre la acción: un doble clic en "Subir" sube dos lugares.
@@ -263,9 +266,9 @@ Para pasar a GitHub con `crear-issue` después de revisar. Siguen la convención
 
 | # | Título | Labels sugeridos | Hallazgos |
 |---|---|---|---|
-| 1 | Auditoría UX panel: el chip "En curso" no llega al contraste mínimo | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:alta` | UX-PANEL-01 |
-| 2 | Auditoría UX panel: el selector de ícono de los servicios no muestra el foco | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-PANEL-02 |
-| 3 | Auditoría UX panel: las acciones de las listas de demos y servicios fallan en silencio | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-PANEL-03 |
+| 1 (#90) | Auditoría UX panel: el chip "En curso" no llega al contraste mínimo | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:alta` | UX-PANEL-01 |
+| 2 (#91) | Auditoría UX panel: el selector de ícono de los servicios no muestra el foco | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-PANEL-02 |
+| 3 (#92) | Auditoría UX panel: las acciones de las listas de demos y servicios fallan en silencio | `tipo:audit`, `area:panel`, `prioridad:alta` | UX-PANEL-03 |
 | 4 | Auditoría UX panel: guardar no confirma lo que se hizo | `tipo:audit`, `area:panel`, `prioridad:media` | UX-PANEL-04, UX-PANEL-05, UX-PANEL-23 |
 | 5 | Auditoría UX panel: los errores de los formularios no se ven ni reciben el foco | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-06, UX-PANEL-20 |
 | 6 | Auditoría UX panel: las confirmaciones usan dos patrones y faltan en usuarios | `tipo:audit`, `area:panel`, `area:diseno`, `prioridad:media` | UX-PANEL-07, UX-PANEL-08, UX-PANEL-09, UX-PANEL-21 |
