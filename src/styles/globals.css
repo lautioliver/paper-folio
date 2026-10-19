@@ -62,7 +62,26 @@
   }
 }
 
+/*
+ * Foco (UX-TRANS-04): el anillo usa --color-foco. Por defecto es la tinta (pasa 3:1 sobre papel, superficie, primario,
+ * acento y terciario); dentro de una zona oscura es el papel. Un solo color no sirve para toda la paleta.
+ */
+@utility zona-oscura {
+  --color-foco: var(--color-papel);
+}
+
+/* Anillo para un control con el input oculto (sr-only): se muestra en el contenedor cuando el input tiene foco de teclado. */
+@utility foco-contenedor {
+  &:has(:focus-visible) {
+    outline: 2px solid var(--color-foco);
+    outline-offset: 2px;
+  }
+}
+
 @layer base {
+  :root {
+    --color-foco: var(--color-tinta);
+  }
   html {
     scroll-behavior: smooth;
   }
@@ -71,7 +90,7 @@
     color: var(--color-tinta);
   }
   :focus-visible {
-    outline: 2px solid var(--color-secundario);
+    outline: 2px solid var(--color-foco);
     outline-offset: 2px;
   }
 }

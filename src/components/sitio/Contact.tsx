@@ -27,7 +27,7 @@ export function Contact() {
 
 export function Footer() {
   return (
-    <footer className="bg-tinta py-12 text-papel">
+    <footer className="zona-oscura bg-tinta py-12 text-papel">
       <Container className="grid gap-8 sm:grid-cols-[1.5fr_1fr]">
         <div>
           <p className="flex items-center gap-2 text-h3 font-bold">
