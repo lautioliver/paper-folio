@@ -72,7 +72,7 @@
 
 /* Anillo para un control con el input oculto (sr-only): se muestra en el contenedor cuando el input tiene foco de teclado. */
 @utility foco-contenedor {
-  &:has(:focus-visible) {
+  &:has(input:focus-visible) {
     outline: 2px solid var(--color-foco);
     outline-offset: 2px;
   }

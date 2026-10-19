@@ -121,7 +121,7 @@ describe("anillo de foco (UX-TRANS-04)", () => {
   });
 
   it("hay una utilidad de foco para los controles con el input oculto", () => {
-    expect(limpio).toMatch(/@utility foco-contenedor\s*\{[\s\S]*:has\(:focus-visible\)[\s\S]*var\(--color-foco\)/);
+    expect(limpio).toMatch(/@utility foco-contenedor\s*\{[\s\S]*:has\(input:focus-visible\)[\s\S]*var\(--color-foco\)/);
   });
 
   it.each([
