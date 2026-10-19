@@ -2,7 +2,7 @@ import { ETIQUETAS_ESTADO, type EstadoConsulta } from "@/lib/estados-consulta";
 
 const COLORES: Record<EstadoConsulta, string> = {
   nueva: "bg-primario text-tinta",
-  en_curso: "bg-secundario text-papel",
+  en_curso: "bg-secundario text-tinta",
   respondida: "bg-superficie text-tinta",
   archivada: "bg-papel text-tinta",
 };
