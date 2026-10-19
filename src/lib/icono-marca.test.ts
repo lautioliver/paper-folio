@@ -2,6 +2,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { profile } from "@/content/profile";
 import { leerColoresMarca, prepararIcono } from "./icono-marca";
 
 // Los tokens de la marca viven en globals.css; el ícono los lee de ahí al generarse.
@@ -9,7 +10,13 @@ const CSS_REAL = join(process.cwd(), "src/styles/globals.css");
 const HEX = /^#[0-9a-f]{3,8}$/i;
 
 type Estilo = { background?: string; color?: string };
-const estiloDe = (elemento: unknown) => (elemento as { props: { style: Estilo } }).props.style;
+type Nodo = { props: { style: Estilo; children?: unknown } };
+const estiloDe = (elemento: unknown) => (elemento as Nodo).props.style;
+// Con fondo opaco (apple-icon), el círculo es el hijo del cuadro de papel.
+const circuloDe = (elemento: unknown) => {
+  const hijo = (elemento as Nodo).props.children;
+  return typeof hijo === "object" && hijo !== null ? (hijo as Nodo) : (elemento as Nodo);
+};
 
 describe("leerColoresMarca", () => {
   it("toma tinta y papel de los tokens de globals.css", async () => {
@@ -31,7 +38,7 @@ describe("prepararIcono", () => {
     const dir = await mkdtemp(join(tmpdir(), "icono-marca-"));
     const css = join(dir, "globals.css");
     await writeFile(css, "@theme {\n  --color-tinta: #123456;\n  --color-papel: #fedcba;\n}\n");
-    const { elemento } = await prepararIcono(32, await readFile(css, "utf8"));
+    const { elemento } = await prepararIcono(32, { css: await readFile(css, "utf8") });
     expect(estiloDe(elemento).background).toBe("#123456");
     expect(estiloDe(elemento).color).toBe("#fedcba");
   });
@@ -41,5 +48,17 @@ describe("prepararIcono", () => {
     const { elemento } = await prepararIcono(180);
     expect(estiloDe(elemento).background).toBe(tinta);
     expect(estiloDe(elemento).color).toBe(papel);
+  });
+
+  it("la letra es la inicial de profile, la misma que la barra de navegación", async () => {
+    const { elemento } = await prepararIcono(32);
+    expect(circuloDe(elemento).props.children).toBe(profile.firstName[0]);
+  });
+
+  it("el ícono de iOS va opaco: fondo papel detrás del círculo", async () => {
+    const { tinta, papel } = leerColoresMarca(await readFile(CSS_REAL, "utf8"));
+    const { elemento } = await prepararIcono(180, { opaco: true });
+    expect(estiloDe(elemento).background).toBe(papel);
+    expect(estiloDe(circuloDe(elemento)).background).toBe(tinta);
   });
 });
