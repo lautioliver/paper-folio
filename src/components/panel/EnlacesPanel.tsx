@@ -47,16 +47,16 @@ export function EnlacesPanel({ enlaces, vertical }: { enlaces: EnlacePanel[]; ve
 
   return (
     // Abajo, en celular: centrada si entra y con scroll horizontal si no (el admin tiene más secciones que ancho).
-    // Con overflow, la lista recorta lo que sale de su caja: el padding de 8 px en los cuatro lados deja entero el
-    // anillo de foco (outline de 2 px a 2 px del chip, `globals.css`) más el corrimiento de `apretable` (2 px), con 2 px
-    // de margen; el margen vertical negativo compensa el alto, y `scroll-px` hace que `scrollIntoView` deje ese margen.
+    // Con overflow, la lista recorta lo que sale de su caja: el padding de 12 px en los cuatro lados deja entero el
+    // anillo de foco (outline de 2 px a 4 px del chip si es el actual, por la sombra de `elegido`; `globals.css`) más el
+    // corrimiento de `apretable` (hasta 4 px), con 2 px de margen; el margen vertical negativo compensa el alto, y `scroll-px` hace que `scrollIntoView` deje ese margen.
     <ul
       ref={lista}
       onFocus={vertical ? undefined : alEnfocar}
       className={
         vertical
           ? "flex flex-col gap-3"
-          : "mx-auto -my-2 flex w-max max-w-full scroll-px-2 items-center gap-2 overflow-x-auto p-2"
+          : "mx-auto -my-3 flex w-max max-w-full scroll-px-3 items-center gap-2 overflow-x-auto p-3"
       }
     >
       {enlaces.map((e) => {
@@ -66,7 +66,7 @@ export function EnlacesPanel({ enlaces, vertical }: { enlaces: EnlacePanel[]; ve
             <Link
               href={e.href}
               aria-current={actual ? "page" : undefined}
-              className={`${base} ${actual ? "bg-primario" : "bg-papel"} text-tinta`}
+              className={`${base} ${actual ? "bg-primario elegido" : "bg-papel"} text-tinta`}
             >
               {e.etiqueta}
             </Link>

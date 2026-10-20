@@ -39,7 +39,7 @@ function Filtro({ etiqueta, opciones }: { etiqueta: string; opciones: { href: st
           href={o.href}
           scroll={false}
           aria-current={o.actual ? "page" : undefined}
-          className={`${chip} ${o.actual ? "bg-primario" : "bg-papel"}`}
+          className={`${chip} ${o.actual ? "bg-primario elegido" : "bg-papel"}`}
         >
           {o.texto}
         </Link>

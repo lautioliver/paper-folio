@@ -51,6 +51,19 @@
   }
 }
 
+/*
+ * Opción elegida (UX-TRANS-05): suma la sombra dura de marca, así el estado no depende solo del relleno (WCAG 1.4.1).
+ * Va con el relleno `bg-primario`; el resto de las opciones no tiene sombra.
+ */
+@utility elegido {
+  box-shadow: var(--shadow-marca);
+  /* Como en `marca`: la sombra de 4 px taparía un anillo con offset de 2 px. */
+  &:focus-visible,
+  &&:has(input:focus-visible) {
+    outline-offset: 4px;
+  }
+}
+
 /* Botón que se "aprieta": la sombra baja y la pieza se corre. */
 @utility apretable {
   transition:
@@ -58,10 +71,15 @@
     box-shadow 120ms ease;
   &:hover {
     transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0 var(--color-tinta);
   }
   &:active {
     transform: translate(4px, 4px);
+  }
+  /* La opción elegida conserva su sombra: es la señal que no depende del color. */
+  &:hover:not(.elegido) {
+    box-shadow: 2px 2px 0 var(--color-tinta);
+  }
+  &:active:not(.elegido) {
     box-shadow: 0 0 0 var(--color-tinta);
   }
 }
