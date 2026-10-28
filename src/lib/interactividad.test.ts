@@ -52,3 +52,85 @@ describe("interactividad del sitio: reduced-motion", () => {
     expect(src).toContain("<ContadorNumero");
   });
 });
+
+const sitio = (name: string) => read(name);
+const css = () => readFileSync(ESTILOS, "utf8");
+const DOCS = fileURLToPath(new URL("../../docs", import.meta.url));
+
+describe("más animaciones del sitio: reduced-motion", () => {
+  for (const archivo of ["Marcador.tsx", "ProgresoLectura.tsx"]) {
+    it(`${archivo} existe y anima solo dentro de matchMedia(MOTION_OK)`, () => {
+      expect(code(archivo)).toContain("mm.add(MOTION_OK");
+    });
+  }
+
+  it("el hero entra palabra por palabra, flota en loop y tiene parallax con el scroll", () => {
+    const src = code("HeroMotion.tsx");
+    expect(src).toContain("[data-palabra]");
+    expect(src).toContain("repeat: -1");
+    expect(src).toContain("scrub");
+    expect(src).not.toMatch(/opacity/);
+    expect(code("Palabras.tsx")).toContain("data-palabra");
+    expect(sitio("Sections.tsx")).toContain("<Palabras");
+  });
+
+  it("el marcador de Highlight se pinta de izquierda a derecha con clip-path", () => {
+    expect(code("Marcador.tsx")).toContain("clipPath");
+    expect(code("Highlight.tsx")).toContain("<Marcador");
+  });
+
+  it("Reveal admite retraso y escalonar las piezas de una tarjeta", () => {
+    const src = code("Reveal.tsx");
+    expect(src).toContain("retraso");
+    expect(src).toContain("data-escalon");
+    const sections = sitio("Sections.tsx");
+    expect(sections).toContain("retraso={");
+    expect(sections).toContain("data-escalon");
+  });
+
+  it("la ilustración del servicio se mueve al hover de la tarjeta y se apaga con reduced-motion", () => {
+    const src = sitio("Sections.tsx");
+    expect(src).toContain("group-hover/servicio:");
+    expect(src).toContain("motion-reduce:");
+  });
+
+  it("la barra de progreso de lectura va en el layout del sitio y no tapa nada", () => {
+    expect(readFileSync(join(SITIO, "../../app/(sitio)/layout.tsx"), "utf8")).toContain("<ProgresoLectura");
+    const src = code("ProgresoLectura.tsx");
+    expect(src).toContain("pointer-events-none");
+    expect(src).toContain("aria-hidden");
+  });
+
+  it("la Navbar se compacta al scrollear y marca la sección activa", () => {
+    const src = code("Navbar.tsx");
+    expect(src).toContain("data-compacta");
+    expect(src).toContain("aria-current");
+    expect(src).toContain("seccionActiva");
+    expect(css()).toContain(".navbar-barra");
+    expect(css()).toContain(".navbar-indicador");
+  });
+
+  it("el hover de los botones y las tarjetas es solo para punteros con hover", () => {
+    const estilos = css();
+    expect(estilos).toMatch(/@utility apretable[\s\S]*?@media \(hover: hover\)/);
+    expect(estilos).toMatch(/@utility elevable[\s\S]*?@media \(hover: hover\)/);
+  });
+
+  it("ResaltarHitos usa una sola línea de referencia: nunca dos hitos activos", () => {
+    const src = code("ResaltarHitos.tsx");
+    expect(src).toContain('start: "top center"');
+    expect(src).toContain('end: "bottom center"');
+  });
+
+  it("detalles: aviso con alto mínimo y número con tabulares", () => {
+    expect(code("ContactForm.tsx")).toContain("min-h-7");
+    expect(code("Sections.tsx")).toContain("tabular-nums");
+  });
+
+  it("surfaces.md menciona el filtro por categoría de /proyectos", () => {
+    const fila = readFileSync(join(DOCS, "reference/surfaces.md"), "utf8")
+      .split("\n")
+      .find((linea) => linea.startsWith("| `/proyectos` |"));
+    expect(fila).toMatch(/categor/i);
+  });
+});
