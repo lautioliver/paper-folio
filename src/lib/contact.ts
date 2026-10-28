@@ -9,23 +9,35 @@ export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   asesoria: "Asesoría técnica",
 };
 
+export const NAME_MIN = 2;
+export const NAME_MAX = 100;
+export const MESSAGE_MAX = 2000;
+
+// Letras (con tildes y ñ), espacios, apóstrofo y guion, y al menos una letra.
+const NAME_PATTERN = /^(?=.*\p{L})[\p{L}\p{M}' \u2019-]+$/u;
+
 const contactSchema = z.object({
-  name: z.string().trim().min(1, "Escribí tu nombre.").max(100, "El nombre es demasiado largo."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Escribí tu nombre.")
+    .min(NAME_MIN, "El nombre tiene que tener al menos 2 letras.")
+    .max(NAME_MAX, "El nombre es demasiado largo.")
+    .regex(NAME_PATTERN, "Usá solo letras, espacios, apóstrofos y guiones."),
   email: z.string().trim().min(1, "Escribí tu email.").pipe(z.email("Ese email no es válido.")),
   type: z.enum(CONTACT_TYPES, "Elegí un tipo de consulta."),
   message: z
     .string()
     .trim()
     .min(10, "Contame un poco más (mínimo 10 caracteres).")
-    .max(2000, "El mensaje no puede pasar los 2000 caracteres."),
+    .max(MESSAGE_MAX, "El mensaje no puede pasar los 2000 caracteres."),
 });
 
 export type ContactRequest = z.infer<typeof contactSchema>;
 export type ContactField = keyof ContactRequest;
 
 export type ContactResult =
-  | { ok: true; data: ContactRequest }
-  | { ok: false; errors: Partial<Record<ContactField, string>> };
+  { ok: true; data: ContactRequest } | { ok: false; errors: Partial<Record<ContactField, string>> };
 
 /** Valida una consulta del formulario: devuelve los datos limpios o un error por campo. */
 export function parseContactRequest(input: unknown): ContactResult {
@@ -42,7 +54,6 @@ export function parseContactRequest(input: unknown): ContactResult {
 
 /** Valida un solo campo (para avisar en vivo). Devuelve el error o `undefined` si está bien. */
 export function validateContactField(field: ContactField, value: string): string | undefined {
-  void field;
-  void value;
-  return undefined;
+  const parsed = contactSchema.shape[field].safeParse(value);
+  return parsed.success ? undefined : parsed.error.issues[0]?.message;
 }

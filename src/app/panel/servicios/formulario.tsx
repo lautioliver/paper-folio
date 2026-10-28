@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
+import { Contador, NotaObligatorios, Obligatorio, useValidacionEnVivo } from "@/components/panel/validacion-en-vivo";
 import { ServiceIcon } from "@/components/sitio/Illustrations";
 import { SERVICE_ICONS, type ServiceIcon as NombreIcono } from "@/content/profile";
 import { LARGO_DESCRIPCION, LARGO_TITULO, type CampoServicio } from "@/lib/servicios-campos";
@@ -89,11 +90,16 @@ function CamposServicio({
     else setErrorSubida(r.mensaje);
   }
 
+  const vivo = useValidacionEnVivo(campos);
+  const errores = vivo.errores;
+
   return (
-    <>
+    <div {...vivo.contenedor}>
+      <NotaObligatorios />
       <div className="grid gap-1">
         <label htmlFor="titulo" className="text-pequeno font-bold">
           Título
+          <Obligatorio />
         </label>
         <input
           id="titulo"
@@ -102,15 +108,16 @@ function CamposServicio({
           maxLength={LARGO_TITULO}
           defaultValue={valores.titulo}
           className={campo}
-          aria-invalid={campos.titulo ? true : undefined}
+          aria-invalid={errores.titulo ? true : undefined}
           aria-describedby="error-titulo"
         />
-        <MensajeCampo id="error-titulo" texto={campos.titulo} />
+        <MensajeCampo id="error-titulo" texto={errores.titulo} />
       </div>
 
       <div className="grid gap-1">
         <label htmlFor="descripcion" className="text-pequeno font-bold">
           Descripción
+          <Obligatorio />
         </label>
         <textarea
           id="descripcion"
@@ -120,10 +127,11 @@ function CamposServicio({
           maxLength={LARGO_DESCRIPCION}
           defaultValue={valores.descripcion}
           className={campo}
-          aria-invalid={campos.descripcion ? true : undefined}
+          aria-invalid={errores.descripcion ? true : undefined}
           aria-describedby="error-descripcion"
         />
-        <MensajeCampo id="error-descripcion" texto={campos.descripcion} />
+        <Contador largo={vivo.largos.descripcion ?? valores.descripcion.length} max={LARGO_DESCRIPCION} />
+        <MensajeCampo id="error-descripcion" texto={errores.descripcion} />
       </div>
 
       <fieldset className="grid gap-3">
@@ -162,7 +170,7 @@ function CamposServicio({
               </label>
             ))}
           </div>
-          <MensajeCampo id="error-icono" texto={campos.icono} />
+          <MensajeCampo id="error-icono" texto={errores.icono} />
         </div>
 
         <div hidden={ilustracion !== "imagen"} className="grid gap-2">
@@ -185,7 +193,7 @@ function CamposServicio({
             />
           </label>
           {subiendo && <p className="text-pequeno">Subiendo…</p>}
-          <MensajeCampo id="error-imagen" texto={errorSubida ?? campos.imagen} />
+          <MensajeCampo id="error-imagen" texto={errorSubida ?? errores.imagen} />
         </div>
       </fieldset>
 
@@ -202,6 +210,6 @@ function CamposServicio({
           Cancelar
         </Link>
       </div>
-    </>
+    </div>
   );
 }
