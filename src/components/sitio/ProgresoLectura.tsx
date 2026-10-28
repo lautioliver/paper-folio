@@ -1,15 +1,24 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { gsap, MOTION_OK } from "@/lib/gsap";
 
 /**
  * Barra fina de progreso de lectura arriba de todo: crece con el scroll de la página (transform, sin layout).
  * Es decorativa (aria-hidden), no recibe clics ni foco, y con reduced-motion no se crea. Vive en el layout, que
- * no se vuelve a montar al navegar: se rearma con cada ruta, así el largo ("max") es el de la página nueva.
+ * no se vuelve a montar al navegar: se rearma con cada ruta, así el largo ("max") es el de la página nueva. Va en
+ * Suspense porque `usePathname` no se puede leer en el prerender (igual que `ContadorVisitas`).
  */
 export function ProgresoLectura() {
+  return (
+    <Suspense fallback={null}>
+      <Barra />
+    </Suspense>
+  );
+}
+
+function Barra() {
   const barra = useRef<HTMLDivElement>(null);
   const ruta = usePathname();
 
