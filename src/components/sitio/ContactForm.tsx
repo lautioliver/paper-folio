@@ -10,7 +10,6 @@ import {
   validateContactField,
   type ContactField,
 } from "@/lib/contact";
-import { cn } from "@/lib/cn";
 
 type Errors = Partial<Record<ContactField, string>>;
 
@@ -166,8 +165,11 @@ type FieldProps = {
 };
 
 function Field({ label, field, required, error, children }: FieldProps) {
+  // `content-start`: si el campo de al lado muestra un error y este no, la fila queda más alta y la grilla
+  // estiraría el label y el input para llenarla. La línea del error siempre ocupa su lugar, así el
+  // formulario no salta cuando aparece o se va un error mientras se escribe.
   return (
-    <div className="grid gap-1.5">
+    <div className="grid content-start gap-1.5">
       <label htmlFor={field} className="text-pequeno font-bold">
         {label}
         {required ? (
@@ -177,7 +179,7 @@ function Field({ label, field, required, error, children }: FieldProps) {
         ) : null}
       </label>
       {children}
-      <p id={`${field}-error`} className={cn("min-h-5 text-pequeno font-bold", error ? "text-tinta" : "sr-only")}>
+      <p id={`${field}-error`} className="min-h-5 text-pequeno font-bold">
         {error ? (
           <>
             <span aria-hidden="true" className="mr-1 inline-block size-2.5 rounded-full bg-acento" />
