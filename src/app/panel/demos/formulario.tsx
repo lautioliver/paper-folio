@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { Contador, NotaObligatorios, Obligatorio, useValidacionEnVivo } from "@/components/panel/validacion-en-vivo";
 import type { ProyectoDeDemo } from "@/lib/demos-admin";
 import { LARGO_DESCRIPCION, LARGO_TITULO, type CampoDemo } from "@/lib/demos-campos";
 import { guardarDemoAccion } from "./acciones";
@@ -75,11 +76,15 @@ function CamposDemo({
   proyectos: ProyectoDeDemo[];
   guardando: boolean;
 }) {
+  const vivo = useValidacionEnVivo(campos);
+  const errores = vivo.errores;
   return (
-    <>
+    <div {...vivo.contenedor}>
+      <NotaObligatorios />
       <div className="grid gap-1">
         <label htmlFor="proyecto" className="text-pequeno font-bold">
           Proyecto
+          <Obligatorio />
         </label>
         <select
           id="proyecto"
@@ -87,7 +92,7 @@ function CamposDemo({
           required
           defaultValue={valores.proyecto}
           className={campo}
-          aria-invalid={campos.proyecto ? true : undefined}
+          aria-invalid={errores.proyecto ? true : undefined}
           aria-describedby="error-proyecto"
         >
           <option value="" disabled>
@@ -99,12 +104,13 @@ function CamposDemo({
             </option>
           ))}
         </select>
-        <MensajeCampo id="error-proyecto" texto={campos.proyecto} />
+        <MensajeCampo id="error-proyecto" texto={errores.proyecto} />
       </div>
 
       <div className="grid gap-1">
         <label htmlFor="titulo" className="text-pequeno font-bold">
           Título
+          <Obligatorio />
         </label>
         <input
           id="titulo"
@@ -113,15 +119,16 @@ function CamposDemo({
           maxLength={LARGO_TITULO}
           defaultValue={valores.titulo}
           className={campo}
-          aria-invalid={campos.titulo ? true : undefined}
+          aria-invalid={errores.titulo ? true : undefined}
           aria-describedby="error-titulo"
         />
-        <MensajeCampo id="error-titulo" texto={campos.titulo} />
+        <MensajeCampo id="error-titulo" texto={errores.titulo} />
       </div>
 
       <div className="grid gap-1">
         <label htmlFor="url" className="text-pequeno font-bold">
           URL (https)
+          <Obligatorio />
         </label>
         <input
           id="url"
@@ -131,10 +138,10 @@ function CamposDemo({
           placeholder="https://"
           defaultValue={valores.url}
           className={campo}
-          aria-invalid={campos.url ? true : undefined}
+          aria-invalid={errores.url ? true : undefined}
           aria-describedby="error-url"
         />
-        <MensajeCampo id="error-url" texto={campos.url} />
+        <MensajeCampo id="error-url" texto={errores.url} />
       </div>
 
       <div className="grid gap-1">
@@ -148,10 +155,11 @@ function CamposDemo({
           maxLength={LARGO_DESCRIPCION}
           defaultValue={valores.descripcion}
           className={campo}
-          aria-invalid={campos.descripcion ? true : undefined}
+          aria-invalid={errores.descripcion ? true : undefined}
           aria-describedby="error-descripcion"
         />
-        <MensajeCampo id="error-descripcion" texto={campos.descripcion} />
+        <Contador largo={vivo.largos.descripcion ?? valores.descripcion.length} max={LARGO_DESCRIPCION} />
+        <MensajeCampo id="error-descripcion" texto={errores.descripcion} />
       </div>
 
       <label className="flex items-center gap-2 text-pequeno font-bold">
@@ -167,6 +175,6 @@ function CamposDemo({
           Cancelar
         </Link>
       </div>
-    </>
+    </div>
   );
 }

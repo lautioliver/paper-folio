@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState, type ReactNode } from "react";
+import { Contador, NotaObligatorios, Obligatorio, useValidacionEnVivo } from "@/components/panel/validacion-en-vivo";
 import { TONES } from "@/components/sitio/tones";
 import { LIMITES, sugerirSlug, type ValoresFormulario } from "@/lib/proyecto-entrada";
 import { actualizarProyectoAccion, crearProyectoAccion } from "./acciones";
@@ -22,9 +23,9 @@ const NOMBRES_ACENTO: Record<(typeof TONES)[number], string> = {
 type Errores = Record<string, string>;
 
 function ErrorCampo({ nombre, errores }: { nombre: string; errores: Errores }) {
-  if (!errores[nombre]) return null;
+  // Siempre en el DOM: un aria-live que aparece junto con el texto no se anuncia en todos los lectores.
   return (
-    <span id={`error-${nombre}`} className="font-normal text-tinta">
+    <span id={`error-${nombre}`} aria-live="polite" className="min-h-5 font-normal text-tinta">
       {errores[nombre]}
     </span>
   );
@@ -39,20 +40,29 @@ function Campo({
   nombre,
   titulo,
   ayuda,
+  obligatorio,
+  contador,
   errores,
   children,
 }: {
   nombre: string;
   titulo: string;
   ayuda?: string;
+  obligatorio?: boolean;
+  /** Largo actual y máximo de un texto largo. */
+  contador?: { largo: number; max: number };
   errores: Errores;
   children: ReactNode;
 }) {
   return (
     <label className={etiqueta}>
-      {titulo}
+      <span>
+        {titulo}
+        {obligatorio && <Obligatorio />}
+      </span>
       {ayuda && <span className="font-normal">{ayuda}</span>}
       {children}
+      {contador && <Contador {...contador} />}
       <ErrorCampo nombre={nombre} errores={errores} />
     </label>
   );
@@ -138,7 +148,7 @@ function CampoImagen({
 
 function Campos({
   valores,
-  errores,
+  errores: erroresDelServidor,
   nuevo,
   alSubir,
 }: {
@@ -147,14 +157,17 @@ function Campos({
   nuevo: boolean;
   alSubir: (subiendo: boolean) => void;
 }) {
+  const vivo = useValidacionEnVivo(erroresDelServidor);
+  const errores = vivo.errores as Errores;
   const [nombre, setNombre] = useState(valores.nombre);
   const [slug, setSlug] = useState(valores.slug);
   // En uno nuevo, el slug se sugiere desde el nombre hasta que se lo edita a mano.
   const [slugAMano, setSlugAMano] = useState(!nuevo || valores.slug !== "");
 
   return (
-    <div className="grid gap-5">
-      <Campo nombre="nombre" titulo="Nombre" errores={errores}>
+    <div {...vivo.contenedor} className="grid gap-5">
+      <NotaObligatorios />
+      <Campo nombre="nombre" obligatorio titulo="Nombre" errores={errores}>
         <input
           name="nombre"
           required
@@ -169,7 +182,7 @@ function Campos({
         />
       </Campo>
       <Campo
-        nombre="slug"
+        nombre="slug" obligatorio
         titulo="Slug"
         ayuda={
           nuevo
@@ -193,7 +206,7 @@ function Campos({
         />
       </Campo>
       <div className="grid gap-5 sm:grid-cols-3">
-        <Campo nombre="inicial" titulo="Inicial" ayuda="Una o dos letras." errores={errores}>
+        <Campo nombre="inicial" obligatorio titulo="Inicial" ayuda="Una o dos letras." errores={errores}>
           <input
             name="inicial"
             required
@@ -203,7 +216,7 @@ function Campos({
             {...aria("inicial", errores)}
           />
         </Campo>
-        <Campo nombre="categoria" titulo="Categoría" errores={errores}>
+        <Campo nombre="categoria" obligatorio titulo="Categoría" errores={errores}>
           <input
             name="categoria"
             required
@@ -223,7 +236,7 @@ function Campos({
           </select>
         </Campo>
       </div>
-      <Campo nombre="descripcion" titulo="Descripción" ayuda={`Hasta ${LIMITES.descripcion} caracteres.`} errores={errores}>
+      <Campo nombre="descripcion" obligatorio contador={{ largo: vivo.largos.descripcion ?? valores.descripcion.length, max: LIMITES.descripcion }} titulo="Descripción" ayuda={`Hasta ${LIMITES.descripcion} caracteres.`} errores={errores}>
         <textarea
           name="descripcion"
           required
@@ -235,14 +248,14 @@ function Campos({
         />
       </Campo>
       <Campo
-        nombre="stack"
+        nombre="stack" obligatorio
         titulo="Stack"
         ayuda={`Una tecnología por línea, de ${LIMITES.stackMin} a ${LIMITES.stackMax}.`}
         errores={errores}
       >
         <textarea name="stack" required rows={4} defaultValue={valores.stack} className={campo} {...aria("stack", errores)} />
       </Campo>
-      <Campo nombre="repoUrl" titulo="Repositorio" ayuda="URL https." errores={errores}>
+      <Campo nombre="repoUrl" obligatorio titulo="Repositorio" ayuda="URL https." errores={errores}>
         <input
           name="repoUrl"
           type="url"
@@ -256,7 +269,7 @@ function Campos({
 
       <fieldset className="grid gap-5">
         <legend className="text-h3 font-bold">Caso de estudio</legend>
-        <Campo nombre="caso.problema" titulo="Problema" ayuda={`Hasta ${LIMITES.caso} caracteres.`} errores={errores}>
+        <Campo nombre="caso.problema" obligatorio contador={{ largo: vivo.largos["caso.problema"] ?? valores["caso.problema"].length, max: LIMITES.caso }} titulo="Problema" ayuda={`Hasta ${LIMITES.caso} caracteres.`} errores={errores}>
           <textarea
             name="caso.problema"
             required
@@ -267,7 +280,7 @@ function Campos({
             {...aria("caso.problema", errores)}
           />
         </Campo>
-        <Campo nombre="caso.solucion" titulo="Solución" ayuda={`Hasta ${LIMITES.caso} caracteres.`} errores={errores}>
+        <Campo nombre="caso.solucion" obligatorio contador={{ largo: vivo.largos["caso.solucion"] ?? valores["caso.solucion"].length, max: LIMITES.caso }} titulo="Solución" ayuda={`Hasta ${LIMITES.caso} caracteres.`} errores={errores}>
           <textarea
             name="caso.solucion"
             required
