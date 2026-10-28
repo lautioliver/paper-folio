@@ -19,11 +19,16 @@ function esControl(destino: EventTarget | null): destino is Control {
 
 function mensajeDe(control: Control): string | undefined {
   const lleva = control instanceof HTMLSelectElement ? undefined : control;
-  return mensajeDeValidez(control.validity, {
-    tipo: lleva?.type,
-    maxLength: lleva && lleva.maxLength >= 0 ? lleva.maxLength : undefined,
-    minLength: lleva && lleva.minLength >= 0 ? lleva.minLength : undefined,
-  });
+  if (control.validity.valid) return undefined;
+  // Si es un estado que no conocemos (rango, paso…), el mensaje del navegador antes que nada.
+  return (
+    mensajeDeValidez(control.validity, {
+      tipo: lleva?.type,
+      maxLength: lleva && lleva.maxLength >= 0 ? lleva.maxLength : undefined,
+      minLength: lleva && lleva.minLength >= 0 ? lleva.minLength : undefined,
+    }) ??
+    (control.validationMessage || "Revisá este campo.")
+  );
 }
 
 /**
@@ -75,7 +80,7 @@ export function useValidacionEnVivo(servidor: Errores = {}) {
   function alEscribir(evento: React.FormEvent<HTMLElement>) {
     const control = evento.target;
     if (!esControl(control)) return;
-    if (control instanceof HTMLTextAreaElement || control instanceof HTMLInputElement) {
+    if (control instanceof HTMLTextAreaElement || (control instanceof HTMLInputElement && control.type === "text")) {
       setLargos((previos) => ({
         ...previos,
         [control.name]: control.value.length,

@@ -21,7 +21,7 @@ const contactSchema = z.object({
     .string()
     .trim()
     .min(1, "Escribí tu nombre.")
-    .min(NAME_MIN, "El nombre tiene que tener al menos 2 letras.")
+    .min(NAME_MIN, `El nombre tiene que tener al menos ${NAME_MIN} letras.`)
     .max(NAME_MAX, "El nombre es demasiado largo.")
     .regex(NAME_PATTERN, "Usá solo letras, espacios, apóstrofos y guiones."),
   email: z.string().trim().min(1, "Escribí tu email.").pipe(z.email("Ese email no es válido.")),
@@ -30,7 +30,7 @@ const contactSchema = z.object({
     .string()
     .trim()
     .min(10, "Contame un poco más (mínimo 10 caracteres).")
-    .max(MESSAGE_MAX, "El mensaje no puede pasar los 2000 caracteres."),
+    .max(MESSAGE_MAX, `El mensaje no puede pasar los ${MESSAGE_MAX} caracteres.`),
 });
 
 export type ContactRequest = z.infer<typeof contactSchema>;
