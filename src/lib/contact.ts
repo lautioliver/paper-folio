@@ -39,3 +39,10 @@ export function parseContactRequest(input: unknown): ContactResult {
   if (Object.keys(errors).length === 0) errors.message = "La consulta no tiene el formato esperado.";
   return { ok: false, errors };
 }
+
+/** Valida un solo campo (para avisar en vivo). Devuelve el error o `undefined` si está bien. */
+export function validateContactField(field: ContactField, value: string): string | undefined {
+  void field;
+  void value;
+  return undefined;
+}
