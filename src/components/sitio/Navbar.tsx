@@ -48,12 +48,14 @@ export function Navbar({ cuenta }: { cuenta?: ReactNode }) {
     const medir = () => {
       pendiente = false;
       setCompacta(window.scrollY > SCROLL_COMPACTA);
-      setActiva(
-        seccionActiva(
-          IDS.map((id) => ({ id, top: document.getElementById(id)?.getBoundingClientRect().top ?? null })),
-          window.innerHeight * LINEA_ACTIVA,
-        ),
-      );
+      // Cuentan todas las secciones de la página (también Servicios y Trayectoria, que no están en el menú: ahí
+      // no se marca ningún enlace) y solo `section`, así un título con id="stack" en otra ruta no se toma.
+      const secciones = Array.from(document.querySelectorAll<HTMLElement>("main section[id]"), (seccion) => ({
+        id: seccion.id,
+        top: seccion.getBoundingClientRect().top,
+      }));
+      const id = seccionActiva(secciones, window.innerHeight * LINEA_ACTIVA);
+      setActiva(id && IDS.includes(id) ? id : null);
     };
     const onScroll = () => {
       if (pendiente) return;
