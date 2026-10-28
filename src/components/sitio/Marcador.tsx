@@ -16,11 +16,11 @@ export function Marcador({ children, className }: { children: ReactNode; classNa
     if (!element) return;
     const mm = gsap.matchMedia();
     mm.add(MOTION_OK, () => {
-      const enPantalla = element.getBoundingClientRect().top < window.innerHeight;
+      const enPantalla = element.getBoundingClientRect().top < window.innerHeight * 0.9;
       gsap.from(element, {
         clipPath: "inset(0 100% 0 0)",
         duration: 0.6,
-        delay: enPantalla ? 0.5 : 0,
+        delay: enPantalla ? 0.8 : 0,
         ease: "power2.out",
         clearProps: "clipPath",
         scrollTrigger: { trigger: element, start: "top 90%", once: true },

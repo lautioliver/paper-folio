@@ -44,6 +44,7 @@ export function Navbar({ cuenta }: { cuenta?: ReactNode }) {
 
   useEffect(() => {
     let pendiente = false;
+    let frame = 0;
     const medir = () => {
       pendiente = false;
       setCompacta(window.scrollY > SCROLL_COMPACTA);
@@ -57,11 +58,16 @@ export function Navbar({ cuenta }: { cuenta?: ReactNode }) {
     const onScroll = () => {
       if (pendiente) return;
       pendiente = true;
-      requestAnimationFrame(medir);
+      frame = requestAnimationFrame(medir);
     };
     medir();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   // El indicador se posiciona con la medida del enlace activo; se recalcula si cambia el ancho de la lista.

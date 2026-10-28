@@ -26,7 +26,15 @@ export function HeroMotion({ children }: { children: ReactNode }) {
       gsap.fromTo(
         "[data-hero-flota]",
         { y: -6 },
-        { y: 6, duration: 2.4, ease: "sine.inOut", yoyo: true, repeat: -1 },
+        {
+          y: 6,
+          duration: 2.4,
+          ease: "sine.inOut",
+          yoyo: true,
+          repeat: -1,
+          // Fuera de pantalla el loop se pausa: no gasta CPU ni batería.
+          scrollTrigger: { trigger: "[data-hero-flota]", start: "top bottom", end: "bottom top", toggleActions: "play pause resume pause" },
+        },
       );
       gsap.to("[data-hero-parallax]", {
         y: 16,
