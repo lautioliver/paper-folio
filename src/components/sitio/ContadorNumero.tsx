@@ -19,13 +19,11 @@ export function ContadorNumero({ valor }: { valor: number }) {
     const mm = gsap.matchMedia();
     mm.add(MOTION_OK, () => {
       const estado = { progreso: 0 };
+      texto.nodeValue = "0";
       gsap.to(estado, {
         progreso: 1,
         duration: 1.2,
         ease: "power2.out",
-        onStart: () => {
-          texto.nodeValue = "0";
-        },
         onUpdate: () => {
           texto.nodeValue = String(valorEnProgreso(valor, estado.progreso));
         },

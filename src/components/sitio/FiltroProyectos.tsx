@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { categoriasDe, filtrarPorCategoria } from "@/lib/filtro-proyectos";
-import { gsap, MOTION_OK } from "@/lib/gsap";
+import { gsap, MOTION_OK, ScrollTrigger } from "@/lib/gsap";
 
 type Item = { slug: string; categoria: string; tarjeta: ReactNode };
 
@@ -16,15 +16,16 @@ const CHIP = "apretable contorno min-h-11 px-4 py-2 text-pequeno font-bold";
 export function FiltroProyectos({ items }: { items: Item[] }) {
   const [categoria, setCategoria] = useState<string | null>(null);
   const lista = useRef<HTMLUListElement>(null);
-  const primera = useRef(true);
+  const anterior = useRef(categoria);
   const categorias = categoriasDe(items);
   const visibles = filtrarPorCategoria(items, categoria);
 
   useEffect(() => {
-    if (primera.current) {
-      primera.current = false;
-      return;
-    }
+    // Compara con la categoría anterior (no con un "primer render"): StrictMode corre el efecto dos veces al montar.
+    if (anterior.current === categoria) return;
+    anterior.current = categoria;
+    // La lista cambió de alto: los Reveal que faltan mostrarse recalculan dónde se disparan.
+    ScrollTrigger.refresh();
     const root = lista.current;
     if (!root) return;
     const mm = gsap.matchMedia(root);
