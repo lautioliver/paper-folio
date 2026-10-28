@@ -8,6 +8,7 @@ import { Highlight, SectionTitle } from "./Highlight";
 import { BrowserMock, HeroCharacter, IlustracionServicio, Portrait } from "./Illustrations";
 import { HeroMotion } from "./HeroMotion";
 import { ContadorNumero } from "./ContadorNumero";
+import { Palabras } from "./Palabras";
 import { Reveal } from "./Reveal";
 import { ResaltarHitos } from "./ResaltarHitos";
 import { ShareButton } from "./ShareButton";
@@ -22,9 +23,15 @@ export function Hero() {
       <HeroMotion>
         <Container className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
           <div>
-            <h1 data-hero className="text-[2.25rem] leading-[1.1] font-bold tracking-tight sm:text-h1 lg:text-[3.75rem]">
-              Soy <Highlight tone="acento">{profile.firstName}</Highlight>, desarrollador fullstack de{" "}
-              <Highlight tone="secundario">{profile.city}</Highlight>
+            <h1 className="text-[2.25rem] leading-[1.1] font-bold tracking-tight sm:text-h1 lg:text-[3.75rem]">
+              <Palabras>Soy</Palabras>{" "}
+              <Highlight tone="acento">
+                <Palabras>{profile.firstName}</Palabras>
+              </Highlight>
+              , <Palabras>desarrollador fullstack de</Palabras>{" "}
+              <Highlight tone="secundario">
+                <Palabras>{profile.city}</Palabras>
+              </Highlight>
             </h1>
             <p data-hero className="mt-6 max-w-xl text-cuerpo">{profile.intro}</p>
             <div data-hero className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -37,7 +44,13 @@ export function Hero() {
             </div>
           </div>
           <div data-hero className="marca mx-auto aspect-square w-full max-w-md overflow-hidden bg-primario">
-            <HeroCharacter />
+            <div data-hero-escala className="h-full">
+              <div data-hero-parallax className="h-full">
+                <div data-hero-flota className="h-full">
+                  <HeroCharacter />
+                </div>
+              </div>
+            </div>
           </div>
         </Container>
       </HeroMotion>
@@ -54,12 +67,14 @@ export async function Services() {
           Mi amplio <Highlight tone="acento">set de habilidades</Highlight>
         </SectionTitle>
         <ul className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {servicios.map((servicio) => (
+          {servicios.map((servicio, i) => (
             <li key={servicio.titulo}>
-              <Reveal className="h-full">
-                <article className="contorno elevable h-full overflow-hidden bg-papel">
+              <Reveal className="h-full" retraso={(i % 3) * 0.12}>
+                <article className="group/servicio contorno elevable h-full overflow-hidden bg-papel">
                   <div className="grid place-items-center border-b-(length:--borde-marca) border-tinta bg-superficie py-6">
-                    <IlustracionServicio icono={servicio.icono} imagen={servicio.imagen} />
+                    <div className="transition-transform duration-300 group-hover/servicio:-rotate-6 group-hover/servicio:scale-110 group-focus-within/servicio:-rotate-6 group-focus-within/servicio:scale-110 motion-reduce:transition-none motion-reduce:group-hover/servicio:rotate-0 motion-reduce:group-hover/servicio:scale-100 motion-reduce:group-focus-within/servicio:rotate-0 motion-reduce:group-focus-within/servicio:scale-100">
+                      <IlustracionServicio icono={servicio.icono} imagen={servicio.imagen} />
+                    </div>
                   </div>
                   <div className="p-6">
                     <h3 className="text-h3 font-bold">{servicio.titulo}</h3>
@@ -70,7 +85,7 @@ export async function Services() {
             </li>
           ))}
           <li>
-            <Reveal className="h-full">
+            <Reveal className="h-full" retraso={(servicios.length % 3) * 0.12}>
               <article className="marca elevable flex h-full flex-col items-start bg-primario p-6">
                 <h3 className="text-h3 font-bold">¿Necesitás otra cosa?</h3>
                 <p className="mt-2 mb-6 text-pequeno">
@@ -110,7 +125,9 @@ export async function About() {
             </li>
             <li className="flex items-center gap-2">
               <span className="size-4 rounded-sm border-2 border-tinta bg-secundario" />
-              <ContadorNumero valor={proyectos.length} /> proyectos públicos en producción
+              <span className="tabular-nums">
+                <ContadorNumero valor={proyectos.length} /> proyectos públicos en producción
+              </span>
             </li>
           </ul>
           <a href={profile.githubUrl} target="_blank" rel="noreferrer" className={cn(BUTTON, "mt-8 bg-tinta text-papel")}>
@@ -129,6 +146,7 @@ export function ProjectCard({ project }: { project: Proyecto }) {
       <article className="contorno elevable grid overflow-hidden bg-papel lg:grid-cols-2">
         <div className="order-2 p-6 sm:p-8 lg:order-1">
           <span
+            data-escalon
             className={cn(
               "grid size-11 place-items-center rounded-lg border-2 border-tinta text-h3 font-bold",
               TONE_BG[project.acento],
@@ -137,13 +155,13 @@ export function ProjectCard({ project }: { project: Proyecto }) {
           >
             {project.inicial}
           </span>
-          <p className="mt-4 inline-block rounded-md bg-tinta px-2 py-0.5 text-xs font-bold text-papel">
+          <p data-escalon className="mt-4 inline-block rounded-md bg-tinta px-2 py-0.5 text-xs font-bold text-papel">
             {project.categoria}
           </p>
-          <h3 className="mt-3 text-h3 font-bold">{project.nombre}</h3>
-          <p className="mt-2 text-pequeno">{project.descripcion}</p>
-          <p className="mt-3 text-xs font-bold">{project.stack.join(" · ")}</p>
-          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-pequeno font-bold">
+          <h3 data-escalon className="mt-3 text-h3 font-bold">{project.nombre}</h3>
+          <p data-escalon className="mt-2 text-pequeno">{project.descripcion}</p>
+          <p data-escalon className="mt-3 text-xs font-bold">{project.stack.join(" · ")}</p>
+          <div data-escalon className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-pequeno font-bold">
             {/* Detalle y demo solo para registrados: sin prefetch, así no se pide la ruta protegida antes de un clic. */}
             <Link
               href={rutaDetalle(project.slug)}

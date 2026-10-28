@@ -64,20 +64,22 @@
   }
 }
 
-/* Botón que se "aprieta": la sombra baja y la pieza se corre. */
+/* Botón que se "aprieta": la sombra baja y la pieza se corre. Con hover real se inclina apenas y rebota. */
 @utility apretable {
   transition:
-    transform 120ms ease,
+    transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 120ms ease;
-  &:hover {
-    transform: translate(2px, 2px);
+  @media (hover: hover) {
+    &:hover {
+      transform: translate(2px, 2px) rotate(-1deg);
+    }
+    /* La opción elegida conserva su sombra: es la señal que no depende del color. */
+    &:hover:not(.elegido) {
+      box-shadow: 2px 2px 0 var(--color-tinta);
+    }
   }
   &:active {
     transform: translate(4px, 4px);
-  }
-  /* La opción elegida conserva su sombra: es la señal que no depende del color. */
-  &:hover:not(.elegido) {
-    box-shadow: 2px 2px 0 var(--color-tinta);
   }
   &:active:not(.elegido) {
     box-shadow: 0 0 0 var(--color-tinta);
@@ -89,7 +91,12 @@
   transition:
     transform 150ms ease,
     box-shadow 150ms ease;
-  &:hover,
+  @media (hover: hover) {
+    &:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: var(--shadow-marca);
+    }
+  }
   &:focus-within {
     transform: translate(-2px, -2px);
     box-shadow: var(--shadow-marca);
@@ -136,6 +143,21 @@
   }
 }
 
+/* Barra flotante: al scrollear se compacta (transform) y gana una sombra más larga; el indicador de sección se desliza. */
+.navbar-barra {
+  transform-origin: top center;
+  transition:
+    transform 250ms ease,
+    box-shadow 250ms ease;
+}
+.navbar-barra[data-compacta="true"] {
+  transform: scale(0.97);
+  box-shadow: 6px 6px 0 var(--color-tinta);
+}
+.navbar-indicador {
+  transition: transform 300ms cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
 /* Banda del stack: dos copias seguidas que se desplazan media pista. */
 @keyframes desplazar {
   to {
@@ -158,6 +180,13 @@
   }
   .banda-pista {
     animation: none;
+  }
+  .navbar-barra,
+  .navbar-indicador {
+    transition: none;
+  }
+  .navbar-barra[data-compacta="true"] {
+    transform: none;
   }
   .elevable,
   .elevable:hover,

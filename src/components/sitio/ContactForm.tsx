@@ -141,7 +141,7 @@ export function ContactForm() {
         >
           {status === "sending" ? "Enviando…" : "Enviar consulta"}
         </button>
-        <p role="status" className="text-pequeno font-bold">
+        <p role="status" className="min-h-7 text-pequeno font-bold">
           {status === "sent" ? <ExitoEnvio /> : null}
         </p>
         <p role="alert" className="text-pequeno font-bold">

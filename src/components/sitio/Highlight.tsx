@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { Marcador } from "./Marcador";
 import { TONE_BG, TONE_TEXT, type Tone } from "./tones";
 
 type HighlightProps = {
@@ -7,9 +8,9 @@ type HighlightProps = {
   tone: Tone;
 };
 
-/** Bloque de color plano detrás de una o dos palabras de un título (manual: resaltado). */
+/** Bloque de color plano detrás de una o dos palabras de un título (manual: resaltado), que se pinta al entrar. */
 export function Highlight({ children, tone }: HighlightProps) {
-  return <span className={cn("box-decoration-clone px-2", TONE_BG[tone], TONE_TEXT[tone])}>{children}</span>;
+  return <Marcador className={cn("box-decoration-clone px-2", TONE_BG[tone], TONE_TEXT[tone])}>{children}</Marcador>;
 }
 
 type SectionTitleProps = {

@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { gsap, ScrollTrigger, MOTION_OK } from "@/lib/gsap";
 
 /**
- * Lista de hitos que marca como activo (data-activo) el que está en la franja central de la pantalla
+ * Lista de hitos que marca como activo (data-activo) el que está en la línea central de la pantalla (una sola línea de referencia: los rangos de dos hitos nunca se pisan)
  * mientras se baja. El estilo lo pone cada hito con `group-data-[activo=true]`. Marcar el activo es un cambio
  * de estado sin movimiento, pero se hace solo con MOTION_OK: con reduced-motion la lista queda quieta.
  */
@@ -19,8 +19,8 @@ export function ResaltarHitos({ children, className }: { children: ReactNode; cl
       const triggers = Array.from(root.children).map((hito) =>
         ScrollTrigger.create({
           trigger: hito,
-          start: "top 60%",
-          end: "bottom 40%",
+          start: "top center",
+          end: "bottom center",
           onToggle: (self) => {
             if (self.isActive) (hito as HTMLElement).dataset.activo = "true";
             else delete (hito as HTMLElement).dataset.activo;
