@@ -19,7 +19,20 @@ describe("seccionActiva", () => {
     expect(seccionActiva([], 100)).toBeNull();
   });
 
-  it("respeta el orden dado aunque haya una sección que no está en la página", () => {
+  it("ignora las secciones que no están en la página", () => {
     expect(seccionActiva([{ id: "a", top: 0 }, { id: "b", top: null }, { id: "c", top: 50 }], 100)).toBe("c");
+  });
+
+  it("elige por la posición en la página, no por el orden de la lista (el del menú)", () => {
+    // Orden del menú; en la página Stack va arriba de Sobre mí y de Proyectos.
+    const menu = [
+      { id: "inicio", top: -2000 },
+      { id: "sobre-mi", top: -300 },
+      { id: "proyectos", top: 200 },
+      { id: "stack", top: -1500 },
+      { id: "contacto", top: 3000 },
+    ];
+    expect(seccionActiva(menu, 400)).toBe("proyectos");
+    expect(seccionActiva(menu, 100)).toBe("sobre-mi");
   });
 });
