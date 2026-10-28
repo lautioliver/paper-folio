@@ -16,7 +16,9 @@ describe("opción elegida (UX-TRANS-05)", () => {
   it("`apretable` no le saca la sombra a la opción elegida en hover ni active", () => {
     expect(css).toMatch(/&:hover:not\(\.elegido\)\s*\{[^}]*box-shadow/);
     expect(css).toMatch(/&:active:not\(\.elegido\)\s*\{[^}]*box-shadow/);
-    expect(css).not.toMatch(/&:hover\s*\{[^}]*box-shadow/);
+    // Solo `apretable`: `elevable` sí pone la sombra en su hover y no tiene opción elegida.
+    const apretable = css.slice(css.indexOf("@utility apretable"), css.indexOf("@utility elevable"));
+    expect(apretable).not.toMatch(/&:hover\s*\{[^}]*box-shadow/);
   });
 
   it("el offset del anillo de `elegido` gana a `foco-contenedor` por especificidad", () => {
