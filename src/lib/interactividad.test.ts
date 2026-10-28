@@ -16,6 +16,16 @@ describe("interactividad del sitio: reduced-motion", () => {
     });
   }
 
+  it("FiltroProyectos refresca los ScrollTrigger al filtrar y no depende de un guard de primer render", () => {
+    const src = code("FiltroProyectos.tsx");
+    expect(src).toContain("ScrollTrigger.refresh()");
+    expect(src).not.toContain("primera");
+  });
+
+  it("ContadorNumero deja el 0 puesto al crear la animación, sin esperar al disparo", () => {
+    expect(code("ContadorNumero.tsx")).not.toContain("onStart");
+  });
+
   it("ResaltarHitos revierte lo que crea al desmontar", () => {
     expect(code("ResaltarHitos.tsx")).toContain("mm.revert()");
   });
