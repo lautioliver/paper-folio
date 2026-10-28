@@ -10,6 +10,7 @@ import {
   validateContactField,
   type ContactField,
 } from "@/lib/contact";
+import { ExitoEnvio } from "./ExitoEnvio";
 
 type Errors = Partial<Record<ContactField, string>>;
 
@@ -141,7 +142,7 @@ export function ContactForm() {
           {status === "sending" ? "Enviando…" : "Enviar consulta"}
         </button>
         <p role="status" className="text-pequeno font-bold">
-          {status === "sent" ? "¡Gracias! Te respondo por email." : ""}
+          {status === "sent" ? <ExitoEnvio /> : null}
         </p>
         <p role="alert" className="text-pequeno font-bold">
           {serverError ? (

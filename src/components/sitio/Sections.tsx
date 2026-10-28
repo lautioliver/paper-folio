@@ -7,7 +7,9 @@ import { RUTA_PROYECTOS, rutaDemo, rutaDetalle } from "@/lib/proyectos";
 import { Highlight, SectionTitle } from "./Highlight";
 import { BrowserMock, HeroCharacter, IlustracionServicio, Portrait } from "./Illustrations";
 import { HeroMotion } from "./HeroMotion";
+import { ContadorNumero } from "./ContadorNumero";
 import { Reveal } from "./Reveal";
+import { ResaltarHitos } from "./ResaltarHitos";
 import { ShareButton } from "./ShareButton";
 import { PANEL_BG, TONE_BG } from "./tones";
 
@@ -55,7 +57,7 @@ export async function Services() {
           {servicios.map((servicio) => (
             <li key={servicio.titulo}>
               <Reveal className="h-full">
-                <article className="contorno h-full overflow-hidden bg-papel">
+                <article className="contorno elevable h-full overflow-hidden bg-papel">
                   <div className="grid place-items-center border-b-(length:--borde-marca) border-tinta bg-superficie py-6">
                     <IlustracionServicio icono={servicio.icono} imagen={servicio.imagen} />
                   </div>
@@ -69,7 +71,7 @@ export async function Services() {
           ))}
           <li>
             <Reveal className="h-full">
-              <article className="marca flex h-full flex-col items-start bg-primario p-6">
+              <article className="marca elevable flex h-full flex-col items-start bg-primario p-6">
                 <h3 className="text-h3 font-bold">¿Necesitás otra cosa?</h3>
                 <p className="mt-2 mb-6 text-pequeno">
                   Si tu proyecto no entra en ninguna caja, contame la idea y vemos juntos cómo resolverla.
@@ -108,7 +110,7 @@ export async function About() {
             </li>
             <li className="flex items-center gap-2">
               <span className="size-4 rounded-sm border-2 border-tinta bg-secundario" />
-              {proyectos.length} proyectos públicos en producción
+              <ContadorNumero valor={proyectos.length} /> proyectos públicos en producción
             </li>
           </ul>
           <a href={profile.githubUrl} target="_blank" rel="noreferrer" className={cn(BUTTON, "mt-8 bg-tinta text-papel")}>
@@ -124,7 +126,7 @@ export async function About() {
 export function ProjectCard({ project }: { project: Proyecto }) {
   return (
     <Reveal>
-      <article className="contorno grid overflow-hidden bg-papel lg:grid-cols-2">
+      <article className="contorno elevable grid overflow-hidden bg-papel lg:grid-cols-2">
         <div className="order-2 p-6 sm:p-8 lg:order-1">
           <span
             className={cn(
@@ -212,11 +214,11 @@ export function Timeline() {
             Cada proyecto empezó como un problema real: de la facu, del campus o de cómo trabajo con agentes.
           </p>
         </div>
-        <ol className="grid gap-5">
+        <ResaltarHitos className="grid gap-5">
           {milestones.map((milestone) => (
-            <li key={milestone.title}>
+            <li key={milestone.title} className="group/hito">
               <Reveal>
-                <article className="rounded-marca bg-papel p-6 text-tinta">
+                <article className="rounded-marca bg-papel p-6 text-tinta transition-colors duration-300 motion-reduce:transition-none group-data-[activo=true]/hito:bg-primario">
                   <p className="text-pequeno font-bold">{milestone.date}</p>
                   <hr className="my-3 border-t-2 border-tinta" />
                   <h3 className="text-cuerpo font-bold">{milestone.title}</h3>
@@ -225,7 +227,7 @@ export function Timeline() {
               </Reveal>
             </li>
           ))}
-        </ol>
+        </ResaltarHitos>
       </Container>
     </section>
   );

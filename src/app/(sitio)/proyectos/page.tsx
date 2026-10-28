@@ -5,6 +5,7 @@ import { Footer } from "@/components/sitio/Contact";
 import { CuentaBarra } from "@/components/sitio/CuentaBarra";
 import { Highlight } from "@/components/sitio/Highlight";
 import { Navbar } from "@/components/sitio/Navbar";
+import { FiltroProyectos } from "@/components/sitio/FiltroProyectos";
 import { ProjectCard } from "@/components/sitio/Sections";
 import { listarProyectos } from "@/lib/contenido";
 
@@ -34,13 +35,13 @@ export default async function ProyectosPage() {
           <p className="mx-auto mt-4 max-w-xl text-center text-cuerpo">
             El caso de estudio y la demo de cada uno son para usuarios registrados: ingresás con Google, en un clic.
           </p>
-          <ul className="mt-12 grid gap-8">
-            {proyectos.map((project) => (
-              <li key={project.slug}>
-                <ProjectCard project={project} />
-              </li>
-            ))}
-          </ul>
+          <FiltroProyectos
+            items={proyectos.map((project) => ({
+              slug: project.slug,
+              categoria: project.categoria,
+              tarjeta: <ProjectCard project={project} />,
+            }))}
+          />
         </Container>
       </main>
       <Footer />

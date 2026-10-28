@@ -84,6 +84,18 @@
   }
 }
 
+/* Tarjeta que reacciona al mouse y al foco del teclado: se levanta y suma la sombra dura de marca. */
+@utility elevable {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+  &:hover,
+  &:focus-within {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-marca);
+  }
+}
+
 /*
  * Foco (UX-TRANS-04): el anillo usa --color-foco. Por defecto es la tinta (pasa 3:1 sobre papel, superficie, primario,
  * acento y terciario); dentro de una zona oscura es el papel. Un solo color no sirve para toda la paleta.
@@ -146,6 +158,12 @@
   }
   .banda-pista {
     animation: none;
+  }
+  .elevable,
+  .elevable:hover,
+  .elevable:focus-within {
+    transition: none;
+    transform: none;
   }
   .apretable,
   .apretable:hover,
