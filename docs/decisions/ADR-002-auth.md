@@ -14,7 +14,7 @@ La consigna pide registro obligatorio para ver el detalle de proyectos y demos (
 
 1. **R-1. Auth.js v5 (`next-auth@5.0.0-beta.32`, versión fija) con Google como único proveedor.** Solo se aceptan cuentas con el email verificado por Google. La configuración vive en `src/auth.ts`, y es perezosa: las variables (`AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`) se validan al primer uso, así `next build` no las exige.
 2. **R-2. Sesión JWT, sin adaptador de base.** Al ingresar, `registrarIngreso` (`src/lib/usuarios.ts`) crea o actualiza el documento en `usuarios`. El token lleva `id` y `rol`.
-3. **R-3. El rol de la base manda.** Para permisos, `requerirRol` (`src/lib/permisos.ts`) relee el rol de `usuarios` en cada página o acción protegida. El rol del token es solo para la UI, como mostrar u ocultar "Panel". Proteger algo solo en la UI o solo en `proxy.ts` no cuenta.
+3. **R-3. El rol de la base manda.** Para permisos, `requerirRol` (`src/lib/permisos.ts`) relee el rol de `usuarios` en cada página o acción protegida. El rol del token no decide permisos; desde #109 tampoco la UI: el menú relee el rol de la base para mostrar u ocultar "Panel". Proteger algo solo en la UI o solo en `proxy.ts` no cuenta.
 4. **R-4. Roles por email hasta el hito 5** (reemplazada por la enmienda de abajo):
    - Todo usuario nuevo es `usuario`.
    - `ADMIN_EMAILS` da `admin` y `OPERADOR_EMAILS` da `operador`. Son listas separadas por comas, solo en el entorno y nunca en el repo.

@@ -74,24 +74,24 @@ describe("sesionParaLaBarra (el menú de la cuenta, #109)", () => {
     expect(buscarRol).toHaveBeenCalledWith("u1");
   });
 
-  it("sin rol (no muestra Panel) si en la base ya no es admin, está bloqueada o se borró, aunque el token diga admin", async () => {
+  it("como usuario (no muestra Panel) si en la base ya no es admin, está bloqueada o se borró, aunque el token diga admin", async () => {
     for (const estado of ["usuario", "bloqueado", null]) {
       auth.mockResolvedValue({ user: { id: "u1", rol: "admin" } });
       buscarRol.mockResolvedValue(estado);
       const sesion = await sesionParaLaBarra();
       expect(sesion?.user?.id, String(estado)).toBe("u1");
-      expect(sesion?.user?.rol === "admin" || sesion?.user?.rol === "operador", String(estado)).toBe(false);
+      expect(sesion?.user?.rol, String(estado)).toBe("usuario");
     }
   });
 
-  it("si la base o ADMIN_EMAILS fallan, la barra sigue con la cuenta y sin Panel (no rompe la landing)", async () => {
+  it("si la base o ADMIN_EMAILS fallan, la barra sigue con la cuenta, como usuario (sin Panel, no rompe la landing)", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     for (const error of [new EnvInvalidoError("ADMIN_EMAILS"), Object.assign(new Error("x"), { name: "MongoServerSelectionError" })]) {
       auth.mockResolvedValue({ user: { id: "u1", rol: "admin" } });
       buscarRol.mockRejectedValue(error);
       const sesion = await sesionParaLaBarra();
       expect(sesion?.user?.id, error.name).toBe("u1");
-      expect(sesion?.user?.rol, error.name).toBeUndefined();
+      expect(sesion?.user?.rol, error.name).toBe("usuario");
     }
     log.mockRestore();
   });
