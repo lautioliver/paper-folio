@@ -62,7 +62,7 @@ describe("esAdminLaSesion (para no contar las visitas de los admin)", () => {
   });
 });
 
-describe("sesionParaLaBarra (el menú de la cuenta, #109)", () => {
+describe("sesionParaLaBarra (el menú de la cuenta, issue 109)", () => {
   it("usa el rol vigente de la base, no el del token: un cambio de rol se ve sin volver a ingresar", async () => {
     for (const rol of ["operador", "admin"]) {
       auth.mockResolvedValue({ user: { id: "u1", name: "Ana", rol: "usuario" } });
