@@ -8,7 +8,7 @@ vi.mock("@/auth", () => ({ auth: (...a: unknown[]) => auth(...a) }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
 vi.mock("./usuarios", () => ({ buscarRol: (...a: unknown[]) => buscarRol(...a) }));
 
-import { esAdminLaSesion } from "./sesion";
+import { esAdminLaSesion, sesionParaLaBarra } from "./sesion";
 
 beforeEach(() => {
   auth.mockReset();
@@ -59,6 +59,47 @@ describe("esAdminLaSesion (para no contar las visitas de los admin)", () => {
     auth.mockResolvedValue({ user: { id: "u1" } });
     buscarRol.mockRejectedValue(Object.assign(new Error("x"), { name: "MongoServerSelectionError" }));
     await expect(esAdminLaSesion()).rejects.toThrow();
+  });
+});
+
+describe("sesionParaLaBarra (el menú de la cuenta, #109)", () => {
+  it("usa el rol vigente de la base, no el del token: un cambio de rol se ve sin volver a ingresar", async () => {
+    for (const rol of ["operador", "admin"]) {
+      auth.mockResolvedValue({ user: { id: "u1", name: "Ana", rol: "usuario" } });
+      buscarRol.mockResolvedValue(rol);
+      const sesion = await sesionParaLaBarra();
+      expect(sesion?.user?.rol, rol).toBe(rol);
+      expect(sesion?.user?.name).toBe("Ana");
+    }
+    expect(buscarRol).toHaveBeenCalledWith("u1");
+  });
+
+  it("sin rol (no muestra Panel) si en la base ya no es admin, está bloqueada o se borró, aunque el token diga admin", async () => {
+    for (const estado of ["usuario", "bloqueado", null]) {
+      auth.mockResolvedValue({ user: { id: "u1", rol: "admin" } });
+      buscarRol.mockResolvedValue(estado);
+      const sesion = await sesionParaLaBarra();
+      expect(sesion?.user?.id, String(estado)).toBe("u1");
+      expect(sesion?.user?.rol === "admin" || sesion?.user?.rol === "operador", String(estado)).toBe(false);
+    }
+  });
+
+  it("si la base o ADMIN_EMAILS fallan, la barra sigue con la cuenta y sin Panel (no rompe la landing)", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    for (const error of [new EnvInvalidoError("ADMIN_EMAILS"), Object.assign(new Error("x"), { name: "MongoServerSelectionError" })]) {
+      auth.mockResolvedValue({ user: { id: "u1", rol: "admin" } });
+      buscarRol.mockRejectedValue(error);
+      const sesion = await sesionParaLaBarra();
+      expect(sesion?.user?.id, error.name).toBe("u1");
+      expect(sesion?.user?.rol, error.name).toBeUndefined();
+    }
+    log.mockRestore();
+  });
+
+  it("sin sesión no lee la base", async () => {
+    auth.mockResolvedValue(null);
+    expect(await sesionParaLaBarra()).toBeNull();
+    expect(buscarRol).not.toHaveBeenCalled();
   });
 });
 
